@@ -198,23 +198,31 @@ def generate_profesores(num_profesores):
 
 
 def generate_eventos(secciones, profesores, eventos_rango, duraciones):
-    """Genera eventos para cada seccion, asignando profesores con round-robin."""
+    """
+    Genera eventos para cada seccion, garantizando que un unico profesor 
+    sea asignado a todos los eventos de la misma seccion.
+    """
     eventos = []
     id_evento = 1
     prof_index = 0
     num_profs = len(profesores)
 
     for seccion in secciones:
+        # SELECCIÓN DEL PROFESOR: Se realiza una sola vez por seccion
+        profesor_asignado = profesores[prof_index % num_profs]['id_profesor']
+        
         num_eventos = random.randint(*eventos_rango)
         for _ in range(num_eventos):
             eventos.append({
                 'id_evento': id_evento,
                 'id_seccion': seccion['id_seccion'],
-                'id_profesor': profesores[prof_index % num_profs]['id_profesor'],
+                'id_profesor': profesor_asignado, # Se mantiene el mismo profesor
                 'duracion': random.choice(duraciones)
             })
             id_evento += 1
-            prof_index += 1
+        
+        # Incrementar el indice para que la siguiente seccion tenga otro profesor
+        prof_index += 1
 
     return eventos
 
