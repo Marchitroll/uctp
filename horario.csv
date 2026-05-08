@@ -1,0 +1,16 @@
+,lunes,martes,miercoles,jueves,viernes,sabado
+7:00 - 8:00,Sist_Organizacionales (Sist_Organizacionales_A) [salon_16],---,Fisica_Sistemas (Fisica_Sistemas_A) [salon_9],IA_Aplicada (IA_Aplicada_A) [r_virtual],Calculo_II (Calculo_II_A) [salon_4],IA_Aplicada (IA_Aplicada_A) [salon_1]
+8:00 - 9:00,Sist_Organizacionales (Sist_Organizacionales_A) [salon_16],---,Fisica_Sistemas (Fisica_Sistemas_A) [salon_9],IA_Aplicada (IA_Aplicada_A) [r_virtual],Calculo_II (Calculo_II_A) [salon_4],IA_Aplicada (IA_Aplicada_A) [salon_1]
+9:00 - 10:00,Sist_Organizacionales (Sist_Organizacionales_A) [salon_16],---,Fisica_Sistemas (Fisica_Sistemas_A) [salon_9],---,Calculo_II (Calculo_II_A) [salon_4],Intro_Programacion (Intro_Programacion_A) [salon_10]
+10:00 - 11:00,---,---,Intro_Programacion (Intro_Programacion_A) [salon_11],---,Estr_Discretas (Estr_Discretas_A) [salon_4],Intro_Programacion (Intro_Programacion_A) [salon_10]
+11:00 - 12:00,Calculo_II (Calculo_II_A) [salon_4],IA_Aplicada (IA_Aplicada_A) [salon_1],Intro_Programacion (Intro_Programacion_A) [salon_11],---,Estr_Discretas (Estr_Discretas_A) [salon_4],Sist_Organizacionales (Sist_Organizacionales_B) [salon_11]
+12:00 - 13:00,Calculo_II (Calculo_II_A) [salon_4],IA_Aplicada (IA_Aplicada_A) [salon_1],Intro_Programacion (Intro_Programacion_A) [salon_11],---,---,Sist_Organizacionales (Sist_Organizacionales_B) [salon_11]
+13:00 - 14:00,---,---,---,---,---,Sist_Organizacionales (Sist_Organizacionales_B) [salon_11]
+14:00 - 15:00,Intro_Programacion (Intro_Programacion_A) [salon_11],---,---,---,IA_Aplicada (IA_Aplicada_B) [salon_1],---
+15:00 - 16:00,Intro_Programacion (Intro_Programacion_A) [salon_11],---,Calculo_II (Calculo_II_A) [salon_4],---,IA_Aplicada (IA_Aplicada_B) [salon_1],---
+16:00 - 17:00,Intro_Programacion (Intro_Programacion_A) [salon_11],---,Calculo_II (Calculo_II_A) [salon_4],---,IA_Aplicada (IA_Aplicada_B) [salon_1],---
+17:00 - 18:00,IA_Aplicada (IA_Aplicada_B) [salon_1],Estr_Discretas (Estr_Discretas_A) [salon_4],Sist_Organizacionales (Sist_Organizacionales_A) [salon_16],---,---,---
+18:00 - 19:00,IA_Aplicada (IA_Aplicada_B) [salon_1],Estr_Discretas (Estr_Discretas_A) [salon_4],Sist_Organizacionales (Sist_Organizacionales_A) [salon_16],---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_16],---
+19:00 - 20:00,---,Estr_Discretas (Estr_Discretas_A) [salon_4],Sist_Organizacionales (Sist_Organizacionales_A) [salon_16],Sist_Organizacionales (Sist_Organizacionales_B) [r_virtual],Sist_Organizacionales (Sist_Organizacionales_A) [salon_16],---
+20:00 - 21:00,Fisica_Sistemas (Fisica_Sistemas_A) [salon_9],---,IA_Aplicada (IA_Aplicada_B) [salon_1],Sist_Organizacionales (Sist_Organizacionales_B) [r_virtual],Fisica_Sistemas (Fisica_Sistemas_A) [salon_9],---
+21:00 - 22:00,Fisica_Sistemas (Fisica_Sistemas_A) [salon_9],---,IA_Aplicada (IA_Aplicada_B) [salon_1],Sist_Organizacionales (Sist_Organizacionales_B) [r_virtual],Fisica_Sistemas (Fisica_Sistemas_A) [salon_9],---

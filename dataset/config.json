@@ -1,0 +1,14 @@
+{
+    "dias": ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado"],
+    "franjas_por_dia": {
+        "lunes":     15,
+        "martes":    15,
+        "miercoles": 15,
+        "jueves":    15,
+        "viernes":   15,
+        "sabado":     7
+    },
+    "dia_cierre": "jueves",
+    "posicion_almuerzo": 7,
+    "dias_sin_almuerzo": ["sabado"]
+}
