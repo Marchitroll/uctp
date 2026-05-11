@@ -2,6 +2,11 @@ from mip import Model, BINARY, INTEGER, xsum, minimize
 import csv
 import json
 import pandas as pd
+import time
+import platform
+import psutil
+import mip
+
 # ============================================================================
 # FUNCIONES DE CARGA DE DATOS
 # ============================================================================
@@ -215,11 +220,11 @@ Cursos_Agrupados = list(E_s.values())
 model = Model(name="UCTP_Universidad", solver_name="HiGHS")
 
 # ============================================================================
-# FILTRADO TOPOLÓGICO (REDUCCIÓN DE DOMINIO)
+# FILTRADO TOPOLOGICO (REDUCCION DE DOMINIO)
 # ============================================================================
 
-Valid_SR = set()   # Tuplas válidas (s, r) para la variable w
-Valid_ERT = set()  # Tuplas válidas (e, r, t) para las variables x e y
+Valid_SR = set()   # Tuplas validas (s, r) para la variable w
+Valid_ERT = set()  # Tuplas validas (e, r, t) para las variables x e y
 
 for s in S:
     # 1. Aplicar R_s: Filtrar salones por aforo e infraestructura
@@ -242,7 +247,7 @@ for s in S:
                 Valid_ERT.add((e, r, t))
 
 # ============================================================================
-# VARIABLES DE DECISION (INSTANCIACIÓN DISPERSA)
+# VARIABLES DE DECISION (INSTANCIACION DISPERSA)
 # ============================================================================
 
 x = {
@@ -272,7 +277,7 @@ print(f"       E={len(E)} eventos | R={len(R)} salones | T={len(T)} franjas | P=
 # ============================================================================
 for p in P:
     for t in T:
-        # Sumamos solo si la variable existe
+        # Acumular asignaciones unicamente para tuplas (e, r, t) instanciadas en el dominio
         suma_clases_profesor = xsum(x[e, r, t] for e in E_p[p] for r in R if (e, r, t) in x)
         model += suma_clases_profesor <= Disp[p, t], f"DispProf_{p}_franja_{t}"
 
@@ -296,7 +301,7 @@ for e in E:
 # ============================================================================
 for s in S:
     for r in R:
-        # Si la combinacion seccion-salon no es valida, omitimos la evaluacion
+        # Ignorar pares seccion-salon que fueron descartados por aforo o infraestructura
         if (s, r) not in w:
             continue
             
@@ -308,7 +313,7 @@ for s in S:
     model += xsum(w[s, r] for r in R if (s, r) in w) <= 2, f"Max_Salones_{s}"
 
 # ============================================================================
-# 6. No colision de salones fisicos
+# 5. No colision de salones fisicos
 # ============================================================================
 for r in R:
     if not ES_VIRTUAL[r]:
@@ -317,7 +322,7 @@ for r in R:
             model += suma_eventos_salon <= 1, f"NoColis_SalonFisico_{r}_franja_{t}"
 
 # ============================================================================
-# 9. Continuidad y no fragmentacion
+# 6. Continuidad y no fragmentacion
 # ============================================================================
 for e in E:
     model += xsum(y[e, r, t] for r in R for t in T if (e, r, t) in y) == 1, f"UnicoInicio_Evento_{e}"
@@ -328,12 +333,12 @@ for d in D:
             arranques_validos = [tau for tau in T_d[d] if (t - Dur[e] + 1) <= tau <= t]
             for r in R:
                 if (e, r, t) in x:
-                    # Validamos que los arranques pertenezcan al dominio
+                    # Vincular el estado de una franja con los instantes de inicio factibles
                     suma_arranques = xsum(y[e, r, tau] for tau in arranques_validos if (e, r, tau) in y)
                     model += x[e, r, t] == suma_arranques, f"Continua_d{d}_t{t}_e{e}_r{r}"
 
 # ============================================================================
-# 10. Espaciado de sesiones
+# 7. Espaciado de sesiones
 # ============================================================================
 for c in Cursos_Agrupados:
     for i in range(len(D) - 1):
@@ -346,7 +351,7 @@ for c in Cursos_Agrupados:
         model += arranques_hoy + arranques_manana <= 1, f"Espaciado_Curso_{c[0]}_Dia_{i}"
 
 # ============================================================================
-# 11. Control de desbordamiento diario
+# 8. Control de desbordamiento diario
 # ============================================================================
 for d in D:
     ultima_franja = max(T_d[d])
@@ -355,7 +360,7 @@ for d in D:
         for t in T_d[d]:
             if t > limite_inicio:
                 for r in R:
-                    # Aplicar restriccion solo a variables de inicio que existen
+                    # Bloquear instantes de inicio que provocarian que el evento sobrepase el final del dia
                     if (e, r, t) in y:
                         model += y[e, r, t] == 0, f"Desborde_d{d}_e{e}_r{r}_t{t}"
 
@@ -377,17 +382,50 @@ if __name__ == '__main__':
     model.verbose = 2
 
     print("[INFO] Iniciando el proceso de optimizacion (maximo 2 horas)...")
+    
+    # Registrar la estampa de tiempo inicial para calcular la duracion total del proceso
+    start_time = time.time()
     status = model.optimize(max_seconds=7200)
+    cpu_time = time.time() - start_time
 
-    if status.value == 0:
-        # 1. Definir etiquetas de horas
+    # Comprobar la existencia de soluciones factibles antes de acceder a los valores objetivos
+    if model.num_solutions > 0:
+        
+        # Recuperar los valores optimos y limites inferiores alcanzados por el solver
+        bestcost = model.objective_value
+        lowerbound = model.objective_bound
+        epsilon = 1e-10
+        
+        # Calcular la brecha de optimalidad garantizando la estabilidad numerica (evita div por 0)
+        gap_pct = ((bestcost - lowerbound) / (abs(bestcost) + epsilon)) * 100
+
+        print("\n" + "="*60)
+        print(" [TRAZABILIDAD DEL ENTORNO]")
+        print("="*60)
+        print(f" Sistema Operativo : {platform.system()} {platform.release()}")
+        print(f" Procesador        : {platform.processor()}")
+        print(f" RAM Disponible    : {round(psutil.virtual_memory().total / (1024.0 **3), 2)} GB")
+        print(f" Version Python    : {platform.python_version()}")
+        print(f" Version Python-MIP: {mip.__version__}")
+
+        print("\n" + "="*60)
+        print(" [METRICAS DE EVALUACION]")
+        print("="*60)
+        print(f" Estado Final (Status) : {status.name if hasattr(status, 'name') else status}")
+        print(f" Tiempo de Procesamiento : {cpu_time:.2f} segundos")
+        print(f" Valor Funcion Objetivo (Z) : {bestcost}")
+        print(f" Limite Inferior (LB) : {lowerbound}")
+        print(f" Gap de Optimalidad (MIP) : {gap_pct:.4f} %")
+        print("="*60 + "\n")
+
+        # Deducir los intervalos horarios basandose en el dia con la mayor cantidad de franjas
         max_slots = max(len(slots) for slots in T_d.values())
         horas_labels = [f"{7+i}:00 - {8+i}:00" for i in range(max_slots)]
         
-        # 2. Matriz limpia
+        # Estructurar una cuadricula tabular para representar el horario de forma legible
         schedule_matrix = pd.DataFrame("---", index=horas_labels, columns=D)
 
-        # 3. Mapeo directo de x a la celda
+        # Iterar el diccionario de variables instanciadas buscando aquellas activas en la solucion
         for (e, r, t), var in x.items():
             if var.x >= 0.99:
                 dia_actual = next(d for d, slots in T_d.items() if t in slots)
@@ -395,8 +433,12 @@ if __name__ == '__main__':
                 
                 seccion = EVENTO_SECCION[e]
                 curso = SECCION_CURSO[seccion]
-                # Marcamos solo esta franja específica
+                
+                # Proyectar el evento en la matriz cruzando el indice horario con la columna del dia
                 schedule_matrix.at[horas_labels[slot_local], dia_actual] = f"{curso} ({seccion}) [{r}]"
 
         schedule_matrix.to_csv("horario.csv")
-        print("\n[INFO] Matriz corregida generada.")
+        print("[INFO] Matriz exportada a 'horario.csv'.")
+    else:
+        print(f"\n[ALERTA] No se encontro ninguna solucion factible. Estado final: {status.name if hasattr(status, 'name') else status}")
+        print(f"[INFO] Tiempo de Procesamiento invertido: {cpu_time:.2f} segundos")

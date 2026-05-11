@@ -208,7 +208,7 @@ def generate_eventos(secciones, profesores, eventos_rango, duraciones):
     num_profs = len(profesores)
 
     for seccion in secciones:
-        # SELECCIÓN DEL PROFESOR: Se realiza una sola vez por seccion
+        # Garantizar que todos los eventos de una misma seccion compartan al mismo docente
         profesor_asignado = profesores[prof_index % num_profs]['id_profesor']
         
         num_eventos = random.randint(*eventos_rango)
@@ -221,7 +221,7 @@ def generate_eventos(secciones, profesores, eventos_rango, duraciones):
             })
             id_evento += 1
         
-        # Incrementar el indice para que la siguiente seccion tenga otro profesor
+        # Desplazar el iterador rotativo para diversificar la asignacion docente
         prof_index += 1
 
     return eventos
@@ -277,7 +277,7 @@ def generate_curriculos(malla, electivos, secciones, eventos):
         for id_curso, _, _ in malla[nivel_id]:
             agregar_curso_a_bridge(nivel_id, id_curso)
 
-        # Agregar electivos elegibles (nivel_minimo <= nivel actual)
+        # Incluir los cursos electivos condicionados al nivel minimo exigido como prerrequisito
         for id_curso, _, _, nivel_minimo in electivos:
             if nivel_minimo <= num_nivel:
                 agregar_curso_a_bridge(nivel_id, id_curso)
@@ -286,7 +286,7 @@ def generate_curriculos(malla, electivos, secciones, eventos):
 
 
 def generate_disponibilidad(profesores, config):
-    """Genera bloques de disponibilidad realistas para cada profesor."""
+    """Construye las franjas de disponibilidad temporal para el cuerpo docente."""
     disponibilidad = []
     dias = config['dias']
     dia_cierre = config['dia_cierre']
@@ -306,18 +306,18 @@ def generate_disponibilidad(profesores, config):
     dias_habiles = [d for d in dias if d != dia_cierre]
 
     for prof in profesores:
-        # Cada profesor esta disponible en 3-4 dias habiles
+        # Asignar un subconjunto aleatorio de dias habiles (entre 3 y 4) a cada docente
         num_dias = random.randint(3, min(4, len(dias_habiles)))
         dias_disponibles = random.sample(dias_habiles, k=num_dias)
 
-        # Adicionalmente, todos estan disponibles el dia de cierre (virtual)
+        # Incluir por defecto el dia designado para la modalidad virtual (dia de cierre)
         dias_disponibles.append(dia_cierre)
 
         for dia in dias_disponibles:
             base = base_dia[dia]
             n = fpd[dia]
 
-            # Jornada completa para garantizar factibilidad
+            # Generar el bloque temporal abarcando la totalidad de franjas correspondientes al dia
             disponibilidad.append({
                 'id_profesor': prof['id_profesor'],
                 'dia': dia,
@@ -397,7 +397,7 @@ if __name__ == '__main__':
     random.seed(SEED)
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # 1. DEFINIR NIVELES PARA ESTA INSTANCIA (Modifica esto para escalar)
+    # 1. SELECCION DE NIVELES CURRICULARES (Ajustar la lista para escalar el tamaño del problema)
     # Ejemplo: ['Nivel_03'] o ['Nivel_03', 'Nivel_04', 'Nivel_05']
     niveles_objetivo = ['Nivel_03'] 
     
@@ -408,8 +408,8 @@ if __name__ == '__main__':
     max_nivel = max([int(n.split('_')[1]) for n in niveles_objetivo])
     electivos_reducidos = [e for e in ELECTIVOS if e[3] <= max_nivel]
 
-    # 3. AJUSTE DE RECURSOS PROPORCIONALES (Evita que el solver se relaje)
-    # Para una instancia pequeña, reduce los profesores y salones
+    # 3. ESCALAMIENTO PROPORCIONAL DE RECURSOS INFRAESTRUCTURALES Y HUMANOS
+    # Restringir salones y docentes en instancias pequenas para mantener la presion combinatoria
     num_profs_instancia = 15 if len(niveles_objetivo) < 3 else NUM_PROFESORES
     num_salones_instancia = 20 if len(niveles_objetivo) < 3 else NUM_SALONES_FISICOS
 
