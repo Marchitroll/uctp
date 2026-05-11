@@ -454,11 +454,11 @@ if __name__ == '__main__':
         ['id_profesor', 'nombre']
     )
     write_csv(
-        os.path.join(OUTPUT_DIR, 'professors_availability.csv'), disponibilidad,
+        os.path.join(OUTPUT_DIR, 'profesores_disponibilidad.csv'), disponibilidad,
         ['id_profesor', 'dia', 'franja_inicio', 'franja_fin']
     )
     write_csv(
-        os.path.join(OUTPUT_DIR, 'rooms.csv'), rooms,
+        os.path.join(OUTPUT_DIR, 'salones.csv'), rooms,
         ['id_salon', 'capacidad', 'es_virtual', 'caracteristicas']
     )
     write_csv(
