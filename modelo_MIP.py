@@ -177,7 +177,7 @@ def load_prof_availability(filepath, P, T):
 D, T, T_d, d_jue, Almuerzo = load_config('dataset/config.json')
 
 # Salones
-R, CAP, ES_VIRTUAL, CARACTERISTICAS = load_rooms_data('dataset/rooms.csv')
+R, CAP, ES_VIRTUAL, CARACTERISTICAS = load_rooms_data('dataset/salones.csv')
 
 # Cursos y sus requisitos
 CURSOS, REQ_CURSO = load_cursos('dataset/cursos.csv')
@@ -195,7 +195,7 @@ P = list(E_p.keys())
 K, E_k = load_curriculos('dataset/curriculos.csv', 'dataset/curriculo_evento.csv')
 
 # Disponibilidad de profesores
-Disp = load_prof_availability('dataset/professors_availability.csv', P, T)
+Disp = load_prof_availability('dataset/profesores_disponibilidad.csv', P, T)
 
 # Conjunto de caracteristicas (union de cursos y salones)
 F = sorted(
