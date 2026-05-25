@@ -91,10 +91,10 @@ Garantiza que un docente no se cruce de horarios y que solo se le programen clas
 
 $$ \sum_{\substack{e \in E_p, r \in R \\ (e,r,t) \in Valid\_ERT}} x_{e,r,t} \leq Disp_{p,t} \quad \forall p \in P,\; \forall t \in T $$
 
-### 2. No colisión por currículo (rutas sugeridas)
-Garantiza que los eventos pertenecientes a una misma ruta académica no se traslapen.
+### 2. Carga diaria máxima del profesor
+Garantiza que ningún profesor trabaje más de un máximo de 8 horas diarias de clase en cualquier día $d \in D$.
 
-$$ \sum_{\substack{e \in E_k, r \in R \\ (e,r,t) \in Valid\_ERT}} x_{e,r,t} \leq 1 \quad \forall k \in K,\; \forall t \in T $$
+$$ \sum_{\substack{e \in E_p, r \in R \\ t \in T_d \\ (e,r,t) \in Valid\_ERT}} x_{e,r,t} \leq 8 \quad \forall p \in P,\; \forall d \in D $$
 
 ### 3. Cobertura total de eventos
 Fuerza a que cada evento sea programado exactamente la cantidad de franjas requeridas por su duración.
@@ -129,6 +129,17 @@ $$ \sum_{\substack{e \in c, r \in R, t \in T_{d_i} \\ (e,r,t) \in Valid\_ERT}} y
 Fija a cero la variable de inicio si el tiempo restante en el día es estrictamente menor a la duración del evento.
 
 $$ y_{e,r,t} = 0 \quad \forall d \in D,\; \forall (e,r,t) \in Valid\_ERT \mid t \in T_d \land t > \max(T_d) - Dur_e + 1 $$
+
+### 9. Oferta global de secciones sin conflicto
+Garantiza que para cada currículo $k \in K$ y cada curso obligatorio $c$, exista al menos una sección $s \in S_c$ completamente libre de conflictos con cualquier otro evento obligatorio externo $e' \in E_k \setminus E_c$ del mismo currículo.
+
+Se define la variable binaria auxiliar de conflicto $\text{conflicto}_{s, e'} \in \{0, 1\}$, la cual se acopla de manera lineal directa:
+
+$$ \text{conflicto}_{s, e'} \geq \sum_{\substack{r \in R \\ (e,r,t) \in Valid\_ERT}} x_{e,r,t} + \sum_{\substack{r' \in R \\ (e',r',t) \in Valid\_ERT}} x_{e',r',t} - 1 \quad \forall e \in E_s,\; \forall t \in T $$
+
+Y se impone la restricción de exclusión de matrícula viable:
+
+$$ \sum_{s \in S_c} \text{conflicto}_{s, e'} \leq |S_c| - 1 \quad \forall k \in K,\; \forall c \in C_k,\; \forall e' \in E_k \setminus E_c $$
 
 ## Restricciones blandas
 

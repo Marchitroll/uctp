@@ -127,7 +127,16 @@ NUM_SALONES_CON_PC = 60
 NUM_SALONES_DEEP_LEARNING = 1       
 CAPACIDAD_SALON_FISICO = 40
 CAPACIDAD_VIRTUAL = 99999
-ALUMNOS_POR_SECCION = (25, 40)     # rango (min, max)
+LIMITE_HORAS_SEMANAL = 48
+MIN_DIAS_PROFESOR = 4
+PESOS_TURNOS = [30, 30, 40]
+UMBRAL_COMPLETO_FRANJAS = 8
+FRACCION_BLOQUE_TURNO = 0.7
+LETRAS_SECCIONES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+PROFES_PEQ_INSTANCIA = 15
+SALONES_PEQ_INSTANCIA = 20
+RATIO_SALONES_CON_PC = 0.6
+ALUMNOS_POR_SECCION = (25, 40)
 CARACTERISTICAS_POSIBLES = ['mesa', 'pc', 'deep_learning']
 
 SEED = 50
@@ -177,7 +186,7 @@ def generate_cursos(malla, electivos):
 def generate_secciones(cursos, secciones_rango, alumnos_rango):
     """Genera secciones para cada curso."""
     secciones = []
-    letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    letras = LETRAS_SECCIONES
     for curso in cursos:
         num_secciones = random.randint(*secciones_rango)
         for j in range(num_secciones):
@@ -200,29 +209,44 @@ def generate_profesores(num_profesores):
 def generate_eventos(secciones, profesores, eventos_rango, duraciones):
     """
     Genera eventos para cada seccion, garantizando que un unico profesor 
-    sea asignado a todos los eventos de la misma seccion.
+    sea asignado a todos los eventos de la misma seccion y respetando 
+    un limite maximo de carga horaria semanal para evitar infactibilidades.
     """
     eventos = []
     id_evento = 1
-    prof_index = 0
-    num_profs = len(profesores)
+    
+    # Llevar el control de horas asignadas a cada profesor
+    horas_prof = {p['id_profesor']: 0 for p in profesores}
 
     for seccion in secciones:
-        # Garantizar que todos los eventos de una misma seccion compartan al mismo docente
-        profesor_asignado = profesores[prof_index % num_profs]['id_profesor']
-        
         num_eventos = random.randint(*eventos_rango)
-        for _ in range(num_eventos):
+        # Generar las duraciones tentativas para esta seccion
+        duraciones_seccion = [random.choice(duraciones) for _ in range(num_eventos)]
+        total_horas_seccion = sum(duraciones_seccion)
+        
+        # Encontrar profesores elegibles (que no superen el limite de horas semanales)
+        profesores_elegibles = [
+            p['id_profesor'] for p in profesores 
+            if horas_prof[p['id_profesor']] + total_horas_seccion <= LIMITE_HORAS_SEMANAL
+        ]
+        
+        # Si no hay ninguno elegible (caso extremo), usamos cualquiera con la menor carga
+        if not profesores_elegibles:
+            profesor_asignado = min(horas_prof, key=horas_prof.get)
+        else:
+            # Seleccionar el profesor elegible con menor carga actual para balancear
+            profesor_asignado = min(profesores_elegibles, key=lambda p: horas_prof[p])
+            
+        horas_prof[profesor_asignado] += total_horas_seccion
+        
+        for duracion in duraciones_seccion:
             eventos.append({
                 'id_evento': id_evento,
                 'id_seccion': seccion['id_seccion'],
-                'id_profesor': profesor_asignado, # Se mantiene el mismo profesor
-                'duracion': random.choice(duraciones)
+                'id_profesor': profesor_asignado,
+                'duracion': duracion
             })
             id_evento += 1
-        
-        # Desplazar el iterador rotativo para diversificar la asignacion docente
-        prof_index += 1
 
     return eventos
 
@@ -286,7 +310,11 @@ def generate_curriculos(malla, electivos, secciones, eventos):
 
 
 def generate_disponibilidad(profesores, config):
-    """Construye las franjas de disponibilidad temporal para el cuerpo docente."""
+    """
+    Construye las franjas de disponibilidad temporal para el cuerpo docente.
+    Para que sea más realista, los profesores no están disponibles todo el día siempre.
+    Se definen turnos: Mañana (primera mitad), Tarde/Noche (segunda mitad) o Completo.
+    """
     disponibilidad = []
     dias = config['dias']
     dia_cierre = config['dia_cierre']
@@ -306,8 +334,9 @@ def generate_disponibilidad(profesores, config):
     dias_habiles = [d for d in dias if d != dia_cierre]
 
     for prof in profesores:
-        # Asignar un subconjunto aleatorio de dias habiles (entre 3 y 4) a cada docente
-        num_dias = random.randint(3, min(4, len(dias_habiles)))
+        # Asignar un subconjunto aleatorio de dias habiles (entre 4 y 5) a cada docente para asegurar
+        # la factibilidad matematica de la regla de espaciado no consecutivo.
+        num_dias = random.randint(MIN_DIAS_PROFESOR, len(dias_habiles))
         dias_disponibles = random.sample(dias_habiles, k=num_dias)
 
         # Incluir por defecto el dia designado para la modalidad virtual (dia de cierre)
@@ -317,12 +346,28 @@ def generate_disponibilidad(profesores, config):
             base = base_dia[dia]
             n = fpd[dia]
 
-            # Generar el bloque temporal abarcando la totalidad de franjas correspondientes al dia
+            # Si es el día de cierre virtual o tiene pocas franjas, se asigna completo
+            if dia == dia_cierre or n <= UMBRAL_COMPLETO_FRANJAS:
+                turno = 'completo'
+            else:
+                # Usar pesos configurables para seleccionar turno
+                turno = random.choices(['mañana', 'tarde', 'completo'], weights=PESOS_TURNOS, k=1)[0]
+
+            if turno == 'mañana':
+                franja_inicio = base
+                franja_fin = base + int(n * FRACCION_BLOQUE_TURNO) - 1
+            elif turno == 'tarde':
+                franja_inicio = base + n - int(n * FRACCION_BLOQUE_TURNO)
+                franja_fin = base + n - 1
+            else:  # completo
+                franja_inicio = base
+                franja_fin = base + n - 1
+
             disponibilidad.append({
                 'id_profesor': prof['id_profesor'],
                 'dia': dia,
-                'franja_inicio': base,
-                'franja_fin': base + n - 1
+                'franja_inicio': franja_inicio,
+                'franja_fin': franja_fin
             })
 
     return disponibilidad
@@ -410,8 +455,8 @@ if __name__ == '__main__':
 
     # 3. ESCALAMIENTO PROPORCIONAL DE RECURSOS INFRAESTRUCTURALES Y HUMANOS
     # Restringir salones y docentes en instancias pequenas para mantener la presion combinatoria
-    num_profs_instancia = 15 if len(niveles_objetivo) < 3 else NUM_PROFESORES
-    num_salones_instancia = 20 if len(niveles_objetivo) < 3 else NUM_SALONES_FISICOS
+    num_profs_instancia = PROFES_PEQ_INSTANCIA if len(niveles_objetivo) < 3 else NUM_PROFESORES
+    num_salones_instancia = SALONES_PEQ_INSTANCIA if len(niveles_objetivo) < 3 else NUM_SALONES_FISICOS
 
     config = load_config(os.path.join(OUTPUT_DIR, 'config.json'))
     print(f"[INFO] Generando instancia para niveles: {niveles_objetivo}")
@@ -428,7 +473,7 @@ if __name__ == '__main__':
     disponibilidad = generate_disponibilidad(profesores, config)
     rooms = generate_rooms(
         num_salones_instancia, 
-        int(num_salones_instancia * 0.6), # Mantener ratio de PCs
+        int(num_salones_instancia * RATIO_SALONES_CON_PC), # Mantener ratio de PCs
         NUM_SALONES_DEEP_LEARNING, 
         CAPACIDAD_SALON_FISICO, 
         CAPACIDAD_VIRTUAL,

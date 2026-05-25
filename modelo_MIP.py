@@ -268,6 +268,32 @@ w = {
 # P_almuerzo: penalizacion por clases en horario de almuerzo
 P_almuerzo = model.add_var(name="P_almuerzo", var_type=INTEGER, lb=0)
 
+# conflicto[s, e_other]: variable binaria auxiliar para la oferta global de secciones sin conflicto
+conflicto = {}
+for k in K:
+    curso_secciones_k = {}
+    curso_eventos_k = {}
+    for e in E_k[k]:
+        s = EVENTO_SECCION[e]
+        c = SECCION_CURSO[s]
+        if c not in curso_secciones_k:
+            curso_secciones_k[c] = set()
+        if c not in curso_eventos_k:
+            curso_eventos_k[c] = []
+        curso_secciones_k[c].add(s)
+        curso_eventos_k[c].append(e)
+
+    for c, S_c in curso_secciones_k.items():
+        for c_other, E_other in curso_eventos_k.items():
+            if c_other != c:
+                for e_other in E_other:
+                    for s in S_c:
+                        if (s, e_other) not in conflicto:
+                            conflicto[(s, e_other)] = model.add_var(
+                                name=f"conflicto_{s}_{e_other}", 
+                                var_type=BINARY
+                            )
+
 print("[INFO] Inicializacion completa: conjuntos, parametros y variables.")
 print(f"       E={len(E)} eventos | R={len(R)} salones | T={len(T)} franjas | P={len(P)} profesores")
 
@@ -282,12 +308,20 @@ for p in P:
         model += suma_clases_profesor <= Disp[p, t], f"DispProf_{p}_franja_{t}"
 
 # ============================================================================
-# 2. No colision de estudiantes por curriculo
+# 2. Carga diaria maxima del profesor (maximo 8 horas de clase por dia)
 # ============================================================================
-for k in K:
-    for t in T:
-        suma_clases_curriculo = xsum(x[e, r, t] for e in E_k[k] for r in R if (e, r, t) in x)
-        model += suma_clases_curriculo <= 1, f"NoColis_Curriculo_{k}_franja_{t}"
+MAX_HORAS_DIARIAS = 8
+for p in P:
+    for d in D:
+        # Sumar todas las franjas asignadas al profesor p durante el dia d
+        suma_clases_diarias = xsum(
+            x[e, r, t] 
+            for e in E_p[p] 
+            for r in R 
+            for t in T_d[d] 
+            if (e, r, t) in x
+        )
+        model += suma_clases_diarias <= MAX_HORAS_DIARIAS, f"MaxHorasDiarias_{p}_{d}"
 
 # ============================================================================
 # 3. Cobertura total de eventos
@@ -363,6 +397,41 @@ for d in D:
                     # Bloquear instantes de inicio que provocarian que el evento sobrepase el final del dia
                     if (e, r, t) in y:
                         model += y[e, r, t] == 0, f"Desborde_d{d}_e{e}_r{r}_t{t}"
+
+# ============================================================================
+# 9. Oferta global de secciones sin conflicto
+# ============================================================================
+# A. Acoplamiento directo de las variables de conflicto
+for (s, e_other), var_conf in conflicto.items():
+    for e in E_s[s]:
+        for t in T:
+            # Encontrar si ambos eventos tienen variables x instanciadas en la franja t
+            has_e = any((e, r, t) in x for r in R)
+            has_e_other = any((e_other, r_prime, t) in x for r_prime in R)
+            if has_e and has_e_other:
+                suma_e = xsum(x[e, r, t] for r in R if (e, r, t) in x)
+                suma_e_other = xsum(x[e_other, r_prime, t] for r_prime in R if (e_other, r_prime, t) in x)
+                model += var_conf >= suma_e + suma_e_other - 1, f"AcopConf_{s}_{e}_{e_other}_t{t}"
+
+# B. Restricción principal: Al menos una sección libre de conflicto con cada evento externo
+for k in K:
+    curso_secciones_k = {}
+    curso_eventos_k = {}
+    for e in E_k[k]:
+        s = EVENTO_SECCION[e]
+        c = SECCION_CURSO[s]
+        if c not in curso_secciones_k:
+            curso_secciones_k[c] = set()
+        if c not in curso_eventos_k:
+            curso_eventos_k[c] = []
+        curso_secciones_k[c].add(s)
+        curso_eventos_k[c].append(e)
+
+    for c, S_c in curso_secciones_k.items():
+        for c_other, E_other in curso_eventos_k.items():
+            if c_other != c:
+                for e_other in E_other:
+                    model += xsum(conflicto[(s, e_other)] for s in S_c) <= len(S_c) - 1, f"OfertaGlobal_{k}_{c}_{e_other}"
 
 # ============================================================================
 # RESTRICCIONES BLANDAS Y FUNCION OBJETIVO
