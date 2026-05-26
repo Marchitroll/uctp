@@ -9,6 +9,7 @@ import csv
 import json
 import random
 import os
+import argparse
 
 # ============================================================================
 # MALLA CURRICULAR OBLIGATORIA (Niveles del 03 al 10)
@@ -447,29 +448,26 @@ def write_csv(filepath, data, fieldnames):
 if __name__ == '__main__':
     random.seed(SEED)
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-    # ========================================================================
-    # DIRECTRICES PARA LA SELECCIÓN DEL ESCENARIO DE PRUEBA:
-    # 
-    # Para cambiar la escala de la instancia del problema y generar los
-    # diferentes escenarios evaluados, se debe modificar la rebanada (slice)
-    # aplicada a la variable 'niveles_objetivo' de acuerdo con las siguientes opciones:
-    #
-    # A) ESCENARIO PEQUEÑO (1 Currículo / Ruta académica única):
-    #    Ideal para validaciones rápidas, pruebas de concepto y depuración rápida.
-    #    Configuración: niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:1]
-    #
-    # B) ESCENARIO MEDIANO (5 Currículos consecutivos - Por defecto):
-    #    Representa un escenario intermedio con un nivel de complejidad moderado.
-    #    Configuración: niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:5]
-    #
-    # C) ESCENARIO GRANDE (Todos los Currículos / 8 Rutas académicas):
-    #    Consiste en la representación institucional a escala completa para pruebas de estrés.
-    #    Configuración: niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())
-    # ========================================================================
     
     # 1. SELECCIÓN DE NIVELES CURRICULARES (Establece el tamaño del problema)
-    niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:1]
+    
+    parser = argparse.ArgumentParser(description="Generador de datasets UCTP")
+    parser.add_argument(
+        "--instancia",
+        type=str,
+        choices=["pequena", "pequeña", "mediana", "grande"],
+        default="pequena",
+        help="Escala del escenario a generar (pequena, mediana, grande)"
+    )
+    args = parser.parse_args()
+
+    instancia = args.instancia.lower()
+    if instancia in ["pequena", "pequeña"]:
+        niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:1]
+    elif instancia == "mediana":
+        niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:5]
+    else:
+        niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())
     
     # 2. FILTRADO DE LA MALLA CURRICULAR Y DE LAS ASIGNATURAS ELECTIVAS ELEGIBLES
     malla_reducida = {k: v for k, v in MALLA_OBLIGATORIA.items() if k in niveles_objetivo}

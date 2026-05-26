@@ -2,6 +2,35 @@ from mip import Model, BINARY, INTEGER, xsum, minimize
 import time
 from exportador_horarios import imprimir_metricas, exportar_horarios
 from cargador_datos import cargar_datos_uctp
+import argparse
+
+# ============================================================================
+# PARSEO DE ARGUMENTOS (Se realiza al inicio para interceptar -h/--help inmediatamente)
+# ============================================================================
+parser = argparse.ArgumentParser(description="Optimizador MIP para UCTP")
+group = parser.add_mutually_exclusive_group()
+group.add_argument(
+    "--horas", "-hr",
+    type=float,
+    help="Tiempo maximo de optimizacion en horas"
+)
+group.add_argument(
+    "--minutos", "-min",
+    type=float,
+    help="Tiempo maximo de optimizacion en minutos"
+)
+args = parser.parse_args()
+
+if args.horas is not None:
+    max_seconds = int(args.horas * 3600)
+    tiempo_desc = f"{args.horas} horas"
+elif args.minutos is not None:
+    max_seconds = int(args.minutos * 60)
+    tiempo_desc = f"{args.minutos} minutos"
+else:
+    max_seconds = 3600
+    tiempo_desc = "1.0 horas (por defecto)"
+
 
 # ============================================================================
 # CARGA DE CONJUNTOS Y PARÁMETROS DESDE EL MÓDULO EXTRACCIÓN
@@ -232,16 +261,17 @@ model += P_almuerzo == xsum(
 model.objective = minimize(P_almuerzo)
 
 if __name__ == '__main__':
+
     model.write("UCTP_Universidad.lp")
     print("[INFO] Archivo LP generado exitosamente.")
 
     model.verbose = 2
 
-    print("[INFO] Iniciando el proceso de optimizacion (maximo 2 horas)...")
+    print(f"[INFO] Iniciando el proceso de optimizacion (maximo {tiempo_desc} / {max_seconds} segundos)...")
     
     # Registra la estampa de tiempo inicial para medir la duración total del proceso de optimización
     start_time = time.time()
-    status = model.optimize(max_seconds=7200)
+    status = model.optimize(max_seconds=max_seconds)
     cpu_time = time.time() - start_time
 
     # Verifica si el optimizador ha encontrado al menos una solución factible antes de extraer los resultados

@@ -1,0 +1,16 @@
+,lunes,martes,miercoles,jueves,viernes,sabado
+7:00 - 8:00,---,Sist_Organizacionales (Sist_Organizacionales_B) [salon_18] | Intro_Programacion (Intro_Programacion_A) [salon_9],---,---,Calculo_II (Calculo_II_A) [salon_17],Sist_Organizacionales (Sist_Organizacionales_B) [salon_18]
+8:00 - 9:00,IA_Aplicada (IA_Aplicada_B) [salon_8],Sist_Organizacionales (Sist_Organizacionales_B) [salon_18] | Intro_Programacion (Intro_Programacion_A) [salon_9],---,---,Calculo_II (Calculo_II_A) [salon_17],Sist_Organizacionales (Sist_Organizacionales_B) [salon_18]
+9:00 - 10:00,Fisica_Sistemas (Fisica_Sistemas_A) [salon_5] | IA_Aplicada (IA_Aplicada_B) [salon_8],Sist_Organizacionales (Sist_Organizacionales_B) [salon_18] | Intro_Programacion (Intro_Programacion_A) [salon_9],---,IA_Aplicada (IA_Aplicada_B) [r_virtual],Calculo_II (Calculo_II_A) [salon_17] | Fisica_Sistemas (Fisica_Sistemas_A) [salon_5],Sist_Organizacionales (Sist_Organizacionales_B) [salon_18]
+10:00 - 11:00,Fisica_Sistemas (Fisica_Sistemas_A) [salon_5],---,---,IA_Aplicada (IA_Aplicada_B) [r_virtual],Fisica_Sistemas (Fisica_Sistemas_A) [salon_5],---
+11:00 - 12:00,Fisica_Sistemas (Fisica_Sistemas_A) [salon_5],---,---,IA_Aplicada (IA_Aplicada_B) [r_virtual],---,---
+12:00 - 13:00,---,---,---,---,---,Intro_Programacion (Intro_Programacion_A) [salon_9] | Estr_Discretas (Estr_Discretas_A) [salon_11] | IA_Aplicada (IA_Aplicada_B) [salon_8]
+13:00 - 14:00,---,---,---,---,---,Intro_Programacion (Intro_Programacion_A) [salon_9] | Estr_Discretas (Estr_Discretas_A) [salon_11] | IA_Aplicada (IA_Aplicada_B) [salon_8]
+14:00 - 15:00,---,Estr_Discretas (Estr_Discretas_A) [salon_11],---,---,---,---
+15:00 - 16:00,---,Estr_Discretas (Estr_Discretas_A) [salon_11],---,---,---,---
+16:00 - 17:00,Calculo_II (Calculo_II_A) [salon_17],Estr_Discretas (Estr_Discretas_A) [salon_11],Fisica_Sistemas (Fisica_Sistemas_A) [salon_5],---,---,---
+17:00 - 18:00,Calculo_II (Calculo_II_A) [salon_17],---,Fisica_Sistemas (Fisica_Sistemas_A) [salon_5],---,---,---
+18:00 - 19:00,---,---,---,---,---,---
+19:00 - 20:00,---,---,Calculo_II (Calculo_II_A) [salon_17],Intro_Programacion (Intro_Programacion_A) [r_virtual],---,---
+20:00 - 21:00,---,---,Calculo_II (Calculo_II_A) [salon_17],Intro_Programacion (Intro_Programacion_A) [r_virtual],---,---
+21:00 - 22:00,---,---,---,Intro_Programacion (Intro_Programacion_A) [r_virtual],---,---

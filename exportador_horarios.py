@@ -45,7 +45,7 @@ def imprimir_metricas(status, cpu_time, model):
     print("="*60 + "\n")
 
 
-def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, output_dir="horarios_por_camino"):
+def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, output_dir=None):
     """
     Genera archivos CSV de horario desagregados por currículo y por camino de matrícula.
     Para cada currículo, se construyen todas las combinaciones factibles de secciones
@@ -59,8 +59,16 @@ def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, output_d
         D               : Lista ordenada de días de la semana académica.
         EVENTO_SECCION  : Diccionario {evento: sección} para resolver la sección de cada evento.
         SECCION_CURSO   : Diccionario {sección: curso} para resolver el curso de cada sección.
-        output_dir      : Directorio raíz para almacenar los archivos CSV generados.
+        output_dir      : Directorio raíz para almacenar los archivos CSV generados (detectado dinámicamente si es None).
     """
+    if output_dir is None or output_dir == "horarios_por_camino":
+        if len(K) == 1:
+            output_dir = "horarios_pequena"
+        elif len(K) == 5:
+            output_dir = "horarios_mediana"
+        else:
+            output_dir = "horarios_grande"
+
     os.makedirs(output_dir, exist_ok=True)
 
     # Determina las etiquetas de los intervalos horarios basándose en el día con mayor cantidad de franjas
