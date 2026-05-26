@@ -469,7 +469,7 @@ if __name__ == '__main__':
     # ========================================================================
     
     # 1. SELECCIÓN DE NIVELES CURRICULARES (Establece el tamaño del problema)
-    niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:5]
+    niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:1]
     
     # 2. FILTRADO DE LA MALLA CURRICULAR Y DE LAS ASIGNATURAS ELECTIVAS ELEGIBLES
     malla_reducida = {k: v for k, v in MALLA_OBLIGATORIA.items() if k in niveles_objetivo}

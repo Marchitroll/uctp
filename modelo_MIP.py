@@ -1,228 +1,20 @@
 from mip import Model, BINARY, INTEGER, xsum, minimize
-import csv
-import json
-import pandas as pd
 import time
-import platform
-import psutil
-import mip
+from exportador_horarios import imprimir_metricas, exportar_horarios
+from cargador_datos import cargar_datos_uctp
 
 # ============================================================================
-# FUNCIONES DE CARGA DE DATOS
+# CARGA DE CONJUNTOS Y PARÁMETROS DESDE EL MÓDULO EXTRACCIÓN
 # ============================================================================
-
-def load_config(filepath):
-    """
-    Carga los parámetros institucionales desde un archivo JSON y deriva los conjuntos D, T, T_d, d_jue y Almuerzo.
-    Soporta franjas heterogéneas, donde cada día puede tener un número diferente de franjas.
-    """
-    with open(filepath, 'r', encoding='utf-8') as f:
-        cfg = json.load(f)
-
-    D = cfg['dias']
-    d_jue = cfg['dia_cierre']
-    pos_almuerzo = cfg['posicion_almuerzo']
-    dias_sin_almuerzo = set(cfg.get('dias_sin_almuerzo', []))
-
-    # El parámetro franjas_por_dia puede ser un diccionario {dia: n} o un entero uniforme
-    fpd_raw = cfg['franjas_por_dia']
-    if isinstance(fpd_raw, dict):
-        fpd = fpd_raw          # Asocia a cada día su respectivo número de franjas
-    else:
-        fpd = {dia: fpd_raw for dia in D}   # Mantiene la compatibilidad con versiones anteriores
-
-    # Construye el conjunto T_d acumulando las franjas de cada día secuencialmente
-    T_d = {}
-    cursor = 1
-    for dia in D:
-        n = fpd[dia]
-        T_d[dia] = list(range(cursor, cursor + n))
-        cursor += n
-
-    # Representa el conjunto global de todas las franjas horarias
-    T = list(range(1, cursor))
-
-    # Define el horario de almuerzo según la posición pos_almuerzo dentro de cada día (índice base 1)
-    almuerzo_set = set()
-    for dia in D:
-        if dia in dias_sin_almuerzo:
-            continue
-        slots = T_d[dia]
-        if pos_almuerzo <= len(slots):
-            almuerzo_set.add(slots[pos_almuerzo - 1])
-    Almuerzo = {t: (1 if t in almuerzo_set else 0) for t in T}
-
-    return D, T, T_d, d_jue, Almuerzo
-
-
-def load_rooms_data(filepath):
-    """
-    Carga los datos de los salones desde un archivo CSV y retorna R, CAP, ES_VIRTUAL y CARACTERISTICAS.
-    """
-    R = []
-    CAP = {}
-    ES_VIRTUAL = {}
-    CARACTERISTICAS = {}
-    with open(filepath, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            r = row['id_salon'].strip()
-            R.append(r)
-            CAP[r] = int(row['capacidad'])
-            ES_VIRTUAL[r] = row['es_virtual'].strip().lower() == 'true'
-            CARACTERISTICAS[r] = [c.strip() for c in row['caracteristicas'].split(',')] if row['caracteristicas'].strip() else []
-    return R, CAP, ES_VIRTUAL, CARACTERISTICAS
-
-
-def load_cursos(filepath):
-    """
-    Carga los datos de los cursos y sus requisitos de infraestructura asociados.
-    """
-    CURSOS = []
-    REQ_CURSO = {}
-    with open(filepath, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            id_curso = row['id_curso'].strip()
-            CURSOS.append(id_curso)
-            reqs = row['requisitos'].strip()
-            REQ_CURSO[id_curso] = [r.strip() for r in reqs.split(',')] if reqs else []
-    return CURSOS, REQ_CURSO
-
-
-def load_secciones(filepath):
-    """
-    Carga las secciones académicas y retorna S, el mapeo seccion->curso y el número de alumnos por sección.
-    """
-    S = []
-    SECCION_CURSO = {}
-    Alumno = {}
-    with open(filepath, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            s = row['id_seccion'].strip()
-            S.append(s)
-            SECCION_CURSO[s] = row['id_curso'].strip()
-            Alumno[s] = int(row['num_alumnos'])
-    return S, SECCION_CURSO, Alumno
-
-
-def load_eventos(filepath):
-    """
-    Carga los eventos de clase y retorna E, E_s, E_p, Dur y el mapeo evento->seccion.
-    """
-    E = []
-    E_s = {}
-    E_p = {}
-    Dur = {}
-    EVENTO_SECCION = {}
-    with open(filepath, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            e = int(row['id_evento'])
-            s = row['id_seccion'].strip()
-            p = row['id_profesor'].strip()
-            d = int(row['duracion'])
-
-            E.append(e)
-            Dur[e] = d
-            EVENTO_SECCION[e] = s
-
-            # Agrupa los eventos correspondientes a cada sección
-            if s not in E_s:
-                E_s[s] = []
-            E_s[s].append(e)
-
-            # Agrupa los eventos correspondientes a cada profesor
-            if p not in E_p:
-                E_p[p] = []
-            E_p[p].append(e)
-
-    return E, E_s, E_p, Dur, EVENTO_SECCION
-
-
-def load_curriculos(curriculos_path, bridge_path):
-    """
-    Carga los currículos académicos y la tabla puente, y retorna K y E_k.
-    """
-    K = []
-    with open(curriculos_path, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            K.append(row['id_curriculo'].strip())
-
-    E_k = {k: [] for k in K}
-    with open(bridge_path, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            k = row['id_curriculo'].strip()
-            e = int(row['id_evento'])
-            if k in E_k:
-                E_k[k].append(e)
-
-    return K, E_k
-
-
-def load_prof_availability(filepath, P, T):
-    """
-    Carga la disponibilidad horaria de los profesores y retorna la matriz binaria Disp.
-    """
-    Disp = {(p, t): 0 for p in P for t in T}
-    with open(filepath, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            p = row['id_profesor'].strip()
-            if p in P:
-                f_inicio = int(row['franja_inicio'])
-                f_fin = int(row['franja_fin'])
-                for t in range(f_inicio, f_fin + 1):
-                    if t in T:
-                        Disp[(p, t)] = 1
-    return Disp
-
-
-# ============================================================================
-# CARGA DE CONJUNTOS Y PARÁMETROS DESDE ARCHIVOS
-# ============================================================================
-
-# Carga la configuración institucional general
-D, T, T_d, d_jue, Almuerzo = load_config('dataset/config.json')
-
-# Carga la información de los salones disponibles
-R, CAP, ES_VIRTUAL, CARACTERISTICAS = load_rooms_data('dataset/salones.csv')
-
-# Carga la información de los cursos y sus requisitos de infraestructura
-CURSOS, REQ_CURSO = load_cursos('dataset/cursos.csv')
-
-# Carga las secciones académicas registradas
-S, SECCION_CURSO, Alumno = load_secciones('dataset/secciones.csv')
-
-# Carga los eventos de clase (de los cuales se derivan los conjuntos E, E_s, E_p y las duraciones Dur)
-E, E_s, E_p, Dur, EVENTO_SECCION = load_eventos('dataset/eventos.csv')
-
-# Obtiene el conjunto de profesores activos a partir de los eventos cargados
-P = list(E_p.keys())
-
-# Carga la estructura de currículos académicos y su relación con los eventos
-K, E_k = load_curriculos('dataset/curriculos.csv', 'dataset/curriculo_evento.csv')
-
-# Carga la disponibilidad horaria específica de cada profesor
-Disp = load_prof_availability('dataset/profesores_disponibilidad.csv', P, T)
-
-# Define el conjunto general de características requeridas o poseídas (unión de cursos y salones)
-F = sorted(
-    set(f for carac in CARACTERISTICAS.values() for f in carac if f)
-    | set(f for reqs in REQ_CURSO.values() for f in reqs if f)
-)
-
-# Define el parámetro binario Tiene[r,f], que indica si el salón r cuenta con la característica f
-Tiene = {(r, f): 1 if f in CARACTERISTICAS[r] else 0 for r in R for f in F}
-
-# Define el parámetro binario Req[s,f], el cual se hereda del curso asignado a la sección
-Req = {(s, f): 1 if f in REQ_CURSO[SECCION_CURSO[s]] else 0 for s in S for f in F}
-
-# Agrupa los eventos por sección para su posterior uso en las restricciones de espaciado
-Cursos_Agrupados = list(E_s.values())
+(
+    D, T, T_d, d_jue, Almuerzo,
+    R, CAP, ES_VIRTUAL, CARACTERISTICAS,
+    CURSOS, REQ_CURSO,
+    S, SECCION_CURSO, Alumno,
+    E, E_s, E_p, Dur, EVENTO_SECCION,
+    P, K, E_k, Disp,
+    F, Tiene, Req, Cursos_Agrupados
+) = cargar_datos_uctp()
 
 
 # ============================================================================
@@ -454,55 +246,8 @@ if __name__ == '__main__':
 
     # Verifica si el optimizador ha encontrado al menos una solución factible antes de extraer los resultados
     if model.num_solutions > 0:
-        
-        # Recupera el valor óptimo de la función objetivo y la cota inferior alcanzados por el resolutor
-        bestcost = model.objective_value
-        lowerbound = model.objective_bound
-        epsilon = 1e-10
-        
-        # Calcula la brecha de optimalidad (MIP Gap) previniendo posibles divisiones por cero
-        gap_pct = ((bestcost - lowerbound) / (abs(bestcost) + epsilon)) * 100
-
-        print("\n" + "="*60)
-        print(" [TRAZABILIDAD DEL ENTORNO]")
-        print("="*60)
-        print(f" Sistema Operativo : {platform.system()} {platform.release()}")
-        print(f" Procesador        : {platform.processor()}")
-        print(f" RAM Disponible    : {round(psutil.virtual_memory().total / (1024.0 **3), 2)} GB")
-        print(f" Version Python    : {platform.python_version()}")
-        print(f" Version Python-MIP: {mip.__version__}")
-
-        print("\n" + "="*60)
-        print(" [METRICAS DE EVALUACION]")
-        print("="*60)
-        print(f" Estado Final (Status) : {status.name if hasattr(status, 'name') else status}")
-        print(f" Tiempo de Procesamiento : {cpu_time:.2f} segundos")
-        print(f" Valor Funcion Objetivo (Z) : {bestcost}")
-        print(f" Limite Inferior (LB) : {lowerbound}")
-        print(f" Gap de Optimalidad (MIP) : {gap_pct:.4f} %")
-        print("="*60 + "\n")
-
-        # Determina las etiquetas de los intervalos horarios basándose en el día que contenga la mayor cantidad de franjas
-        max_slots = max(len(slots) for slots in T_d.values())
-        horas_labels = [f"{7+i}:00 - {8+i}:00" for i in range(max_slots)]
-        
-        # Organiza los resultados en una matriz de datos bidimensional para representar el horario de forma estructurada
-        schedule_matrix = pd.DataFrame("---", index=horas_labels, columns=D)
-
-        # Recorre el diccionario de variables asignadas para identificar aquellas que se encuentran activas en la solución óptima
-        for (e, r, t), var in x.items():
-            if var.x >= 0.99:
-                dia_actual = next(d for d, slots in T_d.items() if t in slots)
-                slot_local = T_d[dia_actual].index(t)
-                
-                seccion = EVENTO_SECCION[e]
-                curso = SECCION_CURSO[seccion]
-                
-                # Inserta el evento en la celda correspondiente cruzando el intervalo horario con el día asignado
-                schedule_matrix.at[horas_labels[slot_local], dia_actual] = f"{curso} ({seccion}) [{r}]"
-
-        schedule_matrix.to_csv("horario.csv")
-        print("[INFO] Matriz exportada a 'horario.csv'.")
+        imprimir_metricas(status, cpu_time, model)
+        exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO)
     else:
         print(f"\n[ALERTA] No se encontro ninguna solucion factible. Estado final: {status.name if hasattr(status, 'name') else status}")
         print(f"[INFO] Tiempo de Procesamiento invertido: {cpu_time:.2f} segundos")
