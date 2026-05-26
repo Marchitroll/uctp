@@ -443,8 +443,8 @@ if __name__ == '__main__':
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     # 1. SELECCION DE NIVELES CURRICULARES (Ajustar la lista para escalar el tamaño del problema)
-    # Ejemplo: ['Nivel_03'] o ['Nivel_03', 'Nivel_04', 'Nivel_05']
-    niveles_objetivo = ['Nivel_03'] 
+    # Escenario por defecto: 5 niveles consecutivos desde Nivel_03
+    niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:5]
     
     # 2. FILTRADO DE MALLA
     malla_reducida = {k: v for k, v in MALLA_OBLIGATORIA.items() if k in niveles_objetivo}
@@ -455,8 +455,8 @@ if __name__ == '__main__':
 
     # 3. ESCALAMIENTO PROPORCIONAL DE RECURSOS INFRAESTRUCTURALES Y HUMANOS
     # Restringir salones y docentes en instancias pequenas para mantener la presion combinatoria
-    num_profs_instancia = PROFES_PEQ_INSTANCIA if len(niveles_objetivo) < 3 else NUM_PROFESORES
-    num_salones_instancia = SALONES_PEQ_INSTANCIA if len(niveles_objetivo) < 3 else NUM_SALONES_FISICOS
+    num_profs_instancia = PROFES_PEQ_INSTANCIA if len(niveles_objetivo) < 5 else NUM_PROFESORES
+    num_salones_instancia = SALONES_PEQ_INSTANCIA if len(niveles_objetivo) < 5 else NUM_SALONES_FISICOS
 
     config = load_config(os.path.join(OUTPUT_DIR, 'config.json'))
     print(f"[INFO] Generando instancia para niveles: {niveles_objetivo}")
