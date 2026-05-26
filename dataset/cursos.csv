@@ -1,5 +1,5 @@
 id_curso,nombre,requisitos
-IA_Aplicada,Inteligencia Artificial Aplicada,"mesa,pc,deep_learning"
+IA_Aplicada,Inteligencia Artificial Aplicada,"mesa,pc"
 Calculo_II,Calculo II,mesa
 Sist_Organizacionales,Sistemas Organizacionales,mesa
 Fisica_Sistemas,Fisica para Sistemas,mesa
@@ -26,7 +26,7 @@ Gestion_Financiera,Gestion Financiera,mesa
 Sist_Intel_Empresarial,Sistemas de Inteligencia Empresarial,"mesa,pc"
 Gestion_Operaciones,Gestion de Operaciones,mesa
 Ing_Software_I,Ingenieria de Software I,"mesa,pc"
-Machine_Learning,Aprendizaje de Maquina,"mesa,pc,deep_learning"
+Machine_Learning,Aprendizaje de Maquina,"mesa,pc"
 Ciberseguridad,Ciberseguridad,"mesa,pc"
 Paradigmas_Prog,Paradigmas de Programacion,"mesa,pc"
 IoT,Internet de las Cosas,"mesa,pc"

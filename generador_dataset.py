@@ -1,8 +1,8 @@
 """
-generate_dataset.py
-Genera los CSVs del esquema relacional para el UCTP.
-Los cursos provienen de la malla curricular real (Nivel 3-10).
-Los electivos se asignan a los niveles donde son elegibles segun prerrequisitos.
+generador_dataset.py
+Genera los archivos CSV correspondientes al esquema relacional para el problema de programación de horarios universitarios (UCTP).
+Las asignaturas obligatorias provienen del plan de estudios real (Nivel 03 al Nivel 10).
+Las asignaturas electivas se asignan a los niveles en los cuales resultan elegibles de acuerdo con la estructura de prerrequisitos establecida.
 """
 
 import csv
@@ -11,13 +11,14 @@ import random
 import os
 
 # ============================================================================
-# MALLA CURRICULAR OBLIGATORIA (Nivel 3 a Nivel 10)
-# Formato: (id_curso, nombre, requisitos_infraestructura)
+# MALLA CURRICULAR OBLIGATORIA (Niveles del 03 al 10)
+# Define la estructura de asignaturas obligatorias por cada nivel académico.
+# Estructura de la tupla: (id_curso, nombre, requisitos_infraestructura)
 # ============================================================================
 
 MALLA_OBLIGATORIA = {
     'Nivel_03': [
-        ('IA_Aplicada', 'Inteligencia Artificial Aplicada', 'mesa,pc,deep_learning'),
+        ('IA_Aplicada', 'Inteligencia Artificial Aplicada', 'mesa,pc'),
         ('Calculo_II', 'Calculo II', 'mesa'),
         ('Sist_Organizacionales', 'Sistemas Organizacionales', 'mesa'),
         ('Fisica_Sistemas', 'Fisica para Sistemas', 'mesa'),
@@ -52,7 +53,7 @@ MALLA_OBLIGATORIA = {
         ('Sist_Intel_Empresarial', 'Sistemas de Inteligencia Empresarial', 'mesa,pc'),
         ('Gestion_Operaciones', 'Gestion de Operaciones', 'mesa'),
         ('Ing_Software_I', 'Ingenieria de Software I', 'mesa,pc'),
-        ('Machine_Learning', 'Aprendizaje de Maquina', 'mesa,pc,deep_learning'),
+        ('Machine_Learning', 'Aprendizaje de Maquina', 'mesa,pc'),
         ('Ciberseguridad', 'Ciberseguridad', 'mesa,pc'),
     ],
     'Nivel_08': [
@@ -75,13 +76,15 @@ MALLA_OBLIGATORIA = {
 }
 
 # ============================================================================
-# ELECTIVOS DE ESPECIALIDAD
-# Formato: (id_curso, nombre, requisitos_infra, nivel_minimo)
-# nivel_minimo = primer nivel donde el estudiante puede cursarlo
+# CURSOS ELECTIVOS DE ESPECIALIDAD
+# Define los cursos electivos ofertados en la institución.
+# Estructura de la tupla: (id_curso, nombre, requisitos_infraestructura, nivel_minimo)
+# El parámetro nivel_minimo representa el nivel académico más temprano en el que 
+# un estudiante resulta elegible para cursar la asignatura.
 # ============================================================================
 
 ELECTIVOS = [
-    # Disponibles desde Nivel 6 (requieren haber culminado V Ciclo)
+    # Asignaturas disponibles a partir del Nivel 06 (requieren haber culminado el quinto ciclo):
     ('Paradigmas_Prog', 'Paradigmas de Programacion', 'mesa,pc', 6),
     ('IoT', 'Internet de las Cosas', 'mesa,pc', 6),
     ('Gestion_BD', 'Gestion de Base de Datos', 'mesa,pc', 6),
@@ -96,66 +99,68 @@ ELECTIVOS = [
     ('DevOps', 'DevOps', 'mesa,pc', 6),
     ('Arq_Software', 'Arquitectura de Software', 'mesa,pc', 6),
 
-    # Disponibles desde Nivel 7 (requieren curso de Nivel 6 o VI Ciclo)
+    # Asignaturas disponibles a partir del Nivel 07 (requieren un curso del Nivel 06 o haber culminado el sexto ciclo):
     ('Analisis_Algoritmos', 'Analisis y Diseno de Algoritmos', 'mesa,pc', 7),
     ('Redes_Avanzadas', 'Redes Avanzadas', 'mesa,pc', 7),
     ('Prog_Movil', 'Programacion Movil', 'mesa,pc', 7),
     ('Seg_Salud_Ocup', 'Seguridad Salud Ocupacional y Bienestar Organizacional', 'mesa', 7),
 
-    # Disponibles desde Nivel 8 (requieren curso de Nivel 7)
+    # Asignaturas disponibles a partir del Nivel 08 (requieren un curso del Nivel 07):
     ('Deep_Learning', 'Deep Learning', 'mesa,pc,deep_learning', 8),
     ('Topicos_Ciberseg', 'Topicos Avanzados en Ciberseguridad', 'mesa,pc', 8),
     ('Analitica_BigData', 'Analitica con Big Data', 'mesa,pc', 8),
 
-    # Disponibles desde Nivel 9 (requieren curso de Nivel 8)
+    # Asignaturas disponibles a partir del Nivel 09 (requieren un curso del Nivel 08):
     ('Proy_Desarrollo_SW', 'Proyecto de Desarrollo de Software', 'mesa,pc', 9),
 
-    # Disponibles desde Nivel 10 (requieren curso de Nivel 9)
+    # Asignaturas disponibles a partir del Nivel 10 (requieren un curso del Nivel 09):
     ('Arq_Empresarial', 'Arquitectura Empresarial', 'mesa', 10),
 ]
 
 # ============================================================================
-# PARAMETROS DE GENERACION (ajustar segun el escenario deseado)
+# PARÁMETROS DE GENERACIÓN DEL CONJUNTO DE DATOS
+# Define las constantes operativas, capacidades y límites para el generador.
 # ============================================================================
 
-SECCIONES_POR_CURSO = (1, 2)       # rango (min, max)
-EVENTOS_POR_SECCION = (2, 3)       # rango (min, max)
-DURACION_EVENTOS = [2, 3]          # valores posibles exclusivamente
-NUM_PROFESORES = 50                 
-NUM_SALONES_FISICOS = 100            
-NUM_SALONES_CON_PC = 60             
-NUM_SALONES_DEEP_LEARNING = 1       
-CAPACIDAD_SALON_FISICO = 40
-CAPACIDAD_VIRTUAL = 99999
-LIMITE_HORAS_SEMANAL = 48
-MIN_DIAS_PROFESOR = 4
-PESOS_TURNOS = [30, 30, 40]
-UMBRAL_COMPLETO_FRANJAS = 8
-FRACCION_BLOQUE_TURNO = 0.7
-LETRAS_SECCIONES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-PROFES_PEQ_INSTANCIA = 15
-SALONES_PEQ_INSTANCIA = 20
-RATIO_SALONES_CON_PC = 0.6
-ALUMNOS_POR_SECCION = (25, 40)
-CARACTERISTICAS_POSIBLES = ['mesa', 'pc', 'deep_learning']
+SECCIONES_POR_CURSO = (1, 2)       # Rango de secciones por curso (mínimo, máximo).
+EVENTOS_POR_SECCION = [2, 3]       # Valores permitidos de eventos de clase por sección.
+DURACION_EVENTOS = [2, 3]          # Valores permitidos de duración en horas por evento.
+NUM_PROFESORES = 50                 # Número total de profesores disponibles en la base de datos general.
+NUM_SALONES_FISICOS = 100            # Número total de salones físicos en la institución.
+NUM_SALONES_CON_PC = 60             # Subconjunto de salones equipados con computadoras personales.
+NUM_SALONES_DEEP_LEARNING = 1       # Subconjunto de salones equipados con infraestructura para aprendizaje profundo.
+CAPACIDAD_SALON_FISICO = 40        # Capacidad máxima de estudiantes admitidos en un salón físico.
+CAPACIDAD_VIRTUAL = 99999          # Capacidad virtual teóricamente ilimitada para sesiones no presenciales.
+LIMITE_HORAS_SEMANAL = 48          # Límite máximo de horas de carga lectiva semanal permitida para un profesor.
+MIN_DIAS_PROFESOR = 4              # Número mínimo de días en los que un profesor debe tener disponibilidad.
+PESOS_TURNOS = [30, 30, 40]        # Pesos para la asignación de turnos (mañana, tarde, completo).
+UMBRAL_COMPLETO_FRANJAS = 8        # Cantidad de franjas por debajo de la cual se fuerza la disponibilidad completa en el día.
+FRACCION_BLOQUE_TURNO = 0.7        # Proporción de la jornada que abarca un turno parcial (mañana o tarde).
+LETRAS_SECCIONES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' # Secuencia utilizada para la nomenclatura alfabética de secciones.
+PROFES_PEQ_INSTANCIA = 15          # Cantidad reducida de profesores asignada para escenarios de menor escala.
+SALONES_PEQ_INSTANCIA = 20         # Cantidad reducida de salones asignada para escenarios de menor escala.
+RATIO_SALONES_CON_PC = 0.6         # Proporción de salones físicos que disponen de computadoras personales.
+ALUMNOS_POR_SECCION = (25, 40)     # Rango de cantidad de estudiantes matriculados por sección.
+CARACTERISTICAS_POSIBLES = ['mesa', 'pc', 'deep_learning'] # Características de infraestructura reconocidas por el modelo.
 
-SEED = 50
-OUTPUT_DIR = 'dataset'
+SEED = 50                          # Semilla para garantizar la reproducibilidad de la generación de datos.
+OUTPUT_DIR = 'dataset'             # Directorio de destino para el almacenamiento de los archivos CSV generados.
 
 # ============================================================================
-# CARGA DE CONFIGURACION INSTITUCIONAL
+# CARGA DE CONFIGURACIÓN INSTITUCIONAL
 # ============================================================================
 
 def load_config(filepath):
+    """Carga los parámetros institucionales desde un archivo JSON."""
     with open(filepath, 'r', encoding='utf-8') as f:
         return json.load(f)
 
 # ============================================================================
-# GENERACION DE DATOS
+# GENERACIÓN DE DATOS
 # ============================================================================
 
 def generate_cursos(malla, electivos):
-    """Extrae todos los cursos unicos: obligatorios + electivos."""
+    """Extrae la totalidad de asignaturas únicas combinando los cursos obligatorios y electivos."""
     cursos = []
     vistos = set()
 
@@ -184,7 +189,7 @@ def generate_cursos(malla, electivos):
 
 
 def generate_secciones(cursos, secciones_rango, alumnos_rango):
-    """Genera secciones para cada curso."""
+    """Genera las secciones académicas correspondientes a cada una de las asignaturas."""
     secciones = []
     letras = LETRAS_SECCIONES
     for curso in cursos:
@@ -199,7 +204,7 @@ def generate_secciones(cursos, secciones_rango, alumnos_rango):
 
 
 def generate_profesores(num_profesores):
-    """Genera la tabla de profesores."""
+    """Genera el conjunto inicial de profesores registrados en el sistema."""
     return [
         {'id_profesor': f"Prof_{i+1}", 'nombre': f"Profesor_{i+1}"}
         for i in range(num_profesores)
@@ -208,33 +213,34 @@ def generate_profesores(num_profesores):
 
 def generate_eventos(secciones, profesores, eventos_rango, duraciones):
     """
-    Genera eventos para cada seccion, garantizando que un unico profesor 
-    sea asignado a todos los eventos de la misma seccion y respetando 
-    un limite maximo de carga horaria semanal para evitar infactibilidades.
+    Genera los eventos de clase para cada sección académica.
+    Se garantiza que se asigne el mismo docente a la totalidad de los eventos
+    pertenecientes a una misma sección, y se restringe la carga horaria semanal
+    acumulada por profesor para evitar condiciones de infactibilidad.
     """
     eventos = []
     id_evento = 1
     
-    # Llevar el control de horas asignadas a cada profesor
+    # Registra la carga horaria acumulada por cada docente
     horas_prof = {p['id_profesor']: 0 for p in profesores}
 
     for seccion in secciones:
         num_eventos = random.randint(*eventos_rango)
-        # Generar las duraciones tentativas para esta seccion
+        # Determina las duraciones aleatorias para los eventos de la sección
         duraciones_seccion = [random.choice(duraciones) for _ in range(num_eventos)]
         total_horas_seccion = sum(duraciones_seccion)
         
-        # Encontrar profesores elegibles (que no superen el limite de horas semanales)
+        # Identifica a los docentes con disponibilidad de carga semanal suficiente
         profesores_elegibles = [
             p['id_profesor'] for p in profesores 
             if horas_prof[p['id_profesor']] + total_horas_seccion <= LIMITE_HORAS_SEMANAL
         ]
         
-        # Si no hay ninguno elegible (caso extremo), usamos cualquiera con la menor carga
+        # Si ningún docente cumple el criterio, se selecciona aquel con menor carga horaria
         if not profesores_elegibles:
             profesor_asignado = min(horas_prof, key=horas_prof.get)
         else:
-            # Seleccionar el profesor elegible con menor carga actual para balancear
+            # Selecciona el docente elegible que posea la menor carga para asegurar el balance
             profesor_asignado = min(profesores_elegibles, key=lambda p: horas_prof[p])
             
         horas_prof[profesor_asignado] += total_horas_seccion
@@ -253,10 +259,10 @@ def generate_eventos(secciones, profesores, eventos_rango, duraciones):
 
 def generate_curriculos(malla, electivos, secciones, eventos):
     """
-    Genera curriculos (uno por nivel) y la tabla puente curriculo-evento.
-    Para cada nivel, incluye los cursos obligatorios + todos los electivos elegibles.
+    Genera la estructura de currículos (uno por nivel académico) y la relación puente entre currículos y eventos.
+    Para cada nivel se incorporan los cursos obligatorios correspondientes y las asignaturas electivas elegibles.
     """
-    # Mapear seccion -> eventos
+    # Asocia cada sección con sus respectivos eventos
     seccion_a_eventos = {}
     for ev in eventos:
         s = ev['id_seccion']
@@ -264,7 +270,7 @@ def generate_curriculos(malla, electivos, secciones, eventos):
             seccion_a_eventos[s] = []
         seccion_a_eventos[s].append(ev['id_evento'])
 
-    # Mapear curso -> secciones
+    # Asocia cada curso con sus respectivas secciones
     curso_a_secciones = {}
     for sec in secciones:
         c = sec['id_curso']
@@ -272,14 +278,14 @@ def generate_curriculos(malla, electivos, secciones, eventos):
             curso_a_secciones[c] = []
         curso_a_secciones[c].append(sec['id_seccion'])
 
-    # Extraer numeros de nivel para iterar
+    # Extrae y ordena los identificadores numéricos de los niveles académicos
     niveles = sorted(malla.keys())  # ['Nivel_03', ..., 'Nivel_10']
 
     curriculos = []
     bridge = []
 
     def agregar_curso_a_bridge(nivel_id, id_curso):
-        """Agrega todos los eventos de un curso al bridge del nivel."""
+        """Registra todos los eventos de un curso específico en la relación del currículo del nivel."""
         if id_curso in curso_a_secciones:
             for id_seccion in curso_a_secciones[id_curso]:
                 if id_seccion in seccion_a_eventos:
@@ -297,11 +303,11 @@ def generate_curriculos(malla, electivos, secciones, eventos):
             'nombre': f"Ruta {nivel_id.replace('_', ' ')}"
         })
 
-        # Agregar cursos obligatorios del nivel
+        # Incorpora los cursos obligatorios programados para el nivel académico
         for id_curso, _, _ in malla[nivel_id]:
             agregar_curso_a_bridge(nivel_id, id_curso)
 
-        # Incluir los cursos electivos condicionados al nivel minimo exigido como prerrequisito
+        # Incorpora las asignaturas electivas cuyos prerrequisitos de nivel mínimo se cumplen
         for id_curso, _, _, nivel_minimo in electivos:
             if nivel_minimo <= num_nivel:
                 agregar_curso_a_bridge(nivel_id, id_curso)
@@ -311,46 +317,46 @@ def generate_curriculos(malla, electivos, secciones, eventos):
 
 def generate_disponibilidad(profesores, config):
     """
-    Construye las franjas de disponibilidad temporal para el cuerpo docente.
-    Para que sea más realista, los profesores no están disponibles todo el día siempre.
-    Se definen turnos: Mañana (primera mitad), Tarde/Noche (segunda mitad) o Completo.
+    Construye los bloques de disponibilidad horaria para el personal docente.
+    Con el fin de emular condiciones reales, se distribuyen las disponibilidades
+    en bloques específicos correspondientes a los turnos mañana, tarde o jornada completa.
     """
     disponibilidad = []
     dias = config['dias']
     dia_cierre = config['dia_cierre']
 
-    # Soporta franjas_por_dia como dict {dia: n} o int uniforme
+    # Permite la definición de franjas por día como diccionario o entero uniforme
     fpd_raw = config['franjas_por_dia']
     fpd = fpd_raw if isinstance(fpd_raw, dict) else {d: fpd_raw for d in dias}
 
-    # Construir base acumulada por dia
+    # Calcula los índices de inicio absolutos para las franjas de cada día
     base_dia = {}
     cursor = 1
     for dia in dias:
         base_dia[dia] = cursor
         cursor += fpd[dia]
 
-    # Dias habiles (excluyendo el dia de cierre)
+    # Días hábiles (excluyendo el día de cierre virtual)
     dias_habiles = [d for d in dias if d != dia_cierre]
 
     for prof in profesores:
-        # Asignar un subconjunto aleatorio de dias habiles (entre 4 y 5) a cada docente para asegurar
-        # la factibilidad matematica de la regla de espaciado no consecutivo.
+        # Asigna un subconjunto aleatorio de días hábiles a cada profesor para garantizar
+        # la factibilidad matemática de la regla de espaciado no consecutivo.
         num_dias = random.randint(MIN_DIAS_PROFESOR, len(dias_habiles))
         dias_disponibles = random.sample(dias_habiles, k=num_dias)
 
-        # Incluir por defecto el dia designado para la modalidad virtual (dia de cierre)
+        # Incorpora de forma obligatoria el día destinado a la modalidad no presencial (cierre)
         dias_disponibles.append(dia_cierre)
 
         for dia in dias_disponibles:
             base = base_dia[dia]
             n = fpd[dia]
 
-            # Si es el día de cierre virtual o tiene pocas franjas, se asigna completo
+            # Si corresponde al cierre virtual o el día posee pocas franjas, se asigna jornada completa
             if dia == dia_cierre or n <= UMBRAL_COMPLETO_FRANJAS:
                 turno = 'completo'
             else:
-                # Usar pesos configurables para seleccionar turno
+                # Selecciona probabilísticamente el turno del docente con base en los pesos configurables
                 turno = random.choices(['mañana', 'tarde', 'completo'], weights=PESOS_TURNOS, k=1)[0]
 
             if turno == 'mañana':
@@ -374,10 +380,10 @@ def generate_disponibilidad(profesores, config):
 
 
 def generate_rooms(num_fisicos, num_con_pc, num_dl, cap_fisico, cap_virtual, caracteristicas_posibles):
-    """Genera la tabla de salones: virtual + fisicos con distintas caracteristicas."""
+    """Genera el catálogo de salones, incluyendo la infraestructura física y virtual con sus respectivas características."""
     rooms = []
 
-    # Salon virtual (tiene todas las caracteristicas posibles)
+    # Registra el salón virtual equipado teóricamente con todas las características
     rooms.append({
         'id_salon': 'r_virtual',
         'capacidad': cap_virtual,
@@ -387,7 +393,7 @@ def generate_rooms(num_fisicos, num_con_pc, num_dl, cap_fisico, cap_virtual, car
 
     salon_id = 1
 
-    # Salon de deep learning (tiene mesa + pc + deep_learning)
+    # Genera la infraestructura física especializada para el aprendizaje profundo
     for _ in range(num_dl):
         rooms.append({
             'id_salon': f"salon_{salon_id}",
@@ -397,7 +403,7 @@ def generate_rooms(num_fisicos, num_con_pc, num_dl, cap_fisico, cap_virtual, car
         })
         salon_id += 1
 
-    # Salones con PC (tienen mesa + pc)
+    # Genera salones equipados con computadoras personales
     for _ in range(num_con_pc - num_dl):
         rooms.append({
             'id_salon': f"salon_{salon_id}",
@@ -407,7 +413,7 @@ def generate_rooms(num_fisicos, num_con_pc, num_dl, cap_fisico, cap_virtual, car
         })
         salon_id += 1
 
-    # Salones tipicos (solo mesa)
+    # Genera aulas estándar equipadas únicamente con mobiliario básico (mesas)
     salones_tipicos = num_fisicos - num_con_pc
     for _ in range(salones_tipicos):
         rooms.append({
@@ -422,11 +428,11 @@ def generate_rooms(num_fisicos, num_con_pc, num_dl, cap_fisico, cap_virtual, car
 
 
 # ============================================================================
-# ESCRITURA DE CSVS
+# ESCRITURA DE ARCHIVOS CSV
 # ============================================================================
 
 def write_csv(filepath, data, fieldnames):
-    """Escribe una lista de diccionarios a un archivo CSV."""
+    """Exporta una colección de registros estructurados en formato de diccionario hacia un archivo CSV."""
     with open(filepath, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
@@ -435,52 +441,71 @@ def write_csv(filepath, data, fieldnames):
 
 
 # ============================================================================
-# MAIN
+# BLOQUE DE EJECUCIÓN PRINCIPAL
 # ============================================================================
 
 if __name__ == '__main__':
     random.seed(SEED)
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # 1. SELECCION DE NIVELES CURRICULARES (Ajustar la lista para escalar el tamaño del problema)
-    # Escenario por defecto: 5 niveles consecutivos desde Nivel_03
+    # ========================================================================
+    # DIRECTRICES PARA LA SELECCIÓN DEL ESCENARIO DE PRUEBA:
+    # 
+    # Para cambiar la escala de la instancia del problema y generar los
+    # diferentes escenarios evaluados, se debe modificar la rebanada (slice)
+    # aplicada a la variable 'niveles_objetivo' de acuerdo con las siguientes opciones:
+    #
+    # A) ESCENARIO PEQUEÑO (1 Currículo / Ruta académica única):
+    #    Ideal para validaciones rápidas, pruebas de concepto y depuración rápida.
+    #    Configuración: niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:1]
+    #
+    # B) ESCENARIO MEDIANO (5 Currículos consecutivos - Por defecto):
+    #    Representa un escenario intermedio con un nivel de complejidad moderado.
+    #    Configuración: niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:5]
+    #
+    # C) ESCENARIO GRANDE (Todos los Currículos / 8 Rutas académicas):
+    #    Consiste en la representación institucional a escala completa para pruebas de estrés.
+    #    Configuración: niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())
+    # ========================================================================
+    
+    # 1. SELECCIÓN DE NIVELES CURRICULARES (Establece el tamaño del problema)
     niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:5]
     
-    # 2. FILTRADO DE MALLA
+    # 2. FILTRADO DE LA MALLA CURRICULAR Y DE LAS ASIGNATURAS ELECTIVAS ELEGIBLES
     malla_reducida = {k: v for k, v in MALLA_OBLIGATORIA.items() if k in niveles_objetivo}
     
-    # Obtener el número máximo de nivel para filtrar electivos
+    # Determina el nivel máximo alcanzado para filtrar electivos
     max_nivel = max([int(n.split('_')[1]) for n in niveles_objetivo])
     electivos_reducidos = [e for e in ELECTIVOS if e[3] <= max_nivel]
 
     # 3. ESCALAMIENTO PROPORCIONAL DE RECURSOS INFRAESTRUCTURALES Y HUMANOS
-    # Restringir salones y docentes en instancias pequenas para mantener la presion combinatoria
+    # Restringe la cantidad de salones y docentes en instancias de menor escala para mantener la presión de asignación.
     num_profs_instancia = PROFES_PEQ_INSTANCIA if len(niveles_objetivo) < 5 else NUM_PROFESORES
     num_salones_instancia = SALONES_PEQ_INSTANCIA if len(niveles_objetivo) < 5 else NUM_SALONES_FISICOS
 
     config = load_config(os.path.join(OUTPUT_DIR, 'config.json'))
     print(f"[INFO] Generando instancia para niveles: {niveles_objetivo}")
 
-    # Generar datos usando los conjuntos filtrados
+    # Generación de registros a partir de los subconjuntos estructurados
     cursos = generate_cursos(malla_reducida, electivos_reducidos)
     secciones = generate_secciones(cursos, SECCIONES_POR_CURSO, ALUMNOS_POR_SECCION)
     profesores = generate_profesores(num_profs_instancia)
     eventos = generate_eventos(secciones, profesores, EVENTOS_POR_SECCION, DURACION_EVENTOS)
     
-    # Importante: Pasar malla_reducida y electivos_reducidos aquí también
+    # Genera la estructura curricular y la relación puente curriculo-evento
     curriculos, bridge = generate_curriculos(malla_reducida, electivos_reducidos, secciones, eventos)
     
     disponibilidad = generate_disponibilidad(profesores, config)
     rooms = generate_rooms(
         num_salones_instancia, 
-        int(num_salones_instancia * RATIO_SALONES_CON_PC), # Mantener ratio de PCs
+        int(num_salones_instancia * RATIO_SALONES_CON_PC), # Mantiene la proporción de computadoras personales.
         NUM_SALONES_DEEP_LEARNING, 
         CAPACIDAD_SALON_FISICO, 
         CAPACIDAD_VIRTUAL,
         CARACTERISTICAS_POSIBLES
     )
 
-    # Escribir CSVs
+    # Escritura de archivos CSV resultantes
     print("\n[INFO] Escribiendo archivos CSV...")
     write_csv(
         os.path.join(OUTPUT_DIR, 'cursos.csv'), cursos,
@@ -515,7 +540,7 @@ if __name__ == '__main__':
         ['id_curriculo', 'id_evento']
     )
 
-    # Resumen
+    # Resumen cuantitativo del conjunto de datos
     obligatorios = sum(len(v) for v in MALLA_OBLIGATORIA.values())
     print(f"\n[RESUMEN]")
     print(f"  Cursos:       {len(cursos)}")
