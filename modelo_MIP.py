@@ -277,7 +277,13 @@ if __name__ == '__main__':
     # Verifica si el optimizador ha encontrado al menos una solución factible antes de extraer los resultados
     if model.num_solutions > 0:
         imprimir_metricas(status, cpu_time, model)
-        exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO)
+        if len(K) == 1:
+            out_path = "horarios_pequena/MIP"
+        elif len(K) == 5:
+            out_path = "horarios_mediana/MIP"
+        else:
+            out_path = "horarios_grande/MIP"
+        exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, output_dir=out_path)
     else:
         print(f"\n[ALERTA] No se encontro ninguna solucion factible. Estado final: {status.name if hasattr(status, 'name') else status}")
         print(f"[INFO] Tiempo de Procesamiento invertido: {cpu_time:.2f} segundos")

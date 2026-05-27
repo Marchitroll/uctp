@@ -123,7 +123,7 @@ ELECTIVOS = [
 # Define las constantes operativas, capacidades y límites para el generador.
 # ============================================================================
 
-SECCIONES_POR_CURSO = (1, 2)       # Rango de secciones por curso (mínimo, máximo).
+SECCIONES_POR_CURSO = (1, 3)       # Rango de secciones por curso (mínimo, máximo).
 EVENTOS_POR_SECCION = [2, 3]       # Valores permitidos de eventos de clase por sección.
 DURACION_EVENTOS = [2, 3]          # Valores permitidos de duración en horas por evento.
 NUM_PROFESORES = 50                 # Número total de profesores disponibles en la base de datos general.
@@ -481,7 +481,22 @@ if __name__ == '__main__':
     num_profs_instancia = PROFES_PEQ_INSTANCIA if len(niveles_objetivo) < 5 else NUM_PROFESORES
     num_salones_instancia = SALONES_PEQ_INSTANCIA if len(niveles_objetivo) < 5 else NUM_SALONES_FISICOS
 
-    config = load_config(os.path.join(OUTPUT_DIR, 'config.json'))
+    config_path = os.path.join(OUTPUT_DIR, 'config.json')
+    if not os.path.exists(config_path):
+        config = {
+            "dias": ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"],
+            "dia_cierre": "Sabado",
+            "posicion_almuerzo": 6,
+            "dias_sin_almuerzo": ["Sabado"],
+            "franjas_por_dia": {
+                "Lunes": 14, "Martes": 14, "Miercoles": 14, "Jueves": 14, "Viernes": 14, "Sabado": 12
+            }
+        }
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2)
+        print("[INFO] Recreado archivo 'config.json' por defecto en el directorio 'dataset/'.")
+    else:
+        config = load_config(config_path)
     print(f"[INFO] Generando instancia para niveles: {niveles_objetivo}")
 
     # Generación de registros a partir de los subconjuntos estructurados

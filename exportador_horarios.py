@@ -139,3 +139,50 @@ def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, output_d
         print(f"[INFO] Ciclo {k}: Generados {len(caminos_matricula)} caminos independientes en '{ciclo_dir}/'.")
 
     print(f"\n[EXITO] Exportacion desagregada completada. Revisar el directorio '{output_dir}/'.")
+
+
+def imprimir_metricas_ga(cpu_time, best_fitness, hard_violations, soft_penalty, epoch, pop_size, crossover, selection):
+    """
+    Imprime las métricas de trazabilidad del entorno de ejecución y los indicadores
+    de desempeño alcanzados por el Algoritmo Genético (GA) durante el proceso de optimización.
+    """
+    print("\n" + "="*60)
+    print(" [TRAZABILIDAD DEL ENTORNO]")
+    print("="*60)
+    print(f" Sistema Operativo : {platform.system()} {platform.release()}")
+    print(f" Procesador        : {platform.processor()}")
+    print(f" RAM Disponible    : {round(psutil.virtual_memory().total / (1024.0 **3), 2)} GB")
+    print(f" Version Python    : {platform.python_version()}")
+    print(f" Version MEALPY    : 3.0.3")
+
+    print("\n" + "="*60)
+    print(" [METRICAS GA]")
+    print("="*60)
+    print(f" Generaciones (Epochs)   : {epoch}")
+    print(f" Tam. Poblacion (Pop)    : {pop_size}")
+    print(f" Crossover / Seleccion   : {crossover} / {selection}")
+    print(f" Tiempo Procesamiento    : {cpu_time:.2f} segundos")
+    print(f" Fitness Total Obtenido  : {best_fitness:.4f}")
+    print(f" Violaciones Duras (HCV) : {hard_violations}")
+    print(f" Penalizacion Almuerzo(Z): {soft_penalty} (comparable con Z del MIP)")
+    print(f" Factible (HCV == 0)     : {'SI' if hard_violations == 0 else 'NO'}")
+    print("="*60 + "\n")
+
+
+class DummyVar:
+    def __init__(self, value):
+        self.x = value
+
+
+def reconstruir_x_desde_ga(solution, valid_starts, E, Dur):
+    """
+    Convierte la solución del Algoritmo Genético (donde cada gen es el índice en valid_starts[idx])
+    en un diccionario x compatible con exportar_horarios.
+    """
+    x_ga = {}
+    for idx, e in enumerate(E):
+        r, t_start = valid_starts[idx][int(solution[idx])]
+        for offset in range(Dur[e]):
+            x_ga[(e, r, t_start + offset)] = DummyVar(1.0)
+    return x_ga
+
