@@ -481,7 +481,7 @@ if __name__ == '__main__':
     num_profs_instancia = PROFES_PEQ_INSTANCIA if len(niveles_objetivo) < 5 else NUM_PROFESORES
     num_salones_instancia = SALONES_PEQ_INSTANCIA if len(niveles_objetivo) < 5 else NUM_SALONES_FISICOS
 
-    config_path = os.path.join(OUTPUT_DIR, 'config.json')
+    config_path = os.path.join(os.path.dirname(__file__), 'config.json')
     if not os.path.exists(config_path):
         config = {
             "dias": ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"],
@@ -494,7 +494,7 @@ if __name__ == '__main__':
         }
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2)
-        print("[INFO] Recreado archivo 'config.json' por defecto en el directorio 'dataset/'.")
+        print("[INFO] Recreado archivo 'config.json' por defecto en el directorio raiz.")
     else:
         config = load_config(config_path)
     print(f"[INFO] Generando instancia para niveles: {niveles_objetivo}")

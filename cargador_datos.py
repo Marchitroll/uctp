@@ -184,7 +184,7 @@ def cargar_datos_uctp(data_dir='dataset'):
     Carga la totalidad de conjuntos y parámetros requeridos para el modelo MIP
     desde los archivos JSON y CSV correspondientes dentro del directorio especificado.
     """
-    D, T, T_d, d_jue, Almuerzo = load_config(os.path.join(data_dir, 'config.json'))
+    D, T, T_d, d_jue, Almuerzo = load_config(os.path.join(os.path.dirname(__file__), 'config.json'))
     R, CAP, ES_VIRTUAL, CARACTERISTICAS = load_rooms_data(os.path.join(data_dir, 'salones.csv'))
     CURSOS, REQ_CURSO = load_cursos(os.path.join(data_dir, 'cursos.csv'))
     S, SECCION_CURSO, Alumno = load_secciones(os.path.join(data_dir, 'secciones.csv'))
