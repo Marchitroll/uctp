@@ -64,7 +64,7 @@ def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, output_d
     if output_dir is None or output_dir == "horarios_por_camino":
         if len(K) == 1:
             output_dir = "horarios_pequena"
-        elif len(K) == 5:
+        elif len(K) in [4, 5]:
             output_dir = "horarios_mediana"
         else:
             output_dir = "horarios_grande"
@@ -136,9 +136,9 @@ def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, output_d
             file_path = os.path.join(ciclo_dir, f"camino_{idx}.csv")
             schedule_matrix.to_csv(file_path)
 
-        print(f"[INFO] Ciclo {k}: Generados {len(caminos_matricula)} caminos independientes en '{ciclo_dir}/'.")
+        print(f"[INFO] Ciclo {k}: Generados {len(caminos_matricula)} caminos independientes en '{ciclo_dir.replace(os.sep, '/')}/'.")
 
-    print(f"\n[EXITO] Exportacion desagregada completada. Revisar el directorio '{output_dir}/'.")
+    print(f"\n[EXITO] Exportacion desagregada completada. Revisar el directorio '{output_dir.replace(os.sep, '/')}/'.")
 
 
 def imprimir_metricas_ga(cpu_time, best_fitness, hard_violations, soft_penalty, epoch, pop_size, crossover, selection):

@@ -90,7 +90,7 @@ else:
 # Auto-detección de escala por len(K)
 if len(K) == 1:
     escala_detectada = "pequena"
-elif len(K) == 5:
+elif len(K) in [4, 5]:
     escala_detectada = "mediana"
 else:
     escala_detectada = "grande"
@@ -220,93 +220,8 @@ class UCTPProblem(Problem):
 
     def obj_func(self, solution):
         self.fitness_evals += 1
-        
-        # 1. Decodificar la solución (clamear y redondear)
-        choices = np.clip(np.round(solution).astype(np.int32), 0, self.max_choices)
-        r_indices = np.empty(self.num_events, dtype=np.int32)
-        t_starts = np.empty(self.num_events, dtype=np.int32)
-        for idx in range(self.num_events):
-            c = choices[idx]
-            r_indices[idx] = self.valid_starts_r_idx[idx][c]
-            t_starts[idx] = self.valid_starts_t[idx][c]
-            
-        # 2. Construir matrices de ocupación
-        prof_slot = np.zeros((self.num_teachers, self.num_slots), dtype=np.int32)
-        room_slot = np.zeros((self.num_rooms, self.num_slots), dtype=np.int32)
-        event_slot = np.zeros((self.num_events, self.num_slots), dtype=np.int32)
-        
-        for idx in range(self.num_events):
-            p_idx = self.event_p_idx[idx]
-            r_idx = r_indices[idx]
-            dur = self.event_dur[idx]
-            t_start = t_starts[idx]
-            
-            for offset in range(dur):
-                t_idx = self.t_to_idx[t_start + offset]
-                prof_slot[p_idx, t_idx] += 1
-                room_slot[r_idx, t_idx] += 1
-                event_slot[idx, t_idx] = 1
-                
-        # 3. Calcular violaciones a restricciones duras
-        # R1: Colisión de Profesor
-        prof_collision_viol = np.sum(np.maximum(0, prof_slot - 1))
-        
-        # R2: Carga diaria del profesor
-        prof_carga_viol = 0
-        for d_idx in range(self.num_days):
-            daily_hours = np.sum(prof_slot[:, self.day_slots_indices[d_idx]], axis=1)
-            prof_carga_viol += np.sum(np.maximum(0, daily_hours - 8))
-            
-        # R4: Estabilidad de Salones
-        salon_estabilidad_viol = 0
-        for s_idx in range(self.num_sections):
-            ev_indices = self.section_events[s_idx]
-            unique_rooms = len(np.unique(r_indices[ev_indices]))
-            if unique_rooms > 2:
-                salon_estabilidad_viol += (unique_rooms - 2)
-                
-        # R5: Colisión de Salones Físicos
-        salon_collision_viol = np.sum(np.maximum(0, room_slot[self.physical_room_indices, :] - 1))
-        
-        # R7: Espaciado de Sesiones
-        espaciado_viol = 0
-        for s_idx in range(self.num_sections):
-            ev_indices = self.section_events[s_idx]
-            n_evs = len(ev_indices)
-            if n_evs <= 1:
-                continue
-            for i in range(n_evs):
-                for j in range(i + 1, n_evs):
-                    d1 = self.slot_to_day_idx[t_starts[ev_indices[i]]]
-                    d2 = self.slot_to_day_idx[t_starts[ev_indices[j]]]
-                    if abs(d1 - d2) <= 1:
-                        espaciado_viol += 1
-                        
-        # R9: Oferta Curricular Global
-        r9_viol = 0
-        for constraint in self.r9_constraints:
-            evs_c = constraint['evs_c']
-            num_secciones = constraint['num_secciones']
-            evs_other = constraint['evs_other']
-            
-            active_c = np.sum(event_slot[evs_c, :], axis=0)
-            full_slots = np.where(active_c == num_secciones)[0]
-            if len(full_slots) > 0:
-                r9_viol += np.sum(event_slot[evs_other][:, full_slots])
-                
-        hcv = (prof_collision_viol + 
-               prof_carga_viol + 
-               salon_estabilidad_viol + 
-               salon_collision_viol + 
-               espaciado_viol + 
-               r9_viol)
-               
-        # 4. Calcular restricción blanda (Z: penalización de almuerzo)
-        lunch_penalty = np.sum(event_slot * self.lunch_slots_mask)
-        
-        # Fitness total
-        fitness = 1000.0 * hcv + 1.0 * lunch_penalty
-        return fitness
+        metrics = self.evaluate_solution(solution)
+        return 1000.0 * metrics['hcv'] + 1.0 * metrics['z']
 
     def amend_position(self, solution):
         # Algoritmo de reparación agresiva para colisiones de profesor y salón físico
@@ -805,12 +720,7 @@ if best_global_solution is not None:
     )
     
     # Exportar horario en formato CSV desagregado
-    if len(K) == 1:
-        out_path = "horarios_pequena/GA"
-    elif len(K) == 5:
-        out_path = "horarios_mediana/GA"
-    else:
-        out_path = "horarios_grande/GA"
+    out_path = f"horarios_{escala_efectiva}/GA"
     exportar_horarios(
         x=x_best,
         K=K,

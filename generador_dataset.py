@@ -465,7 +465,7 @@ if __name__ == '__main__':
     if instancia in ["pequena", "pequeña"]:
         niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:1]
     elif instancia == "mediana":
-        niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:5]
+        niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:4]
     else:
         niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())
     

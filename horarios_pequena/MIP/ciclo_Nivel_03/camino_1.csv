@@ -1,0 +1,15 @@
+,Lunes,Martes,Miercoles,Jueves,Viernes,Sabado
+7:00 - 8:00,---,---,---,---,---,IA_Aplicada (IA_Aplicada_B) [r_virtual]
+8:00 - 9:00,Sist_Organizacionales (Sist_Organizacionales_A) [salon_6],---,---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_6],Calculo_II (Calculo_II_C) [salon_20],IA_Aplicada (IA_Aplicada_B) [r_virtual]
+9:00 - 10:00,Sist_Organizacionales (Sist_Organizacionales_A) [salon_6],---,---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_6],Calculo_II (Calculo_II_C) [salon_20],---
+10:00 - 11:00,IA_Aplicada (IA_Aplicada_B) [salon_8],---,---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_6],Calculo_II (Calculo_II_C) [salon_20],---
+11:00 - 12:00,IA_Aplicada (IA_Aplicada_B) [salon_8],---,---,---,---,---
+12:00 - 13:00,---,---,---,---,---,---
+13:00 - 14:00,---,---,Calculo_II (Calculo_II_C) [salon_11] | Intro_Programacion (Intro_Programacion_A) [salon_1],IA_Aplicada (IA_Aplicada_B) [salon_8],---,---
+14:00 - 15:00,---,---,Calculo_II (Calculo_II_C) [salon_11] | Intro_Programacion (Intro_Programacion_A) [salon_1],IA_Aplicada (IA_Aplicada_B) [salon_8],---,---
+15:00 - 16:00,Estr_Discretas (Estr_Discretas_A) [salon_6],---,Calculo_II (Calculo_II_C) [salon_11] | Intro_Programacion (Intro_Programacion_A) [salon_1],IA_Aplicada (IA_Aplicada_B) [salon_8],Estr_Discretas (Estr_Discretas_A) [salon_6],---
+16:00 - 17:00,Fisica_Sistemas (Fisica_Sistemas_A) [salon_9] | Estr_Discretas (Estr_Discretas_A) [salon_6],---,---,---,Estr_Discretas (Estr_Discretas_A) [salon_6],Sist_Organizacionales (Sist_Organizacionales_A) [r_virtual]
+17:00 - 18:00,Fisica_Sistemas (Fisica_Sistemas_A) [salon_9] | Estr_Discretas (Estr_Discretas_A) [salon_6],---,---,---,---,Sist_Organizacionales (Sist_Organizacionales_A) [r_virtual]
+18:00 - 19:00,Fisica_Sistemas (Fisica_Sistemas_A) [salon_9] | Intro_Programacion (Intro_Programacion_A) [salon_1],---,Estr_Discretas (Estr_Discretas_A) [salon_1],---,---,---
+19:00 - 20:00,Intro_Programacion (Intro_Programacion_A) [salon_1],---,Fisica_Sistemas (Fisica_Sistemas_A) [salon_9] | Estr_Discretas (Estr_Discretas_A) [salon_1],---,Intro_Programacion (Intro_Programacion_A) [salon_6],---
+20:00 - 21:00,---,---,Fisica_Sistemas (Fisica_Sistemas_A) [salon_9] | Estr_Discretas (Estr_Discretas_A) [salon_1],---,Intro_Programacion (Intro_Programacion_A) [salon_6],---

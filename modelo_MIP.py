@@ -279,7 +279,7 @@ if __name__ == '__main__':
         imprimir_metricas(status, cpu_time, model)
         if len(K) == 1:
             out_path = "horarios_pequena/MIP"
-        elif len(K) == 5:
+        elif len(K) in [4, 5]:
             out_path = "horarios_mediana/MIP"
         else:
             out_path = "horarios_grande/MIP"

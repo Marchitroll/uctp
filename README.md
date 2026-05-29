@@ -1,5 +1,25 @@
 # UCTP - Universidad
 
+## 0. Instalación y Configuración del Entorno
+
+Para configurar el entorno de ejecución utilizando Anaconda y asegurar la reproductibilidad de los resultados:
+
+### Crear y activar el entorno Conda
+```bash
+# Crear el entorno con Python 3.13
+conda create -n uctp python=3.13 -y
+
+# Activar el entorno
+conda activate uctp
+```
+
+### Instalar dependencias
+Instale los paquetes necesarios a través del archivo `requirements.txt`:
+```bash
+pip install -r requirements.txt
+```
+* Nota: Para utilizar el solucionador HiGHS con la librería `mip` en Windows, se incluye el paquete `highsbox` dentro de las dependencias de forma automática.
+
 ## 1. Generación de Dataset
 
 Para generar el conjunto de datos de entrada:
@@ -22,16 +42,25 @@ python modelo_MIP.py --minutos [MINUTOS]
 
 ## 3. Ejecución del Algoritmo Genético
 
-Para resolver empleando el Algoritmo Genético:
+Para resolver empleando el Algoritmo Genético basándose en corridas independientes (por defecto se ejecuta 1 corrida y las estadísticas consolidadas se guardan en `resultados_GA.csv`):
 
 ```bash
-python modelo_GA.py --horas [HORAS]
-# O alternativamente:
-python modelo_GA.py --minutos [MINUTOS]
-# O alternativamente por generaciones:
-python modelo_GA.py --epoch [EPOCHS] --pop-size [POPSIZE]
+python modelo_GA.py --corridas [NÚMERO_DE_CORRIDAS]
 ```
-* Nota: Soporta el argumento `--corridas N` para especificar el número de ejecuciones independientes (por defecto 1, formal 20) y persiste estadísticas consolidadas en `resultados_GA.csv`.
+
+### Opciones Adicionales (Extras)
+También es posible parametrizar el proceso de optimización del Algoritmo Genético mediante las siguientes configuraciones adicionales:
+
+* **Por tiempo límite en horas o minutos**:
+  ```bash
+  python modelo_GA.py --horas [HORAS]
+  # O alternativamente:
+  python modelo_GA.py --minutos [MINUTOS]
+  ```
+* **Por número de generaciones (epochs) y tamaño de población**:
+  ```bash
+  python modelo_GA.py --epoch [EPOCHS] --pop-size [POPSIZE]
+  ```
 
 ## 4. Guía Rápida por Escala (Pequeña, Mediana, Grande)
 
@@ -44,7 +73,7 @@ python generador_dataset.py --instancia pequena
 
 # 2. Ejecutar optimizador (MIP o GA)
 python modelo_MIP.py
-python modelo_GA.py --config pequena
+python modelo_GA.py --corridas 20
 ```
 
 ### Instancia Mediana
@@ -54,7 +83,7 @@ python generador_dataset.py --instancia mediana
 
 # 2. Ejecutar optimizador (MIP o GA)
 python modelo_MIP.py
-python modelo_GA.py --config mediana
+python modelo_GA.py --corridas 20
 ```
 
 ### Instancia Grande
@@ -64,7 +93,7 @@ python generador_dataset.py --instancia grande
 
 # 2. Ejecutar optimizador (MIP o GA)
 python modelo_MIP.py
-python modelo_GA.py --config grande
+python modelo_GA.py --corridas 20
 ```
 
 
