@@ -204,12 +204,77 @@ def generate_secciones(cursos, secciones_rango, alumnos_rango):
     return secciones
 
 
+# ============================================================================
+# MAPEO DE ÁREAS ACADÉMICAS Y ESPECIALIZACIÓN DOCENTE
+# ============================================================================
+
+AREAS_CURSOS = {
+    # Matemáticas (MATEMATICAS)
+    'Calculo_II': 'MATEMATICAS',
+    'Calculo_III': 'MATEMATICAS',
+    'Estadistica_Prob': 'MATEMATICAS',
+    'Estadistica_Aplicada': 'MATEMATICAS',
+    'Estr_Discretas': 'MATEMATICAS',
+    'Analisis_Algoritmos': 'MATEMATICAS',
+
+    # Física (FISICA)
+    'Fisica_Sistemas': 'FISICA',
+
+    # Gestión y Finanzas (GESTION)
+    'Sist_Organizacionales': 'GESTION',
+    'Costeo_Operaciones': 'GESTION',
+    'Competencias_Gerenciales': 'GESTION',
+    'Ing_Procesos_Negocio': 'GESTION',
+    'Gestion_Financiera': 'GESTION',
+    'Gestion_Operaciones': 'GESTION',
+    'Propuesta_Investigacion': 'GESTION',
+    'Auditoria_Control': 'GESTION',
+    'Seminario_I': 'GESTION',
+    'Plan_Estrategico': 'GESTION',
+    'Gestion_Proyectos': 'GESTION',
+    'Seminario_II': 'GESTION',
+    'Gestion_Servicios_Dig': 'GESTION',
+    'Ing_Conocimiento': 'GESTION',
+    'Analitica_Negocios': 'GESTION',
+    'Innovacion_Digital': 'GESTION',
+    'Arq_TI': 'GESTION',
+    'Seg_Salud_Ocup': 'GESTION',
+    'Arq_Empresarial': 'GESTION',
+}
+
+# Compatibilidad de áreas que un profesor de cierta especialidad puede dictar
+COMPATIBILIDAD = {
+    'CS': ['CS'],
+    'MATEMATICAS': ['MATEMATICAS', 'CS'],
+    'FISICA': ['FISICA', 'MATEMATICAS'],
+    'GESTION': ['GESTION']
+}
+
+
 def generate_profesores(num_profesores):
-    """Genera el conjunto inicial de profesores registrados en el sistema."""
-    return [
-        {'id_profesor': f"Prof_{i+1}", 'nombre': f"Profesor_{i+1}"}
-        for i in range(num_profesores)
-    ]
+    """Genera el conjunto inicial de profesores registrados en el sistema con su especialidad académica."""
+    especialidades = ['CS', 'MATEMATICAS', 'FISICA', 'GESTION']
+    pesos = [0.45, 0.25, 0.10, 0.20]
+    profesores = []
+    for i in range(num_profesores):
+        # Asegurar representación mínima para escalas pequeñas
+        if i == 0:
+            esp = 'CS'
+        elif i == 1:
+            esp = 'MATEMATICAS'
+        elif i == 2:
+            esp = 'FISICA'
+        elif i == 3:
+            esp = 'GESTION'
+        else:
+            esp = random.choices(especialidades, weights=pesos, k=1)[0]
+            
+        profesores.append({
+            'id_profesor': f"Prof_{i+1}",
+            'nombre': f"Profesor_{i+1}",
+            'especialidad': esp
+        })
+    return profesores
 
 
 def generate_eventos(secciones, profesores, eventos_rango, duraciones):
@@ -218,12 +283,16 @@ def generate_eventos(secciones, profesores, eventos_rango, duraciones):
     Se garantiza que se asigne el mismo docente a la totalidad de los eventos
     pertenecientes a una misma sección, y se restringe la carga horaria semanal
     acumulada por profesor para evitar condiciones de infactibilidad.
+    Las asignaciones siguen una heurística de especialización y multisección.
     """
     eventos = []
     id_evento = 1
     
     # Registra la carga horaria acumulada por cada docente
     horas_prof = {p['id_profesor']: 0 for p in profesores}
+    # Registra los cursos y áreas académicas ya asignadas a cada docente
+    prof_cursos = {p['id_profesor']: set() for p in profesores}
+    prof_areas = {p['id_profesor']: set() for p in profesores}
 
     for seccion in secciones:
         num_eventos = random.randint(*eventos_rango)
@@ -231,20 +300,51 @@ def generate_eventos(secciones, profesores, eventos_rango, duraciones):
         duraciones_seccion = [random.choice(duraciones) for _ in range(num_eventos)]
         total_horas_seccion = sum(duraciones_seccion)
         
+        id_curso = seccion['id_curso']
+        area = AREAS_CURSOS.get(id_curso, 'CS')
+        
+        # Filtrar profesores cuya especialidad es compatible con el área del curso
+        compatible_profs = [
+            p for p in profesores 
+            if area in COMPATIBILIDAD.get(p['especialidad'], ['CS'])
+        ]
+        if not compatible_profs:
+            compatible_profs = profesores
+
         # Identifica a los docentes con disponibilidad de carga semanal suficiente
-        profesores_elegibles = [
-            p['id_profesor'] for p in profesores 
+        candidatos = [
+            p for p in compatible_profs 
             if horas_prof[p['id_profesor']] + total_horas_seccion <= LIMITE_HORAS_SEMANAL
         ]
         
         # Si ningún docente cumple el criterio, se selecciona aquel con menor carga horaria
-        if not profesores_elegibles:
-            profesor_asignado = min(horas_prof, key=horas_prof.get)
-        else:
-            # Selecciona el docente elegible que posea la menor carga para asegurar el balance
-            profesor_asignado = min(profesores_elegibles, key=lambda p: horas_prof[p])
+        if not candidatos:
+            candidatos = compatible_profs
             
+        # Heurística para elegir al mejor profesor (multisección y cruzada)
+        same_course_cands = [
+            p for p in candidatos 
+            if id_curso in prof_cursos[p['id_profesor']]
+        ]
+        same_area_cands = [
+            p for p in candidatos 
+            if area in prof_areas[p['id_profesor']]
+        ]
+        
+        if same_course_cands:
+            # 1. Preferir profesor que ya dicta otra sección del mismo curso
+            profesor_asignado_dict = min(same_course_cands, key=lambda p: horas_prof[p['id_profesor']])
+        elif same_area_cands:
+            # 2. Preferir profesor que dicta materias de la misma área
+            profesor_asignado_dict = min(same_area_cands, key=lambda p: horas_prof[p['id_profesor']])
+        else:
+            # 3. Asignar al profesor con menor carga acumulada
+            profesor_asignado_dict = min(candidatos, key=lambda p: horas_prof[p['id_profesor']])
+            
+        profesor_asignado = profesor_asignado_dict['id_profesor']
         horas_prof[profesor_asignado] += total_horas_seccion
+        prof_cursos[profesor_asignado].add(id_curso)
+        prof_areas[profesor_asignado].add(area)
         
         for duracion in duraciones_seccion:
             eventos.append({
@@ -255,7 +355,7 @@ def generate_eventos(secciones, profesores, eventos_rango, duraciones):
             })
             id_evento += 1
 
-    return eventos
+    return eventos, horas_prof
 
 
 def generate_curriculos(malla, electivos, secciones, eventos):
@@ -316,11 +416,11 @@ def generate_curriculos(malla, electivos, secciones, eventos):
     return curriculos, bridge
 
 
-def generate_disponibilidad(profesores, config):
+def generate_disponibilidad(profesores, config, horas_prof=None):
     """
     Construye los bloques de disponibilidad horaria para el personal docente.
-    Con el fin de emular condiciones reales, se distribuyen las disponibilidades
-    en bloques específicos correspondientes a los turnos mañana, tarde o jornada completa.
+    Si el docente tiene alta carga lectiva, se incrementa su disponibilidad y
+    se asignan turnos completos para evitar infactibilidades de calendarización.
     """
     disponibilidad = []
     dias = config['dias']
@@ -341,10 +441,16 @@ def generate_disponibilidad(profesores, config):
     dias_habiles = [d for d in dias if d != dia_cierre]
 
     for prof in profesores:
-        # Asigna un subconjunto aleatorio de días hábiles a cada profesor para garantizar
-        # la factibilidad matemática de la regla de espaciado no consecutivo.
-        num_dias = random.randint(MIN_DIAS_PROFESOR, len(dias_habiles))
-        dias_disponibles = random.sample(dias_habiles, k=num_dias)
+        p_id = prof['id_profesor']
+        horas = horas_prof.get(p_id, 0) if horas_prof else 0
+
+        if horas > 12:
+            # Profesor multisección de alta carga: forzar disponibilidad total en todos los días hábiles
+            dias_disponibles = list(dias_habiles)
+        else:
+            # Asigna un subconjunto aleatorio de días hábiles
+            num_dias = random.randint(MIN_DIAS_PROFESOR, len(dias_habiles))
+            dias_disponibles = random.sample(dias_habiles, k=num_dias)
 
         # Incorpora de forma obligatoria el día destinado a la modalidad no presencial (cierre)
         dias_disponibles.append(dia_cierre)
@@ -353,11 +459,11 @@ def generate_disponibilidad(profesores, config):
             base = base_dia[dia]
             n = fpd[dia]
 
-            # Si corresponde al cierre virtual o el día posee pocas franjas, se asigna jornada completa
-            if dia == dia_cierre or n <= UMBRAL_COMPLETO_FRANJAS:
+            # Si corresponde al cierre virtual, el día posee pocas franjas o es docente de alta carga
+            if dia == dia_cierre or n <= UMBRAL_COMPLETO_FRANJAS or horas > 12:
                 turno = 'completo'
             else:
-                # Selecciona probabilísticamente el turno del docente con base en los pesos configurables
+                # Selecciona probabilísticamente el turno del docente
                 turno = random.choices(['mañana', 'tarde', 'completo'], weights=PESOS_TURNOS, k=1)[0]
 
             if turno == 'mañana':
@@ -503,12 +609,12 @@ if __name__ == '__main__':
     cursos = generate_cursos(malla_reducida, electivos_reducidos)
     secciones = generate_secciones(cursos, SECCIONES_POR_CURSO, ALUMNOS_POR_SECCION)
     profesores = generate_profesores(num_profs_instancia)
-    eventos = generate_eventos(secciones, profesores, EVENTOS_POR_SECCION, DURACION_EVENTOS)
+    eventos, horas_prof = generate_eventos(secciones, profesores, EVENTOS_POR_SECCION, DURACION_EVENTOS)
     
     # Genera la estructura curricular y la relación puente curriculo-evento
     curriculos, bridge = generate_curriculos(malla_reducida, electivos_reducidos, secciones, eventos)
     
-    disponibilidad = generate_disponibilidad(profesores, config)
+    disponibilidad = generate_disponibilidad(profesores, config, horas_prof)
     rooms = generate_rooms(
         num_salones_instancia, 
         int(num_salones_instancia * RATIO_SALONES_CON_PC), # Mantiene la proporción de computadoras personales.
@@ -534,7 +640,7 @@ if __name__ == '__main__':
     )
     write_csv(
         os.path.join(OUTPUT_DIR, 'profesores.csv'), profesores,
-        ['id_profesor', 'nombre']
+        ['id_profesor', 'nombre', 'especialidad']
     )
     write_csv(
         os.path.join(OUTPUT_DIR, 'profesores_disponibilidad.csv'), disponibilidad,

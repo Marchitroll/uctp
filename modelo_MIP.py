@@ -106,6 +106,14 @@ w = {
 # Define la variable P_almuerzo para la penalización por programación de clases en horario de almuerzo
 P_almuerzo = model.add_var(name="P_almuerzo", var_type=INTEGER, lb=0)
 
+# Define las variables de infracción de espaciado por curso y día de transición
+v_espaciado = {
+    (tuple(c), i): model.add_var(name=f"v_espaciado_{c[0]}_{i}", var_type=INTEGER, lb=0)
+    for c in Cursos_Agrupados
+    for i in range(len(D) - 1)
+}
+P_espaciado = model.add_var(name="P_espaciado", var_type=INTEGER, lb=0)
+
 print("[INFO] Inicializacion completa: conjuntos, parametros y variables.")
 print(f"       E={len(E)} eventos | R={len(R)} salones | T={len(T)} franjas | P={len(P)} profesores")
 
@@ -184,7 +192,7 @@ for d in D:
                     model += x[e, r, t] == suma_arranques, f"Continua_d{d}_t{t}_e{e}_r{r}"
 
 # ============================================================================
-# 7. ESPACIADO DE SESIONES
+# 7. ESPACIADO DE SESIONES (RESTRICCIÓN BLANDA PENALIZADA)
 # ============================================================================
 for c in Cursos_Agrupados:
     for i in range(len(D) - 1):
@@ -194,7 +202,14 @@ for c in Cursos_Agrupados:
         arranques_hoy = xsum(y[e, r, t] for e in c for r in R for t in T_d[dia_actual] if (e, r, t) in y)
         arranques_manana = xsum(y[e, r, t] for e in c for r in R for t in T_d[dia_siguiente] if (e, r, t) in y)
 
-        model += arranques_hoy + arranques_manana <= 1, f"Espaciado_Curso_{c[0]}_Dia_{i}"
+        model += arranques_hoy + arranques_manana <= 1 + v_espaciado[tuple(c), i], f"Espaciado_Curso_{c[0]}_Dia_{i}"
+
+# Vínculo para la penalización total por espaciado
+model += P_espaciado == xsum(
+    v_espaciado[tuple(c), i]
+    for c in Cursos_Agrupados
+    for i in range(len(D) - 1)
+), "Calculo_Penalizacion_Espaciado"
 
 # ============================================================================
 # 8. CONTROL DE DESBORDAMIENTO DIARIO
@@ -258,7 +273,7 @@ model += P_almuerzo == xsum(
     if Almuerzo[t] == 1
 ), "Calculo_Penalizacion_Almuerzo"
 
-model.objective = minimize(P_almuerzo)
+model.objective = minimize(P_almuerzo + 10 * P_espaciado)
 
 if __name__ == '__main__':
 
@@ -277,13 +292,18 @@ if __name__ == '__main__':
     # Verifica si el optimizador ha encontrado al menos una solución factible antes de extraer los resultados
     if model.num_solutions > 0:
         imprimir_metricas(status, cpu_time, model)
+        print(" [DETALLE DE RESTRICCIONES BLANDAS]")
+        print(" " + "-"*50)
+        print(f"   - Almuerzo (franjas de clase) : {P_almuerzo.x:.0f}")
+        print(f"   - Espaciado (infracciones)     : {P_espaciado.x:.0f}")
+        print(" " + "-"*50 + "\n")
         if len(K) == 1:
             out_path = "horarios_pequena/MIP"
         elif len(K) in [4, 5]:
             out_path = "horarios_mediana/MIP"
         else:
             out_path = "horarios_grande/MIP"
-        exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, output_dir=out_path)
+        exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, E_p=E_p, output_dir=out_path)
     else:
         print(f"\n[ALERTA] No se encontro ninguna solucion factible. Estado final: {status.name if hasattr(status, 'name') else status}")
         print(f"[INFO] Tiempo de Procesamiento invertido: {cpu_time:.2f} segundos")

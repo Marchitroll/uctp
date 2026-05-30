@@ -94,6 +94,8 @@ Las variables de decisión se crean exclusivamente sobre las combinaciones de lo
 * **Inicio del evento** $y_{e,r,t}$: Variable binaria que vale 1 si el evento $e$ comienza su bloque de franjas consecutivas en el salón $r$ durante la franja $t$, y 0 en caso contrario.
 * **Uso de salón por sección** $w_{s,r}$: Variable binaria auxiliar que vale 1 si la sección $s$ utiliza el salón $r$ en al menos una franja durante la semana, y 0 en caso contrario.
 * **Penalización por clases en almuerzo** $P_{\text{almuerzo}}$: Variable entera no negativa que acumula el total de franjas de clase programadas durante el período de almuerzo.
+* **Infracción de espaciado por curso y día** $v_{\text{espaciado}, c, i}$: Variable entera no negativa que vale 1 (o más) si el curso $c$ se programa en días consecutivos $i$ e $i+1$, y 0 en caso contrario.
+* **Penalización total por espaciado** $P_{\text{espaciado}}$: Variable entera no negativa que acumula el total de infracciones de espaciado temporal de sesiones.
 
 ### Dominio de las variables
 
@@ -103,7 +105,11 @@ $$ y_{e,r,t} \in \{0,1\} \quad \forall (e,r,t) \in Valid\_ERT $$
 
 $$ w_{s,r} \in \{0,1\} \quad \forall (s,r) \in Valid\_SR $$
 
+$$ v_{\text{espaciado}, c, i} \in \mathbb{Z}^{+} \cup \{0\} \quad \forall c \in C,\; \forall i \in \{1, \dots, |D|-1\} $$
+
 $$ P_{\text{almuerzo}} \in \mathbb{Z}^{+} \cup \{0\} $$
+
+$$ P_{\text{espaciado}} \in \mathbb{Z}^{+} \cup \{0\} $$
 
 > **Nota:** En todas las sumatorias que se presentan a continuación, si una combinación evaluada no pertenece al conjunto de combinaciones válidas correspondiente, la variable asociada no existe y se considera con valor 0. Esto evita la formulación de restricciones sobre variables inexistentes.
 
@@ -149,19 +155,13 @@ $$ \sum_{\substack{r \in R, t \in T \\ (e,r,t) \in Valid\_ERT}} y_{e,r,t} = 1 \q
 
 $$ x_{e,r,t} = \sum_{\substack{\tau \in T_d \mid (e,r,\tau) \in Valid\_ERT \\ t - Dur_e + 1 \leq \tau \leq t}} y_{e,r,\tau} \quad \forall d \in D,\; \forall (e,r,t) \in Valid\_ERT \mid t \in T_d $$
 
-### 7. Espaciado de sesiones
-
-Garantiza al menos un día de descanso entre los inicios de eventos que pertenecen a la misma agrupación por curso.
-
-$$ \sum_{\substack{e \in c, r \in R, t \in T_{d_i} \\ (e,r,t) \in Valid\_ERT}} y_{e,r,t} + \sum_{\substack{e \in c, r \in R, t \in T_{d_{i+1}} \\ (e,r,t) \in Valid\_ERT}} y_{e,r,t} \leq 1 \quad \forall c \in C,\; \forall i \in \{1, \dots, |D|-1\} $$
-
-### 8. Control de desbordamiento diario
+### 7. Control de desbordamiento diario
 
 Prohíbe que un evento inicie en una franja tan tardía que su duración lo lleve más allá de la última franja del día.
 
 $$ y_{e,r,t} = 0 \quad \forall d \in D,\; \forall (e,r,t) \in Valid\_ERT \mid t \in T_d \land t > \max(T_d) - Dur_e + 1 $$
 
-### 9. Oferta global de secciones sin conflicto
+### 8. Oferta global de secciones sin conflicto
 
 Garantiza que para cada currículo $k \in K$ y cada curso $c \in C_k$ que posea más de una sección ($|S_{k,c}| > 1$), la suma total de franjas ocupadas simultáneamente por todas las secciones de dicho curso más las franjas de cualquier otro evento del mismo currículo no exceda la cantidad de secciones disponibles. De esta manera, se asegura que en cada franja horaria al menos una sección del curso permanezca libre de conflicto con cada evento externo de la malla curricular.
 
@@ -175,8 +175,16 @@ Contabiliza el total de franjas de clase programadas durante el período de almu
 
 $$ P_{\text{almuerzo}} = \sum_{(e,r,t) \in Valid\_ERT} \left(x_{e,r,t} \cdot Almuerzo_t\right) $$
 
+### 2. Penalización por espaciado de sesiones
+
+Contabiliza las infracciones a la regla de espaciado (sesiones dictadas en días consecutivos). Permite la holgura controlada a través de la variable $v_{\text{espaciado}, c, i}$ y la acumula en $P_{\text{espaciado}}$:
+
+$$ \sum_{\substack{e \in c, r \in R, t \in T_{d_i} \\ (e,r,t) \in Valid\_ERT}} y_{e,r,t} + \sum_{\substack{e \in c, r \in R, t \in T_{d_{i+1}} \\ (e,r,t) \in Valid\_ERT}} y_{e,r,t} \leq 1 + v_{\text{espaciado}, c, i} \quad \forall c \in C,\; \forall i \in \{1, \dots, |D|-1\} $$
+
+$$ P_{\text{espaciado}} = \sum_{c \in C} \sum_{i=1}^{|D|-1} v_{\text{espaciado}, c, i} $$
+
 ## Función objetivo
 
-El propósito del modelo consiste en encontrar un horario que cumpla con todas las restricciones operativas y, al mismo tiempo, minimice las penalizaciones por la programación de clases durante el período de almuerzo:
+El propósito del modelo consiste en encontrar un horario que cumpla con todas las restricciones operativas duras y, al mismo tiempo, minimice de manera conjunta las penalizaciones por clases en almuerzo y las infracciones de espaciado de sesiones:
 
-$$ \min Z = P_{\text{almuerzo}} $$
+$$ \min Z = P_{\text{almuerzo}} + 10 \cdot P_{\text{espaciado}} $$

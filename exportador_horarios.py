@@ -45,7 +45,7 @@ def imprimir_metricas(status, cpu_time, model):
     print("="*60 + "\n")
 
 
-def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, output_dir=None):
+def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, E_p=None, output_dir=None):
     """
     Genera archivos CSV de horario desagregados por currículo y por camino de matrícula.
     Para cada currículo, se construyen todas las combinaciones factibles de secciones
@@ -59,6 +59,7 @@ def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, output_d
         D               : Lista ordenada de días de la semana académica.
         EVENTO_SECCION  : Diccionario {evento: sección} para resolver la sección de cada evento.
         SECCION_CURSO   : Diccionario {sección: curso} para resolver el curso de cada sección.
+        E_p             : Diccionario {profesor: [eventos]} que asocia cada profesor con sus eventos.
         output_dir      : Directorio raíz para almacenar los archivos CSV generados (detectado dinámicamente si es None).
     """
     if output_dir is None or output_dir == "horarios_por_camino":
@@ -74,6 +75,32 @@ def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, output_d
     # Determina las etiquetas de los intervalos horarios basándose en el día con mayor cantidad de franjas
     max_slots = max(len(slots) for slots in T_d.values())
     horas_labels = [f"{7+i}:00 - {8+i}:00" for i in range(max_slots)]
+
+    # Mapeo de evento a profesor e inicialización del horario docente
+    evento_profesor = {}
+    mapeo_profesor_horario = {}
+    if E_p is not None:
+        for prof, evs in E_p.items():
+            for ev in evs:
+                evento_profesor[ev] = prof
+                
+        # Recolectar asignaciones activas para generar horarios de profesores
+        for (e, r, t), var in x.items():
+            if var.x >= 0.99:
+                profesor = evento_profesor.get(e, None)
+                if profesor:
+                    seccion = EVENTO_SECCION[e]
+                    curso = SECCION_CURSO[seccion]
+                    dia_actual = next(d for d, slots in T_d.items() if t in slots)
+                    slot_local = T_d[dia_actual].index(t)
+                    
+                    if profesor not in mapeo_profesor_horario:
+                        mapeo_profesor_horario[profesor] = []
+                    mapeo_profesor_horario[profesor].append({
+                        'dia': dia_actual,
+                        'slot': slot_local,
+                        'info': f"{curso} ({seccion}) [{r}]"
+                    })
 
     for k in K:
         # Identifica las secciones y eventos del currículo que fueron activados por el resolutor
@@ -95,11 +122,14 @@ def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, output_d
                 if seccion not in mapeo_eventos_seccion:
                     mapeo_eventos_seccion[seccion] = []
 
+                profesor = evento_profesor.get(e, "") if E_p is not None else ""
+                prof_suffix = f" - {profesor}" if profesor else ""
+
                 # Almacena la coordenada física de la clase asignada por el resolutor
                 mapeo_eventos_seccion[seccion].append({
                     'dia': dia_actual,
                     'slot': slot_local,
-                    'info': f"{curso} ({seccion}) [{r}]"
+                    'info': f"{curso} ({seccion}){prof_suffix} [{r}]"
                 })
 
         if not secciones_activas_por_curso:
@@ -137,6 +167,27 @@ def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, output_d
             schedule_matrix.to_csv(file_path)
 
         print(f"[INFO] Ciclo {k}: Generados {len(caminos_matricula)} caminos independientes en '{ciclo_dir.replace(os.sep, '/')}/'.")
+
+    # Exportación de los horarios individuales de cada profesor
+    if E_p is not None and mapeo_profesor_horario:
+        prof_dir = os.path.join(output_dir, "profesores")
+        os.makedirs(prof_dir, exist_ok=True)
+        for prof, clases in mapeo_profesor_horario.items():
+            prof_matrix = pd.DataFrame("---", index=horas_labels, columns=D)
+            for clase in clases:
+                dia = clase['dia']
+                slot = clase['slot']
+                info_str = clase['info']
+
+                celda_actual = prof_matrix.at[horas_labels[slot], dia]
+                if celda_actual == "---":
+                    prof_matrix.at[horas_labels[slot], dia] = info_str
+                else:
+                    prof_matrix.at[horas_labels[slot], dia] = f"{celda_actual} | {info_str}"
+
+            prof_file_path = os.path.join(prof_dir, f"{prof}.csv")
+            prof_matrix.to_csv(prof_file_path)
+        print(f"[INFO] Exportados {len(mapeo_profesor_horario)} horarios de profesores en '{prof_dir.replace(os.sep, '/')}/'.")
 
     print(f"\n[EXITO] Exportacion desagregada completada. Revisar el directorio '{output_dir.replace(os.sep, '/')}/'.")
 

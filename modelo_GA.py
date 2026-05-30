@@ -396,14 +396,17 @@ class UCTPProblem(Problem):
                prof_carga_viol + 
                salon_estabilidad_viol + 
                salon_collision_viol + 
-               espaciado_viol + 
                r9_viol)
                
         lunch_penalty = int(np.sum(event_slot * self.lunch_slots_mask))
+        spacing_penalty = 10 * espaciado_viol
+        total_soft = lunch_penalty + spacing_penalty
         
         return {
             'hcv': hcv,
-            'z': lunch_penalty,
+            'z': total_soft,
+            'lunch_penalty': lunch_penalty,
+            'spacing_penalty': spacing_penalty,
             'prof_collision': prof_collision_viol,
             'prof_carga': prof_carga_viol,
             'salon_estabilidad': salon_estabilidad_viol,
@@ -651,7 +654,16 @@ for run in range(n_corridas):
         "CPU_time": cpu_time,
         "fitness_evals": problem.fitness_evals,
         "tasa_factib_inicial": init_feas,
-        "factible": hcv == 0
+        "factible": hcv == 0,
+        # Desglose de restricciones duras (HCV)
+        "hcv_prof_collision": run_metrics['prof_collision'],
+        "hcv_prof_carga": run_metrics['prof_carga'],
+        "hcv_salon_estabilidad": run_metrics['salon_estabilidad'],
+        "hcv_salon_collision": run_metrics['salon_collision'],
+        "hcv_r9": run_metrics['r9'],
+        # Desglose de restricciones blandas
+        "soft_lunch": run_metrics['lunch_penalty'],
+        "soft_spacing": run_metrics['espaciado']
     })
 
 print("="*80 + "\n")
@@ -719,6 +731,14 @@ if best_global_solution is not None:
         selection=config_base['selection']
     )
     
+    # Calcular y mostrar el desglose detallado de la mejor solución
+    best_metrics = problem.evaluate_solution(best_global_solution)
+    print(" [DETALLE DE RESTRICCIONES BLANDAS DE LA MEJOR CORRIDA]")
+    print(" " + "-"*50)
+    print(f"   - Almuerzo (franjas de clase) : {best_metrics['lunch_penalty']}")
+    print(f"   - Espaciado (infracciones)     : {best_metrics['espaciado']}")
+    print(" " + "-"*50 + "\n")
+    
     # Exportar horario en formato CSV desagregado
     out_path = f"horarios_{escala_efectiva}/GA"
     exportar_horarios(
@@ -729,6 +749,7 @@ if best_global_solution is not None:
         D=D,
         EVENTO_SECCION=EVENTO_SECCION,
         SECCION_CURSO=SECCION_CURSO,
+        E_p=E_p,
         output_dir=out_path
     )
 else:
