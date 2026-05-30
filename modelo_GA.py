@@ -57,7 +57,7 @@ parser.add_argument(
     help="Probabilidad de mutacion"
 )
 parser.add_argument(
-    "--config",
+    "--instancia", "-i",
     choices=["pequena", "mediana", "grande"],
     help="Forzar configuracion de escala especifica"
 )
@@ -95,7 +95,7 @@ elif len(K) in [4, 5]:
 else:
     escala_detectada = "grande"
 
-escala_efectiva = args.config if args.config is not None else escala_detectada
+escala_efectiva = args.instancia if args.instancia is not None else escala_detectada
 
 # Configuraciones por defecto según escala
 CONFIGS = {
@@ -672,7 +672,9 @@ print("="*80 + "\n")
 # PERSISTENCIA DE RESULTADOS Y CONSOLIDACIÓN ESTADÍSTICA
 # ============================================================================
 df_results = pd.DataFrame(resultados_runs)
-csv_filepath = "resultados_GA.csv"
+resultados_dir = "resultados_GA"
+os.makedirs(resultados_dir, exist_ok=True)
+csv_filepath = os.path.join(resultados_dir, f"resultados_{escala_efectiva}.csv")
 df_results.to_csv(csv_filepath, index=False)
 print(f"[EXITO] Resultados individuales persistidos en '{csv_filepath}'.")
 

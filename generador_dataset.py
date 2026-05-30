@@ -559,7 +559,7 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description="Generador de datasets UCTP")
     parser.add_argument(
-        "--instancia",
+        "--instancia", "-i",
         type=str,
         choices=["pequena", "pequeña", "mediana", "grande"],
         default="pequena",

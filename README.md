@@ -26,8 +26,10 @@ Para generar el conjunto de datos de entrada:
 
 ```bash
 python generador_dataset.py --instancia [pequena|mediana|grande]
+# O alternativamente con el atajo:
+python generador_dataset.py -i [pequena|mediana|grande]
 ```
-* Nota: Si no se especifica `--instancia`, por defecto se generará la instancia `pequena`.
+* Nota: Si no se especifica `--instancia` (o `-i`), por defecto se generará la instancia `pequena`.
 
 ## 2. Ejecución del Modelo de Optimización
 
@@ -42,7 +44,7 @@ python modelo_MIP.py --minutos [MINUTOS]
 
 ## 3. Ejecución del Algoritmo Genético
 
-Para resolver empleando el Algoritmo Genético basándose en corridas independientes (por defecto se ejecuta 1 corrida y las estadísticas consolidadas se guardan en `resultados_GA.csv`):
+Para resolver empleando el Algoritmo Genético basándose en corridas independientes (por defecto se ejecuta 1 corrida y las estadísticas consolidadas se guardan en la carpeta `resultados_GA/` con el nombre `resultados_[pequena|mediana|grande].csv`):
 
 ```bash
 python modelo_GA.py --corridas [NÚMERO_DE_CORRIDAS]
@@ -60,6 +62,12 @@ También es posible parametrizar el proceso de optimización del Algoritmo Gené
 * **Por número de generaciones (epochs) y tamaño de población**:
   ```bash
   python modelo_GA.py --epoch [EPOCHS] --pop-size [POPSIZE]
+  ```
+* **Por escala de instancia (forzar configuración de escala específica)**:
+  ```bash
+  python modelo_GA.py --instancia [pequena|mediana|grande]
+  # O usando el atajo:
+  python modelo_GA.py -i [pequena|mediana|grande]
   ```
 
 ## 4. Guía Rápida por Escala (Pequeña, Mediana, Grande)
