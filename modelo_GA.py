@@ -225,7 +225,7 @@ class UCTPProblem(Problem):
     def obj_func(self, solution):
         self.fitness_evals += 1
         metrics = self.evaluate_solution(solution)
-        return 1000.0 * metrics['hcv'] + 1.0 * metrics['z']
+        return 1000.0 * metrics['violaciones_restricciones_duras'] + 1.0 * metrics['penalizacion_blanda']
 
     def amend_position(self, solution):
         # Algoritmo de reparación agresiva para colisiones de profesor y salón físico
@@ -407,20 +407,20 @@ class UCTPProblem(Problem):
         total_soft = W_A * lunch_penalty + W_E * spacing_penalty
         
         return {
-            'hcv': hcv,
-            'z': total_soft,
-            'lunch_penalty': lunch_penalty,
-            'spacing_penalty': spacing_penalty,
-            'prof_collision': prof_collision_viol,
-            'prof_carga': prof_carga_viol,
-            'salon_estabilidad': salon_estabilidad_viol,
-            'salon_collision': salon_collision_viol,
-            'espaciado': espaciado_viol,
-            'r9': r9_viol
+            'violaciones_restricciones_duras': hcv,
+            'penalizacion_blanda': total_soft,
+            'P_almuerzo': lunch_penalty,
+            'P_espaciado': spacing_penalty,
+            'disponibilidad_y_no_colision_profesor': prof_collision_viol,
+            'carga_diaria_maxima_profesor': prof_carga_viol,
+            'estabilidad_salones': salon_estabilidad_viol,
+            'no_colision_salones_fisicos': salon_collision_viol,
+            'infracciones_espaciado': espaciado_viol,
+            'oferta_curricular_sin_conflicto': r9_viol
         }
 
     def get_hcv(self, solution):
-        return self.evaluate_solution(solution)['hcv']
+        return self.evaluate_solution(solution)['violaciones_restricciones_duras']
 
 # ============================================================================
 # CLASE DEL ALGORITMO GENÉTICO PERSONALIZADO (MÉTRICAS Y TRAZABILIDAD)
@@ -618,8 +618,8 @@ for run in range(n_corridas):
     run_solution = best_agent.solution
     run_metrics = problem.evaluate_solution(run_solution)
     
-    hcv = run_metrics['hcv']
-    z = run_metrics['z']
+    hcv = run_metrics['violaciones_restricciones_duras']
+    z = run_metrics['penalizacion_blanda']
     ttf = ga_model.first_feasible_time
     init_feas = ga_model.init_feasibility_rate
     
@@ -660,14 +660,14 @@ for run in range(n_corridas):
         "tasa_factib_inicial": init_feas,
         "factible": hcv == 0,
         # Desglose de restricciones duras (HCV)
-        "hcv_prof_collision": run_metrics['prof_collision'],
-        "hcv_prof_carga": run_metrics['prof_carga'],
-        "hcv_salon_estabilidad": run_metrics['salon_estabilidad'],
-        "hcv_salon_collision": run_metrics['salon_collision'],
-        "hcv_r9": run_metrics['r9'],
+        "hcv_prof_collision": run_metrics['disponibilidad_y_no_colision_profesor'],
+        "hcv_prof_carga": run_metrics['carga_diaria_maxima_profesor'],
+        "hcv_salon_estabilidad": run_metrics['estabilidad_salones'],
+        "hcv_salon_collision": run_metrics['no_colision_salones_fisicos'],
+        "hcv_r9": run_metrics['oferta_curricular_sin_conflicto'],
         # Desglose de restricciones blandas
-        "soft_lunch": run_metrics['lunch_penalty'],
-        "soft_spacing": run_metrics['espaciado']
+        "soft_lunch": run_metrics['P_almuerzo'],
+        "soft_spacing": run_metrics['infracciones_espaciado']
     })
 
 print("="*80 + "\n")
@@ -741,8 +741,8 @@ if best_global_solution is not None:
     best_metrics = problem.evaluate_solution(best_global_solution)
     print(" [DETALLE DE RESTRICCIONES BLANDAS DE LA MEJOR CORRIDA]")
     print(" " + "-"*50)
-    print(f"   - Almuerzo (franjas de clase) : {best_metrics['lunch_penalty']}")
-    print(f"   - Espaciado (infracciones)     : {best_metrics['espaciado']}")
+    print(f"   - Almuerzo (franjas de clase) : {best_metrics['P_almuerzo']}")
+    print(f"   - Espaciado (infracciones)     : {best_metrics['infracciones_espaciado']}")
     print(" " + "-"*50 + "\n")
     
     # Exportar horario en formato CSV desagregado
