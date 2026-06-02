@@ -74,6 +74,10 @@ else:
     max_seconds = None
     tiempo_desc = "sin limite de tiempo"
 
+# Pesos de penalización constantes de la función objetivo (Sección 4.3)
+W_A = 1
+W_E = 10
+
 # ============================================================================
 # CARGA DE DATOS Y CONJUNTOS
 # ============================================================================
@@ -399,8 +403,8 @@ class UCTPProblem(Problem):
                r9_viol)
                
         lunch_penalty = int(np.sum(event_slot * self.lunch_slots_mask))
-        spacing_penalty = 10 * espaciado_viol
-        total_soft = lunch_penalty + spacing_penalty
+        spacing_penalty = espaciado_viol
+        total_soft = W_A * lunch_penalty + W_E * spacing_penalty
         
         return {
             'hcv': hcv,

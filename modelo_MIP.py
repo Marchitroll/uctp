@@ -1,4 +1,4 @@
-from mip import Model, BINARY, INTEGER, xsum, minimize
+from mip import Model, BINARY, INTEGER, CONTINUOUS, xsum, minimize
 import time
 from exportador_horarios import imprimir_metricas, exportar_horarios
 from cargador_datos import cargar_datos_uctp
@@ -106,13 +106,13 @@ w = {
 # Define la variable P_almuerzo para la penalización por programación de clases en horario de almuerzo
 P_almuerzo = model.add_var(name="P_almuerzo", var_type=INTEGER, lb=0)
 
-# Define las variables de infracción de espaciado por curso y día de transición
+# Define las variables de infracción de espaciado por curso y día de transición (relajación continua)
 v_espaciado = {
-    (tuple(c), i): model.add_var(name=f"v_espaciado_{c[0]}_{i}", var_type=INTEGER, lb=0)
+    (tuple(c), i): model.add_var(name=f"v_espaciado_{c[0]}_{i}", var_type=CONTINUOUS, lb=0)
     for c in Cursos_Agrupados
     for i in range(len(D) - 1)
 }
-P_espaciado = model.add_var(name="P_espaciado", var_type=INTEGER, lb=0)
+P_espaciado = model.add_var(name="P_espaciado", var_type=CONTINUOUS, lb=0)
 
 print("[INFO] Inicializacion completa: conjuntos, parametros y variables.")
 print(f"       E={len(E)} eventos | R={len(R)} salones | T={len(T)} franjas | P={len(P)} profesores")
@@ -273,7 +273,11 @@ model += P_almuerzo == xsum(
     if Almuerzo[t] == 1
 ), "Calculo_Penalizacion_Almuerzo"
 
-model.objective = minimize(P_almuerzo + 10 * P_espaciado)
+# Pesos de penalización constantes de la función objetivo
+W_A = 1
+W_E = 10
+
+model.objective = minimize(W_A * P_almuerzo + W_E * P_espaciado)
 
 if __name__ == '__main__':
 
