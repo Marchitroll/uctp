@@ -151,7 +151,7 @@ OUTPUT_DIR = 'dataset'             # Directorio de destino para el almacenamient
 # CARGA DE CONFIGURACIÓN INSTITUCIONAL
 # ============================================================================
 
-def load_config(filepath):
+def cargar_configuracion(filepath):
     """Carga los parámetros institucionales desde un archivo JSON."""
     with open(filepath, 'r', encoding='utf-8') as f:
         return json.load(f)
@@ -602,7 +602,7 @@ if __name__ == '__main__':
             json.dump(config, f, indent=2)
         print("[INFO] Recreado archivo 'config.json' por defecto en el directorio raiz.")
     else:
-        config = load_config(config_path)
+        config = cargar_configuracion(config_path)
     print(f"[INFO] Generando instancia para niveles: {niveles_objetivo}")
 
     # Generación de registros a partir de los subconjuntos estructurados

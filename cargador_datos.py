@@ -9,7 +9,7 @@ import json
 import os
 
 
-def load_config(filepath):
+def cargar_configuracion(filepath):
     """
     Carga los parámetros institucionales desde un archivo JSON y deriva los conjuntos D, T, T_d, d_jue y Almuerzo.
     Soporta franjas heterogéneas, donde cada día puede tener un número diferente de franjas.
@@ -53,7 +53,7 @@ def load_config(filepath):
     return D, T, T_d, d_jue, Almuerzo
 
 
-def load_rooms_data(filepath):
+def cargar_datos_salones(filepath):
     """
     Carga los datos de los salones desde un archivo CSV y retorna R, CAP, ES_VIRTUAL y CARACTERISTICAS.
     """
@@ -72,7 +72,7 @@ def load_rooms_data(filepath):
     return R, CAP, ES_VIRTUAL, CARACTERISTICAS
 
 
-def load_cursos(filepath):
+def cargar_cursos(filepath):
     """
     Carga los datos de los cursos y sus requisitos de infraestructura asociados.
     """
@@ -88,7 +88,7 @@ def load_cursos(filepath):
     return CURSOS, REQ_CURSO
 
 
-def load_secciones(filepath):
+def cargar_secciones(filepath):
     """
     Carga las secciones académicas y retorna S, el mapeo seccion->curso y el número de alumnos por sección.
     """
@@ -105,7 +105,7 @@ def load_secciones(filepath):
     return S, SECCION_CURSO, Alumno
 
 
-def load_eventos(filepath):
+def cargar_eventos(filepath):
     """
     Carga los eventos de clase y retorna E, E_s, E_p, Dur y el mapeo evento->seccion.
     """
@@ -139,7 +139,7 @@ def load_eventos(filepath):
     return E, E_s, E_p, Dur, EVENTO_SECCION
 
 
-def load_curriculos(curriculos_path, bridge_path):
+def cargar_curriculos(curriculos_path, bridge_path):
     """
     Carga los currículos académicos y la tabla puente, y retorna K y E_k.
     """
@@ -161,7 +161,7 @@ def load_curriculos(curriculos_path, bridge_path):
     return K, E_k
 
 
-def load_prof_availability(filepath, P, T):
+def cargar_disponibilidad_profesores(filepath, P, T):
     """
     Carga la disponibilidad horaria de los profesores y retorna la matriz binaria Disp.
     """
@@ -184,14 +184,14 @@ def cargar_datos_uctp(data_dir='dataset'):
     Carga la totalidad de conjuntos y parámetros requeridos para el modelo MIP
     desde los archivos JSON y CSV correspondientes dentro del directorio especificado.
     """
-    D, T, T_d, d_jue, Almuerzo = load_config(os.path.join(os.path.dirname(__file__), 'config.json'))
-    R, CAP, ES_VIRTUAL, CARACTERISTICAS = load_rooms_data(os.path.join(data_dir, 'salones.csv'))
-    CURSOS, REQ_CURSO = load_cursos(os.path.join(data_dir, 'cursos.csv'))
-    S, SECCION_CURSO, Alumno = load_secciones(os.path.join(data_dir, 'secciones.csv'))
-    E, E_s, E_p, Dur, EVENTO_SECCION = load_eventos(os.path.join(data_dir, 'eventos.csv'))
+    D, T, T_d, d_jue, Almuerzo = cargar_configuracion(os.path.join(os.path.dirname(__file__), 'config.json'))
+    R, CAP, ES_VIRTUAL, CARACTERISTICAS = cargar_datos_salones(os.path.join(data_dir, 'salones.csv'))
+    CURSOS, REQ_CURSO = cargar_cursos(os.path.join(data_dir, 'cursos.csv'))
+    S, SECCION_CURSO, Alumno = cargar_secciones(os.path.join(data_dir, 'secciones.csv'))
+    E, E_s, E_p, Dur, EVENTO_SECCION = cargar_eventos(os.path.join(data_dir, 'eventos.csv'))
     P = list(E_p.keys())
-    K, E_k = load_curriculos(os.path.join(data_dir, 'curriculos.csv'), os.path.join(data_dir, 'curriculo_evento.csv'))
-    Disp = load_prof_availability(os.path.join(data_dir, 'profesores_disponibilidad.csv'), P, T)
+    K, E_k = cargar_curriculos(os.path.join(data_dir, 'curriculos.csv'), os.path.join(data_dir, 'curriculo_evento.csv'))
+    Disp = cargar_disponibilidad_profesores(os.path.join(data_dir, 'profesores_disponibilidad.csv'), P, T)
 
     # Define el conjunto general de características requeridas o poseídas (unión de cursos y salones)
     F = sorted(

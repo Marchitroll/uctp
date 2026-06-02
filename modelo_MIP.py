@@ -114,7 +114,7 @@ v_espaciado = {
 }
 P_espaciado = model.add_var(name="P_espaciado", var_type=CONTINUOUS, lb=0)
 
-print("[INFO] Inicializacion completa: conjuntos, parametros y variables.")
+print("[INFO] Inicialización completa: conjuntos, parámetros y variables.")
 print(f"       E={len(E)} eventos | R={len(R)} salones | T={len(T)} franjas | P={len(P)} profesores")
 
 
@@ -286,7 +286,7 @@ if __name__ == '__main__':
 
     model.verbose = 2
 
-    print(f"[INFO] Iniciando el proceso de optimizacion (maximo {tiempo_desc} / {max_seconds} segundos)...")
+    print(f"[INFO] Iniciando el proceso de optimización (máximo {tiempo_desc} / {max_seconds} segundos)...")
     
     # Registra la estampa de tiempo inicial para medir la duración total del proceso de optimización
     start_time = time.time()
@@ -309,5 +309,5 @@ if __name__ == '__main__':
             out_path = "horarios_grande/MIP"
         exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, E_p=E_p, output_dir=out_path)
     else:
-        print(f"\n[ALERTA] No se encontro ninguna solucion factible. Estado final: {status.name if hasattr(status, 'name') else status}")
+        print(f"\n[ALERTA] No se encontró ninguna solución factible. Estado final: {status.name if hasattr(status, 'name') else status}")
         print(f"[INFO] Tiempo de Procesamiento invertido: {cpu_time:.2f} segundos")

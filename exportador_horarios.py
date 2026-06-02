@@ -16,7 +16,7 @@ import mip
 def imprimir_metricas(status, cpu_time, model):
     """
     Imprime las métricas de trazabilidad del entorno de ejecución y los indicadores
-    de desempeño alcanzados por el resolutor durante el proceso de optimización.
+    de desempeño alcanzados por el solucionador durante el proceso de optimización.
     """
     bestcost = model.objective_value
     lowerbound = model.objective_bound
@@ -31,17 +31,17 @@ def imprimir_metricas(status, cpu_time, model):
     print(f" Sistema Operativo : {platform.system()} {platform.release()}")
     print(f" Procesador        : {platform.processor()}")
     print(f" RAM Disponible    : {round(psutil.virtual_memory().total / (1024.0 **3), 2)} GB")
-    print(f" Version Python    : {platform.python_version()}")
-    print(f" Version Python-MIP: {mip.__version__}")
+    print(f" Versión Python    : {platform.python_version()}")
+    print(f" Versión Python-MIP: {mip.__version__}")
 
     print("\n" + "="*60)
-    print(" [METRICAS DE EVALUACION]")
+    print(" [MÉTRICAS DE EVALUACIÓN]")
     print("="*60)
-    print(f" Estado Final (Status) : {status.name if hasattr(status, 'name') else status}")
-    print(f" Tiempo de Procesamiento : {cpu_time:.2f} segundos")
-    print(f" Valor Funcion Objetivo (Z) : {bestcost}")
-    print(f" Limite Inferior (LB) : {lowerbound}")
-    print(f" Gap de Optimalidad (MIP) : {gap_pct:.4f} %")
+    print(f" Estado Final (Status)      : {status.name if hasattr(status, 'name') else status}")
+    print(f" Tiempo de Procesamiento    : {cpu_time:.2f} segundos")
+    print(f" Valor Función Objetivo (Z) : {bestcost}")
+    print(f" Límite Inferior (LB)       : {lowerbound}")
+    print(f" Brecha de Optimalidad (Gap): {gap_pct:.4f} %")
     print("="*60 + "\n")
 
 
@@ -189,7 +189,7 @@ def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, E_p=None
             prof_matrix.to_csv(prof_file_path)
         print(f"[INFO] Exportados {len(mapeo_profesor_horario)} horarios de profesores en '{prof_dir.replace(os.sep, '/')}/'.")
 
-    print(f"\n[EXITO] Exportacion desagregada completada. Revisar el directorio '{output_dir.replace(os.sep, '/')}/'.")
+    print(f"\n[ÉXITO] Exportación desagregada completada. Revisar el directorio '{output_dir.replace(os.sep, '/')}/'.")
 
 
 def imprimir_metricas_ga(cpu_time, best_fitness, hard_violations, soft_penalty, epoch, pop_size, crossover, selection):
@@ -203,19 +203,19 @@ def imprimir_metricas_ga(cpu_time, best_fitness, hard_violations, soft_penalty, 
     print(f" Sistema Operativo : {platform.system()} {platform.release()}")
     print(f" Procesador        : {platform.processor()}")
     print(f" RAM Disponible    : {round(psutil.virtual_memory().total / (1024.0 **3), 2)} GB")
-    print(f" Version Python    : {platform.python_version()}")
-    print(f" Version MEALPY    : 3.0.3")
+    print(f" Versión Python    : {platform.python_version()}")
+    print(f" Versión MEALPY    : 3.0.3")
 
     print("\n" + "="*60)
-    print(" [METRICAS GA]")
+    print(" [MÉTRICAS GA]")
     print("="*60)
     print(f" Generaciones (Epochs)   : {epoch}")
-    print(f" Tam. Poblacion (Pop)    : {pop_size}")
-    print(f" Crossover / Seleccion   : {crossover} / {selection}")
-    print(f" Tiempo Procesamiento    : {cpu_time:.2f} segundos")
-    print(f" Fitness Total Obtenido  : {best_fitness:.4f}")
+    print(f" Tamaño Población (Pop)  : {pop_size}")
+    print(f" Crossover / Selección   : {crossover} / {selection}")
+    print(f" Tiempo de Procesamiento : {cpu_time:.2f} segundos")
+    print(f" Aptitud (Fitness) Total : {best_fitness:.4f}")
     print(f" Violaciones Duras (HCV) : {hard_violations}")
-    print(f" Penalizacion Blanda (Z) : {soft_penalty} (comparable con Z del MIP)")
+    print(f" Penalización Blanda (Z) : {soft_penalty} (comparable con Z del MIP)")
     print(f" Factible (HCV == 0)     : {'SI' if hard_violations == 0 else 'NO'}")
     print("="*60 + "\n")
 

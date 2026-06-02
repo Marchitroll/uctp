@@ -143,7 +143,7 @@ if args.pm is not None:
     config_base['pm'] = args.pm
 
 print(f"[INFO] Escala detectada: {escala_detectada} | Escala efectiva: {escala_efectiva}")
-print(f"       Configuracion: Epochs={config_base['epoch']} | PopSize={config_base['pop_size']} | CrossoverProb={config_base['pc']} | MutationProb={config_base['pm']}")
+print(f"       Configuración: Generaciones={config_base['epoch']} | Población={config_base['pop_size']} | Prob. Crossover={config_base['pc']} | Prob. Mutación={config_base['pm']}")
 
 # ============================================================================
 # CLASE DEL PROBLEMA UCTP PARA MEALPY
@@ -490,23 +490,23 @@ class UCTPProblem(Problem):
                 room_slot[r_idx, t_idx] += 1
                 event_slot[idx, t_idx] = 1
                 
-        prof_collision_viol = int(np.sum(np.maximum(0, prof_slot - 1)))
+        viol_colision_prof = int(np.sum(np.maximum(0, prof_slot - 1)))
         
-        prof_carga_viol = 0
+        viol_carga_prof = 0
         for d_idx in range(self.num_days):
             daily_hours = np.sum(prof_slot[:, self.day_slots_indices[d_idx]], axis=1)
-            prof_carga_viol += int(np.sum(np.maximum(0, daily_hours - 8)))
+            viol_carga_prof += int(np.sum(np.maximum(0, daily_hours - 8)))
             
-        salon_estabilidad_viol = 0
+        viol_estabilidad_salon = 0
         for s_idx in range(self.num_sections):
             ev_indices = self.section_events[s_idx]
             unique_rooms = len(np.unique(r_indices[ev_indices]))
             if unique_rooms > 2:
-                salon_estabilidad_viol += (unique_rooms - 2)
+                viol_estabilidad_salon += (unique_rooms - 2)
                 
-        salon_collision_viol = int(np.sum(np.maximum(0, room_slot[self.physical_room_indices, :] - 1)))
+        viol_colision_salon = int(np.sum(np.maximum(0, room_slot[self.physical_room_indices, :] - 1)))
         
-        espaciado_viol = 0
+        viol_espaciado = 0
         for s_idx in range(self.num_sections):
             ev_indices = self.section_events[s_idx]
             n_evs = len(ev_indices)
@@ -517,9 +517,9 @@ class UCTPProblem(Problem):
                     d1 = self.slot_to_day_idx[t_starts[ev_indices[i]]]
                     d2 = self.slot_to_day_idx[t_starts[ev_indices[j]]]
                     if abs(d1 - d2) <= 1:
-                        espaciado_viol += 1
+                        viol_espaciado += 1
                         
-        r9_viol = 0
+        viol_r9 = 0
         for constraint in self.r9_constraints:
             evs_c = constraint['evs_c']
             num_secciones = constraint['num_secciones']
@@ -528,29 +528,29 @@ class UCTPProblem(Problem):
             active_c = np.sum(event_slot[evs_c, :], axis=0)
             full_slots = np.where(active_c == num_secciones)[0]
             if len(full_slots) > 0:
-                r9_viol += int(np.sum(event_slot[evs_other][:, full_slots]))
+                viol_r9 += int(np.sum(event_slot[evs_other][:, full_slots]))
                 
-        hcv = (prof_collision_viol + 
-               prof_carga_viol + 
-               salon_estabilidad_viol + 
-               salon_collision_viol + 
-               r9_viol)
+        hcv = (viol_colision_prof + 
+               viol_carga_prof + 
+               viol_estabilidad_salon + 
+               viol_colision_salon + 
+               viol_r9)
                
-        lunch_penalty = int(np.sum(event_slot * self.lunch_slots_mask))
-        spacing_penalty = espaciado_viol
-        total_soft = W_A * lunch_penalty + W_E * spacing_penalty
+        penalizacion_almuerzo = int(np.sum(event_slot * self.lunch_slots_mask))
+        penalizacion_espaciado = viol_espaciado
+        total_blanda = W_A * penalizacion_almuerzo + W_E * penalizacion_espaciado
         
         return {
             'violaciones_restricciones_duras': hcv,
-            'penalizacion_blanda': total_soft,
-            'P_almuerzo': lunch_penalty,
-            'P_espaciado': spacing_penalty,
-            'disponibilidad_y_no_colision_profesor': prof_collision_viol,
-            'carga_diaria_maxima_profesor': prof_carga_viol,
-            'estabilidad_salones': salon_estabilidad_viol,
-            'no_colision_salones_fisicos': salon_collision_viol,
-            'infracciones_espaciado': espaciado_viol,
-            'oferta_curricular_sin_conflicto': r9_viol
+            'penalizacion_blanda': total_blanda,
+            'P_almuerzo': penalizacion_almuerzo,
+            'P_espaciado': penalizacion_espaciado,
+            'disponibilidad_y_no_colision_profesor': viol_colision_prof,
+            'carga_diaria_maxima_profesor': viol_carga_prof,
+            'estabilidad_salones': viol_estabilidad_salon,
+            'no_colision_salones_fisicos': viol_colision_salon,
+            'infracciones_espaciado': viol_espaciado,
+            'oferta_curricular_sin_conflicto': viol_r9
         }
 
     def get_hcv(self, solution):
@@ -562,27 +562,27 @@ class UCTPProblem(Problem):
 class CustomGA(BaseGA):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.first_feasible_epoch = None
-        self.first_feasible_time = None
-        self.start_wall_time = None
-        self.init_feasibility_rate = 0.0
-        self.epochs_no_improve_z = 0
-        self.best_z = float('inf')
+        self.primera_gen_factible = None
+        self.primer_tiempo_factible = None
+        self.tiempo_inicio = None
+        self.tasa_factibilidad_inicial = 0.0
+        self.generaciones_sin_mejora_z = 0
+        self.mejor_z = float('inf')
 
     def solve(self, problem, **kwargs):
-        self.first_feasible_epoch = None
-        self.first_feasible_time = None
-        self.start_wall_time = time.time()
-        self.epochs_no_improve_z = 0
-        self.best_z = float('inf')
+        self.primera_gen_factible = None
+        self.primer_tiempo_factible = None
+        self.tiempo_inicio = time.time()
+        self.generaciones_sin_mejora_z = 0
+        self.mejor_z = float('inf')
         res = super().solve(problem, **kwargs)
         
         # Comprobación de factibilidad al final por si ocurrió en inicialización
-        if self.first_feasible_epoch is None:
+        if self.primera_gen_factible is None:
             hcv = self.problem.get_hcv(self.g_best.solution)
             if hcv == 0:
-                self.first_feasible_epoch = 0
-                self.first_feasible_time = 0.0
+                self.primera_gen_factible = 0
+                self.primer_tiempo_factible = 0.0
         return res
 
     def after_initialization(self):
@@ -593,16 +593,16 @@ class CustomGA(BaseGA):
             hcv = self.problem.get_hcv(agent.solution)
             if hcv == 0:
                 feasible_count += 1
-        self.init_feasibility_rate = (feasible_count / len(self.pop)) * 100.0
+        self.tasa_factibilidad_inicial = (feasible_count / len(self.pop)) * 100.0
 
     def track_optimize_step(self, pop=None, epoch=None, runtime=None):
         super().track_optimize_step(pop, epoch, runtime)
-        if self.first_feasible_epoch is None:
+        if self.primera_gen_factible is None:
             g_best_sol = self.g_best.solution
             hcv = self.problem.get_hcv(g_best_sol)
             if hcv == 0:
-                self.first_feasible_epoch = epoch
-                self.first_feasible_time = time.time() - self.start_wall_time
+                self.primera_gen_factible = epoch
+                self.primer_tiempo_factible = time.time() - self.tiempo_inicio
 
     def check_termination(self, mode="start", termination=None, epoch=None):
         finished = super().check_termination(mode, termination, epoch)
@@ -612,47 +612,23 @@ class CustomGA(BaseGA):
             hcv = self.problem.get_hcv(self.g_best.solution)
             if hcv == 0:
                 z = self.problem.evaluate_solution(self.g_best.solution)['penalizacion_blanda']
-                if z < self.best_z:
-                    self.best_z = z
-                    self.epochs_no_improve_z = 0
+                if z < self.mejor_z:
+                    self.mejor_z = z
+                    self.generaciones_sin_mejora_z = 0
                 else:
-                    self.epochs_no_improve_z += 1
+                    self.generaciones_sin_mejora_z += 1
                 
                 # Detener si Z no ha mejorado en 20 generaciones consecutivas
-                if self.epochs_no_improve_z >= 20:
-                    self.logger.warning("Stopping criterion with feasible solution found and Z converged (no improvement for 20 epochs) occurred. End program!")
+                if self.generaciones_sin_mejora_z >= 20:
+                    self.logger.warning("Criterio de parada: solución factible encontrada y Z convergió (sin mejoras durante 20 generaciones). ¡Finalizando programa!")
                     return True
         return False
 
 # ============================================================================
-# PRE-CÓMPUTO DE REDUCCIÓN DE DOMINIO Y ASIGNACIONES
+# PRE-CÓMPUTO DE COMBINACIONES DE INICIO POR EVENTO
 # ============================================================================
-print("[INFO] Pre-computando dominio reducido y combinaciones de inicio...")
+print("[INFO] Pre-computando combinaciones de inicio por evento...")
 start_precompute = time.time()
-
-Valid_SR = set()
-Valid_ERT = set()
-
-for s in S:
-    salones_elegibles = [
-        r for r in R 
-        if CAP[r] >= Alumno[s] and all(Req[(s, f)] <= Tiene[(r, f)] for f in F)
-    ]
-    
-    for r in salones_elegibles:
-        Valid_SR.add((s, r))
-        
-        if ES_VIRTUAL[r]:
-            franjas_operativas = T_d[d_jue]
-        else:
-            franjas_operativas = [t for t in T if t not in T_d[d_jue]]
-            
-        for e in E_s[s]:
-            p_assigned = next(prof for prof, eventos_prof in E_p.items() if e in eventos_prof)
-            
-            for t in franjas_operativas:
-                if Disp[(p_assigned, t)] == 1:
-                    Valid_ERT.add((e, r, t))
 
 # Filtrado de combinaciones válidas por evento
 valid_starts = {}
@@ -739,12 +715,12 @@ best_global_solution = None
 best_global_hcv = float('inf')
 best_global_z = float('inf')
 
-print(f"\n[INFO] Iniciando ejecucion de {n_corridas} corridas del Algoritmo Genetico...")
+print(f"\n[INFO] Iniciando la ejecución de {n_corridas} corridas del Algoritmo Genético...")
 print("="*80)
 
 for run in range(n_corridas):
     seed = 42 + run
-    print(f"\n>>> [CORRIDA {run + 1}/{n_corridas}] Seed: {seed} ...")
+    print(f"\n>>> [CORRIDA {run + 1}/{n_corridas}] Semilla (Seed): {seed} ...")
     
     # Crear problema
     problem = UCTPProblem(
@@ -778,8 +754,8 @@ for run in range(n_corridas):
     
     hcv = run_metrics['violaciones_restricciones_duras']
     z = run_metrics['penalizacion_blanda']
-    ttf = ga_model.first_feasible_time
-    init_feas = ga_model.init_feasibility_rate
+    ttf = ga_model.primer_tiempo_factible
+    init_feas = ga_model.tasa_factibilidad_inicial
     
     # Trazabilidad y almacenamiento de la mejor solución general
     is_better = False
@@ -802,10 +778,10 @@ for run in range(n_corridas):
         best_global_hcv = hcv
         best_global_z = z
         
-    print(f"    Resultado Corrida: HCV={hcv} | Z={z} | Factible={'SI' if hcv == 0 else 'NO'} | CPU Time={cpu_time:.2f} s")
+    print(f"    Resultado de Corrida: HCV={hcv} | Z={z} | Factible={'SÍ' if hcv == 0 else 'NO'} | Tiempo CPU={cpu_time:.2f} s")
     if hcv == 0:
-        print(f"    TTF (Factibilidad) : {ttf:.2f} s (Generacion {ga_model.first_feasible_epoch})")
-    print(f"    Tasa Factib. Inicial: {init_feas:.2f}% | Evaluaciones de Fitness={problem.fitness_evals}")
+        print(f"    Tiempo a Factible (TTF): {ttf:.2f} s (Generación {ga_model.primera_gen_factible})")
+    print(f"    Tasa Factib. Inicial: {init_feas:.2f}% | Evaluaciones de Aptitud (Fitness)={problem.fitness_evals}")
     
     resultados_runs.append({
         "corrida": run + 1,
@@ -838,7 +814,7 @@ resultados_dir = "resultados_GA"
 os.makedirs(resultados_dir, exist_ok=True)
 csv_filepath = os.path.join(resultados_dir, f"resultados_{escala_efectiva}.csv")
 df_results.to_csv(csv_filepath, index=False)
-print(f"[EXITO] Resultados individuales persistidos en '{csv_filepath}'.")
+print(f"[ÉXITO] Resultados individuales persistidos en '{csv_filepath}'.")
 
 # Estadísticas consolidadas
 total_runs = len(df_results)
@@ -862,25 +838,25 @@ cpu_promedio = df_results['CPU_time'].mean()
 evals_promedio = df_results['fitness_evals'].mean()
 
 print("="*60)
-print(" [RESUMEN ESTADISTICO CONSOLIDADO]")
+print(" [RESUMEN ESTADÍSTICO CONSOLIDADO]")
 print("="*60)
 print(f" Total de corridas ejecutadas     : {total_runs}")
-print(f" Tasa de Factibilidad de Inicial. : {tasa_factib_inicial_promedio:.2f} %")
+print(f" Tasa de Factibilidad Inicial     : {tasa_factib_inicial_promedio:.2f} %")
 print(f" Tasa de Factibilidad Final       : {tasa_factibilidad:.2f} %")
-print(f" Tiempo hacia Factib. (TTF) Prom. : {ttf_promedio:.2f} segundos" if not np.isnan(ttf_promedio) else " Tiempo hacia Factib. (TTF) Prom. : N/A")
-print(f" CPU Time Promedio por Corrida    : {cpu_promedio:.2f} segundos")
-print(f" Evaluaciones de Fitness Promedio : {evals_promedio:.1f}")
+print(f" Tiempo a Factible (TTF) Promedio : {ttf_promedio:.2f} segundos" if not np.isnan(ttf_promedio) else " Tiempo a Factible (TTF) Promedio : N/A")
+print(f" Tiempo CPU Promedio por Corrida  : {cpu_promedio:.2f} segundos")
+print(f" Evaluaciones Aptitud (Fitness) Prom: {evals_promedio:.1f}")
 print("-"*60)
-print(f" Mejor Valor Funcion Objetivo (Z) : {mejor_z}" if not np.isnan(mejor_z) else " Mejor Valor Funcion Objetivo (Z) : N/A")
+print(f" Mejor Valor Función Objetivo (Z) : {mejor_z}" if not np.isnan(mejor_z) else " Mejor Valor Función Objetivo (Z) : N/A")
 print(f" Valor Promedio Objetivo (Z)      : {promedio_z:.2f}" if not np.isnan(promedio_z) else " Valor Promedio Objetivo (Z)      : N/A")
-print(f" Desviacion Estandar Objetivo (Z) : {desviacion_z:.4f}" if not np.isnan(desviacion_z) else " Desviacion Estandar Objetivo (Z) : N/A")
+print(f" Desviación Estándar Objetivo (Z) : {desviacion_z:.4f}" if not np.isnan(desviacion_z) else " Desviación Estándar Objetivo (Z) : N/A")
 print("="*60 + "\n")
 
 # ============================================================================
 # EXPORTACIÓN DEL HORARIO DE LA MEJOR CORRIDA
 # ============================================================================
 if best_global_solution is not None:
-    print("[INFO] Reconstruyendo y exportando horario de la mejor solucion encontrada...")
+    print("[INFO] Reconstruyendo y exportando horario de la mejor solución encontrada...")
     x_best = reconstruir_x_desde_ga(best_global_solution, valid_starts, E, Dur)
     
     # Imprimir métricas detalladas en consola
@@ -917,4 +893,4 @@ if best_global_solution is not None:
         output_dir=out_path
     )
 else:
-    print("[ALERTA] No se encontro ninguna solucion factible o valida para exportar.")
+    print("[ALERTA] No se encontró ninguna solución factible o válida para exportar.")
