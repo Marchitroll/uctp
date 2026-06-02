@@ -30,7 +30,7 @@ A continuación se presenta la colección de conjuntos que definen el espacio de
 
 ### Agrupaciones relacionales
 
-* **Agrupación por curso** $C$: Familia de subconjuntos de $E$ donde cada elemento $c \in C$ agrupa los eventos de un mismo curso dentro de una sección específica. Se utiliza para aplicar las reglas de espaciado temporal entre sesiones del mismo curso.
+* **Conjunto de agrupaciones curso-sección** $C$: Conjunto de índices que identifican a cada curso dentro de una sección específica. Para cada grupo $c \in C$, se define el conjunto de eventos asociados como $E_c \subseteq E$, lo cual permite aplicar las reglas de espaciado temporal entre las sesiones del mismo curso.
 * **Relación currículo-evento** $\{E_k\}_{k \in K}$: Familia de subconjuntos de $E$ que componen la ruta curricular $k \in K$.
 * **Relación sección-evento** $\{E_s\}_{s \in S}$: Familia de subconjuntos de $E$ que pertenecen a la sección $s \in S$.
 * **Relación profesor-evento** $\{E_p\}_{p \in P}$: Familia de subconjuntos de $E$ dictados por el profesor $p \in P$.
@@ -107,11 +107,11 @@ $$ y_{e,r,t} \in \{0,1\} \quad \forall (e,r,t) \in Valid\_ERT $$
 
 $$ w_{s,r} \in \{0,1\} \quad \forall (s,r) \in Valid\_SR $$
 
-$$ v_{\text{espaciado}, c, i} \in \mathbb{Z}^{+} \cup \{0\} \quad \forall c \in C,\; \forall i \in \{1, \dots, |D|-1\} $$
+$$ v_{\text{espaciado}, c, i} \ge 0 \quad \forall c \in C,\; \forall i \in \{1, \dots, |D|-1\} $$
 
 $$ P_{\text{almuerzo}} \in \mathbb{Z}^{+} \cup \{0\} $$
 
-$$ P_{\text{espaciado}} \in \mathbb{Z}^{+} \cup \{0\} $$
+$$ P_{\text{espaciado}} \ge 0 $$
 
 > **Nota:** En todas las sumatorias que se presentan a continuación, si una combinación evaluada no pertenece al conjunto de combinaciones válidas correspondiente, la variable asociada no existe y se considera con valor 0. Esto evita la formulación de restricciones sobre variables inexistentes.
 
@@ -181,7 +181,7 @@ $$ P_{\text{almuerzo}} = \sum_{(e,r,t) \in Valid\_ERT} \left(x_{e,r,t} \cdot Alm
 
 Contabiliza las infracciones a la regla de espaciado (sesiones dictadas en días consecutivos). Permite la holgura controlada a través de la variable $v_{\text{espaciado}, c, i}$ y la acumula en $P_{\text{espaciado}}$:
 
-$$ \sum_{\substack{e \in c, r \in R, t \in T_{d_i} \\ (e,r,t) \in Valid\_ERT}} y_{e,r,t} + \sum_{\substack{e \in c, r \in R, t \in T_{d_{i+1}} \\ (e,r,t) \in Valid\_ERT}} y_{e,r,t} \leq 1 + v_{\text{espaciado}, c, i} \quad \forall c \in C,\; \forall i \in \{1, \dots, |D|-1\} $$
+$$ \sum_{\substack{e \in E_c, r \in R, t \in T_{d_i} \\ (e,r,t) \in Valid\_ERT}} y_{e,r,t} + \sum_{\substack{e \in E_c, r \in R, t \in T_{d_{i+1}} \\ (e,r,t) \in Valid\_ERT}} y_{e,r,t} \leq 1 + v_{\text{espaciado}, c, i} \quad \forall c \in C,\; \forall i \in \{1, \dots, |D|-1\} $$
 
 $$ P_{\text{espaciado}} = \sum_{c \in C} \sum_{i=1}^{|D|-1} v_{\text{espaciado}, c, i} $$
 
