@@ -85,6 +85,8 @@ Se definen los siguientes parámetros del modelo:
 * **Disponibilidad del profesor** $Disp_{p,t}$: Parámetro binario que vale 1 si el profesor $p \in P$ se encuentra disponible para dictar clase en la franja horaria $t \in T$, y 0 en caso contrario.
 * **Almuerzo** $Almuerzo_t$: Parámetro binario que vale 1 si la franja horaria $t \in T$ corresponde al período de almuerzo, y 0 en caso contrario.
 * **Duración del evento** $Dur_e$: Número entero que indica cuántas franjas horarias consecutivas ocupa el evento $e \in E$.
+* **Peso de penalización por almuerzo** $W_A$: Escalar abstracto que pondera la importancia de las clases programadas durante el período de almuerzo en la función objetivo.
+* **Peso de penalización por espaciado** $W_E$: Escalar abstracto que pondera la importancia de las infracciones por sesiones dictadas en días consecutivos en la función objetivo.
 
 ## Variables de decisión
 
@@ -187,4 +189,4 @@ $$ P_{\text{espaciado}} = \sum_{c \in C} \sum_{i=1}^{|D|-1} v_{\text{espaciado},
 
 El propósito del modelo consiste en encontrar un horario que cumpla con todas las restricciones operativas duras y, al mismo tiempo, minimice de manera conjunta las penalizaciones por clases en almuerzo y las infracciones de espaciado de sesiones:
 
-$$ \min Z = P_{\text{almuerzo}} + 10 \cdot P_{\text{espaciado}} $$
+$$ \min Z = W_A \cdot P_{\text{almuerzo}} + W_E \cdot P_{\text{espaciado}} $$
