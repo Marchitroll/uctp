@@ -215,7 +215,7 @@ def imprimir_metricas_ga(cpu_time, best_fitness, hard_violations, soft_penalty, 
     print(f" Tiempo Procesamiento    : {cpu_time:.2f} segundos")
     print(f" Fitness Total Obtenido  : {best_fitness:.4f}")
     print(f" Violaciones Duras (HCV) : {hard_violations}")
-    print(f" Penalizacion Almuerzo(Z): {soft_penalty} (comparable con Z del MIP)")
+    print(f" Penalizacion Blanda (Z) : {soft_penalty} (comparable con Z del MIP)")
     print(f" Factible (HCV == 0)     : {'SI' if hard_violations == 0 else 'NO'}")
     print("="*60 + "\n")
 

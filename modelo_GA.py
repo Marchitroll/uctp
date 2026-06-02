@@ -7,6 +7,7 @@ un Algoritmo Genético (GA) utilizando la librería MEALPY.
 import argparse
 import time
 import os
+import random
 import numpy as np
 import pandas as pd
 from mealpy import Problem, IntegerVar
@@ -219,6 +220,39 @@ class UCTPProblem(Problem):
             self.valid_starts_r_idx[idx] = np.array([self.r_to_idx[r] for r, t in valid_starts[idx]], dtype=np.int32)
             self.valid_starts_t[idx] = np.array([t for r, t in valid_starts[idx]], dtype=np.int32)
             
+        # Calcular carga semanal de profesores para el ordenamiento por saturación
+        self.teacher_weekly_load = {}
+        for p in self.P:
+            self.teacher_weekly_load[p] = sum(self.Dur[e] for e in self.E_p[p])
+            
+        # Calcular dificultad de cada evento (Saturación estructural + carga docente)
+        self.event_difficulty = np.empty(self.num_events, dtype=np.float64)
+        for idx in range(self.num_events):
+            e = self.E[idx]
+            p = next(prof for prof, evs in self.E_p.items() if e in evs)
+            p_load = self.teacher_weekly_load[p]
+            num_choices = len(self.valid_starts[idx])
+            self.event_difficulty[idx] = (1000.0 / max(1, num_choices)) + p_load
+            
+        # Ordenar eventos por dificultad descendente (Most Constrained First)
+        self.event_priority_order = np.argsort(self.event_difficulty)[::-1]
+        
+        # Mapear cada evento a las restricciones R9 en las que participa para acelerar la validación
+        self.event_r9_constraints = {idx: [] for idx in range(self.num_events)}
+        for constraint in self.r9_constraints:
+            for idx in constraint['evs_c'] + constraint['evs_other']:
+                self.event_r9_constraints[idx].append(constraint)
+
+        # Atributos optimizados para correct_solution (acceso directo sin NumPy)
+        self.t_min = min(T)
+        self.slot_to_day_idx_list = [0] * (max(T) + 1)
+        for t, d_idx in self.slot_to_day_idx.items():
+            self.slot_to_day_idx_list[t] = d_idx
+        self.event_p_list = list(self.event_p_idx)
+        self.event_dur_list = list(self.event_dur)
+        self.valid_starts_r_idx_list = {idx: list(self.valid_starts_r_idx[idx]) for idx in range(self.num_events)}
+        self.valid_starts_t_list = {idx: list(self.valid_starts_t[idx]) for idx in range(self.num_events)}
+
         self.fitness_evals = 0
         super().__init__(bounds=bounds, minmax="min", name="UCTP_Problem", **kwargs)
 
@@ -227,109 +261,209 @@ class UCTPProblem(Problem):
         metrics = self.evaluate_solution(solution)
         return 1000.0 * metrics['violaciones_restricciones_duras'] + 1.0 * metrics['penalizacion_blanda']
 
-    def amend_position(self, solution):
-        # Algoritmo de reparación agresiva para colisiones de profesor y salón físico
-        pos = np.clip(np.round(solution).astype(np.int32), 0, self.max_choices)
+    def correct_solution(self, solution):
+        choices = np.clip(np.round(solution).astype(np.int32), 0, self.max_choices)
+        r_indices = np.full(self.num_events, -1, dtype=np.int32)
+        t_starts = np.full(self.num_events, -1, dtype=np.int32)
         
-        prof_slot = np.zeros((self.num_teachers, self.num_slots), dtype=np.int32)
-        room_slot = np.zeros((self.num_rooms, self.num_slots), dtype=np.int32)
+        prof_slot = [[0] * self.num_slots for _ in range(self.num_teachers)]
+        room_slot = [[0] * self.num_slots for _ in range(self.num_rooms)]
+        event_slot = [[0] * self.num_slots for _ in range(self.num_events)]
+        prof_daily_hours = [[0] * self.num_days for _ in range(self.num_teachers)]
+        slot_events = [[] for _ in range(self.num_slots)]
         
-        t_starts = np.empty(self.num_events, dtype=np.int32)
-        r_indices = np.empty(self.num_events, dtype=np.int32)
+        # Atributos pre-computados cacheados en variables locales para evitar lookups de atributos
+        event_p_list = self.event_p_list
+        event_dur_list = self.event_dur_list
+        valid_starts_r_idx_list = self.valid_starts_r_idx_list
+        valid_starts_t_list = self.valid_starts_t_list
+        slot_to_day_idx_list = self.slot_to_day_idx_list
+        t_min = self.t_min
         
-        for idx in range(self.num_events):
-            c = pos[idx]
-            r_idx = self.valid_starts_r_idx[idx][c]
-            t_start = self.valid_starts_t[idx][c]
+        def remove_event(idx):
+            c = choices[idx]
+            if c == -1 or t_starts[idx] == -1:
+                return
+            r_idx = r_indices[idx]
+            t_start = t_starts[idx]
+            p_idx = event_p_list[idx]
+            dur = event_dur_list[idx]
+            d_idx = slot_to_day_idx_list[t_start]
+            
+            for offset in range(dur):
+                t_idx = t_start + offset - t_min
+                prof_slot[p_idx][t_idx] -= 1
+                room_slot[r_idx][t_idx] -= 1
+                event_slot[idx][t_idx] = 0
+                slot_events[t_idx].remove(idx)
+            prof_daily_hours[p_idx][d_idx] -= dur
+            r_indices[idx] = -1
+            t_starts[idx] = -1
+
+        def add_event(idx, c):
+            choices[idx] = c
+            r_idx = valid_starts_r_idx_list[idx][c]
+            t_start = valid_starts_t_list[idx][c]
+            p_idx = event_p_list[idx]
+            dur = event_dur_list[idx]
+            d_idx = slot_to_day_idx_list[t_start]
+            
             r_indices[idx] = r_idx
             t_starts[idx] = t_start
-            
-            p_idx = self.event_p_idx[idx]
-            dur = self.event_dur[idx]
-            
             for offset in range(dur):
-                t_idx = self.t_to_idx[t_start + offset]
-                prof_slot[p_idx, t_idx] += 1
-                room_slot[r_idx, t_idx] += 1
+                t_idx = t_start + offset - t_min
+                prof_slot[p_idx][t_idx] += 1
+                room_slot[r_idx][t_idx] += 1
+                event_slot[idx][t_idx] = 1
+                slot_events[t_idx].append(idx)
+            prof_daily_hours[p_idx][d_idx] += dur
+
+        def check_conflict_free(idx, c):
+            r_idx = valid_starts_r_idx_list[idx][c]
+            t_start = valid_starts_t_list[idx][c]
+            p_idx = event_p_list[idx]
+            dur = event_dur_list[idx]
+            s_idx = self.s_to_idx[self.EVENTO_SECCION[self.E[idx]]]
+            
+            # 1. Colisión de profesor y salón físico
+            for offset in range(dur):
+                t_idx = t_start + offset - t_min
+                if prof_slot[p_idx][t_idx] >= 1:
+                    return False
+                if r_idx in self.physical_room_indices_set and room_slot[r_idx][t_idx] >= 1:
+                    return False
+                    
+            # 2. Carga diaria máxima del profesor (8 horas)
+            d_idx = slot_to_day_idx_list[t_start]
+            if prof_daily_hours[p_idx][d_idx] + dur > 8:
+                return False
                 
-        # Permutar orden de eventos aleatoriamente para evitar sesgos
-        event_order = np.random.permutation(self.num_events)
-        
-        for idx in event_order:
-            c_curr = pos[idx]
-            r_curr = r_indices[idx]
-            t_curr = t_starts[idx]
-            p_idx = self.event_p_idx[idx]
-            dur = self.event_dur[idx]
+            # 3. Estabilidad de salones por sección (máximo 2 salones distintos)
+            other_evs = [ev for ev in self.section_events[s_idx] if ev != idx]
+            assigned_rooms = [r_indices[ev] for ev in other_evs if r_indices[ev] != -1]
+            unique_assigned = set(assigned_rooms)
+            if r_idx not in unique_assigned and len(unique_assigned) >= 2:
+                return False
+                
+            # 4. Oferta curricular sin conflicto (R9)
+            for constraint in self.event_r9_constraints[idx]:
+                evs_c = constraint['evs_c']
+                num_secciones = constraint['num_secciones']
+                evs_other = constraint['evs_other']
+                
+                for offset in range(dur):
+                    t_idx = t_start + offset - t_min
+                    if idx in evs_c:
+                        active_c_at_t = 0
+                        for ev in evs_c:
+                            active_c_at_t += event_slot[ev][t_idx]
+                        active_c_at_t += 1 # Incluir el candidato actual
+                        if active_c_at_t == num_secciones:
+                            has_other = False
+                            for ev in evs_other:
+                                if event_slot[ev][t_idx] > 0:
+                                    has_other = True
+                                    break
+                            if has_other:
+                                return False
+                    elif idx in evs_other:
+                        active_c_at_t = 0
+                        for ev in evs_c:
+                            active_c_at_t += event_slot[ev][t_idx]
+                        if active_c_at_t == num_secciones:
+                            return False
+                            
+            return True
+
+        # Reparar/Construir eventos en orden de prioridad por saturación (Most Constrained First)
+        # Colocamos los eventos uno por uno, validando conflictos solo contra los ya asignados.
+        for idx in self.event_priority_order:
+            c_curr = choices[idx]
             
-            # Verificar si el evento participa de alguna colisión
-            has_conflict = False
-            for offset in range(dur):
-                t_idx = self.t_to_idx[t_curr + offset]
-                if prof_slot[p_idx, t_idx] > 1:
-                    has_conflict = True
-                    break
-                if r_curr in self.physical_room_indices_set and room_slot[r_curr, t_idx] > 1:
-                    has_conflict = True
-                    break
+            # Si la posición actual es factible con respecto a lo ya asignado, mantenerla
+            if check_conflict_free(idx, c_curr):
+                add_event(idx, c_curr)
+                continue
+                
+            # Buscar una alternativa factible sin conflictos
+            num_choices = len(valid_starts_t_list[idx])
+            start_choice = random.randrange(num_choices)
+            best_choice = None
             
-            if has_conflict:
-                num_choices = len(self.valid_starts[idx])
-                if num_choices <= 1:
+            for offset in range(num_choices):
+                c_cand = (start_choice + offset) % num_choices
+                if c_cand == c_curr:
+                    continue
+                if check_conflict_free(idx, c_cand):
+                    best_choice = c_cand
+                    break
+                    
+            if best_choice is not None:
+                add_event(idx, best_choice)
+                continue
+                
+            # Desplazamiento en cadena de 1 paso (1-step displacement)
+            displacement_success = False
+            start_disp = random.randrange(num_choices)
+            
+            for offset in range(num_choices):
+                c_cand = (start_disp + offset) % num_choices
+                if c_cand == c_curr:
                     continue
                 
-                # Probar alternativas de inicio en orden aleatorio
-                choice_order = np.random.permutation(num_choices)
-                best_choice = None
+                # Identificar bloqueadores para este inicio candidato
+                r_cand = valid_starts_r_idx_list[idx][c_cand]
+                t_cand = valid_starts_t_list[idx][c_cand]
+                dur = event_dur_list[idx]
+                p_idx = event_p_list[idx]
                 
-                # Restar la asignación actual temporalmente de las matrices de ocupación
-                for offset in range(dur):
-                    t_idx = self.t_to_idx[t_curr + offset]
-                    prof_slot[p_idx, t_idx] -= 1
-                    room_slot[r_curr, t_idx] -= 1
-                
-                for c_cand in choice_order:
-                    if c_cand == c_curr:
-                        continue
+                blocking_events = set()
+                for offset_dur in range(dur):
+                    t_idx = t_cand + offset_dur - t_min
+                    for ev_idx in slot_events[t_idx]:
+                        if ev_idx != idx:
+                            if event_p_list[ev_idx] == p_idx:
+                                blocking_events.add(ev_idx)
+                            if r_cand in self.physical_room_indices_set and r_indices[ev_idx] == r_cand:
+                                blocking_events.add(ev_idx)
+                                
+                # Si el bloqueo es causado por un único evento, intentar desplazarlo
+                if len(blocking_events) == 1:
+                    idx_block = list(blocking_events)[0]
+                    c_block_curr = choices[idx_block]
                     
-                    r_cand = self.valid_starts_r_idx[idx][c_cand]
-                    t_cand = self.valid_starts_t[idx][c_cand]
+                    remove_event(idx_block)
                     
-                    cand_conflict = False
-                    for offset in range(dur):
-                        t_idx = self.t_to_idx[t_cand + offset]
-                        if prof_slot[p_idx, t_idx] >= 1:
-                            cand_conflict = True
-                            break
-                        if r_cand in self.physical_room_indices_set and room_slot[r_cand, t_idx] >= 1:
-                            cand_conflict = True
+                    # Buscar una alternativa conflict-free para el evento bloqueador
+                    num_block_choices = len(valid_starts_t_list[idx_block])
+                    start_block = random.randrange(num_block_choices)
+                    best_block_choice = None
+                    
+                    for offset_block in range(num_block_choices):
+                        c_block_cand = (start_block + offset_block) % num_block_choices
+                        if c_block_cand == c_block_curr:
+                            continue
+                        if check_conflict_free(idx_block, c_block_cand):
+                            best_block_choice = c_block_cand
                             break
                             
-                    if not cand_conflict:
-                        best_choice = c_cand
+                    # Si el bloqueador se puede reubicar y el candidato de idx ahora está libre:
+                    if best_block_choice is not None and check_conflict_free(idx, c_cand):
+                        add_event(idx_block, best_block_choice)
+                        add_event(idx, c_cand)
+                        displacement_success = True
                         break
+                    else:
+                        # Si falló, restaurar al bloqueador a su estado original
+                        add_event(idx_block, c_block_curr)
+                        
+            if displacement_success:
+                continue
                 
-                if best_choice is not None:
-                    # Asignar mejor alternativa sin conflictos
-                    pos[idx] = best_choice
-                    r_new = self.valid_starts_r_idx[idx][best_choice]
-                    t_new = self.valid_starts_t[idx][best_choice]
-                    
-                    for offset in range(dur):
-                        t_idx = self.t_to_idx[t_new + offset]
-                        prof_slot[p_idx, t_idx] += 1
-                        room_slot[r_new, t_idx] += 1
-                        
-                    r_indices[idx] = r_new
-                    t_starts[idx] = t_new
-                else:
-                    # Restaurar ocupación actual si no hay mejor opción
-                    for offset in range(dur):
-                        t_idx = self.t_to_idx[t_curr + offset]
-                        prof_slot[p_idx, t_idx] += 1
-                        room_slot[r_curr, t_idx] += 1
-                        
-        return pos.astype(np.float64)
+            # Si todo falla, restaurar la posición original con conflicto
+            add_event(idx, c_curr)
+            
+        return choices.astype(np.float64)
 
     def evaluate_solution(self, solution):
         choices = np.clip(np.round(solution).astype(np.int32), 0, self.max_choices)
@@ -432,11 +566,15 @@ class CustomGA(BaseGA):
         self.first_feasible_time = None
         self.start_wall_time = None
         self.init_feasibility_rate = 0.0
+        self.epochs_no_improve_z = 0
+        self.best_z = float('inf')
 
     def solve(self, problem, **kwargs):
         self.first_feasible_epoch = None
         self.first_feasible_time = None
         self.start_wall_time = time.time()
+        self.epochs_no_improve_z = 0
+        self.best_z = float('inf')
         res = super().solve(problem, **kwargs)
         
         # Comprobación de factibilidad al final por si ocurrió en inicialización
@@ -465,6 +603,26 @@ class CustomGA(BaseGA):
             if hcv == 0:
                 self.first_feasible_epoch = epoch
                 self.first_feasible_time = time.time() - self.start_wall_time
+
+    def check_termination(self, mode="start", termination=None, epoch=None):
+        finished = super().check_termination(mode, termination, epoch)
+        if finished:
+            return True
+        if mode == "end" and epoch is not None:
+            hcv = self.problem.get_hcv(self.g_best.solution)
+            if hcv == 0:
+                z = self.problem.evaluate_solution(self.g_best.solution)['penalizacion_blanda']
+                if z < self.best_z:
+                    self.best_z = z
+                    self.epochs_no_improve_z = 0
+                else:
+                    self.epochs_no_improve_z += 1
+                
+                # Detener si Z no ha mejorado en 20 generaciones consecutivas
+                if self.epochs_no_improve_z >= 20:
+                    self.logger.warning("Stopping criterion with feasible solution found and Z converged (no improvement for 20 epochs) occurred. End program!")
+                    return True
+        return False
 
 # ============================================================================
 # PRE-CÓMPUTO DE REDUCCIÓN DE DOMINIO Y ASIGNACIONES
@@ -667,7 +825,7 @@ for run in range(n_corridas):
         "hcv_r9": run_metrics['oferta_curricular_sin_conflicto'],
         # Desglose de restricciones blandas
         "soft_lunch": run_metrics['P_almuerzo'],
-        "soft_spacing": run_metrics['infracciones_espaciado']
+        "soft_spacing": run_metrics['P_espaciado']
     })
 
 print("="*80 + "\n")
@@ -742,7 +900,7 @@ if best_global_solution is not None:
     print(" [DETALLE DE RESTRICCIONES BLANDAS DE LA MEJOR CORRIDA]")
     print(" " + "-"*50)
     print(f"   - Almuerzo (franjas de clase) : {best_metrics['P_almuerzo']}")
-    print(f"   - Espaciado (infracciones)     : {best_metrics['infracciones_espaciado']}")
+    print(f"   - Espaciado (infracciones)     : {best_metrics['P_espaciado']}")
     print(" " + "-"*50 + "\n")
     
     # Exportar horario en formato CSV desagregado
