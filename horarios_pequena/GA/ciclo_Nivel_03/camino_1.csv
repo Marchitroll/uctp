@@ -1,15 +1,15 @@
 ,Lunes,Martes,Miercoles,Jueves,Viernes,Sabado
-7:00 - 8:00,Calculo_II (Calculo_II_A) - Prof_2 [salon_6] | Intro_Programacion (Intro_Programacion_A) - Prof_1 [salon_10],---,---,---,---,Sist_Organizacionales (Sist_Organizacionales_A) - Prof_4 [salon_17]
-8:00 - 9:00,Calculo_II (Calculo_II_A) - Prof_2 [salon_6] | Intro_Programacion (Intro_Programacion_A) - Prof_1 [salon_10],Estr_Discretas (Estr_Discretas_A) - Prof_2 [salon_12],IA_Aplicada (IA_Aplicada_A) - Prof_1 [salon_6],---,---,Sist_Organizacionales (Sist_Organizacionales_A) - Prof_4 [salon_17]
-9:00 - 10:00,IA_Aplicada (IA_Aplicada_A) - Prof_1 [salon_12],Estr_Discretas (Estr_Discretas_A) - Prof_2 [salon_12],IA_Aplicada (IA_Aplicada_A) - Prof_1 [salon_6],---,---,Sist_Organizacionales (Sist_Organizacionales_A) - Prof_4 [salon_17]
-10:00 - 11:00,IA_Aplicada (IA_Aplicada_A) - Prof_1 [salon_12],---,IA_Aplicada (IA_Aplicada_A) - Prof_1 [salon_6],---,---,---
-11:00 - 12:00,---,---,---,---,---,Estr_Discretas (Estr_Discretas_A) - Prof_2 [salon_19]
-12:00 - 13:00,---,---,---,---,---,Fisica_Sistemas (Fisica_Sistemas_A) - Prof_3 [salon_12] | Estr_Discretas (Estr_Discretas_A) - Prof_2 [salon_19]
-13:00 - 14:00,Fisica_Sistemas (Fisica_Sistemas_A) - Prof_3 [salon_11],---,---,---,IA_Aplicada (IA_Aplicada_A) - Prof_1 [salon_12],Fisica_Sistemas (Fisica_Sistemas_A) - Prof_3 [salon_12] | Estr_Discretas (Estr_Discretas_A) - Prof_2 [salon_19]
-14:00 - 15:00,Fisica_Sistemas (Fisica_Sistemas_A) - Prof_3 [salon_11],---,Intro_Programacion (Intro_Programacion_A) - Prof_1 [salon_10],---,IA_Aplicada (IA_Aplicada_A) - Prof_1 [salon_12],Fisica_Sistemas (Fisica_Sistemas_A) - Prof_3 [salon_12]
-15:00 - 16:00,---,---,Intro_Programacion (Intro_Programacion_A) - Prof_1 [salon_10],---,---,---
-16:00 - 17:00,---,---,Intro_Programacion (Intro_Programacion_A) - Prof_1 [salon_10],---,---,---
-17:00 - 18:00,---,---,Calculo_II (Calculo_II_A) - Prof_2 [salon_17],---,Intro_Programacion (Intro_Programacion_A) - Prof_1 [salon_2],---
-18:00 - 19:00,---,Sist_Organizacionales (Sist_Organizacionales_A) - Prof_4 [salon_3],Calculo_II (Calculo_II_A) - Prof_2 [salon_17],---,Calculo_II (Calculo_II_A) - Prof_2 [salon_6] | Intro_Programacion (Intro_Programacion_A) - Prof_1 [salon_2],---
-19:00 - 20:00,---,Sist_Organizacionales (Sist_Organizacionales_A) - Prof_4 [salon_3],Calculo_II (Calculo_II_A) - Prof_2 [salon_17],---,Calculo_II (Calculo_II_A) - Prof_2 [salon_6],---
-20:00 - 21:00,---,Sist_Organizacionales (Sist_Organizacionales_A) - Prof_4 [salon_3],---,---,Calculo_II (Calculo_II_A) - Prof_2 [salon_6],---
+7:00 - 8:00,Fisica_Sistemas (Fisica_Sistemas_A) - Prof_3 [salon_14] | Intro_Programacion (Intro_Programacion_A) - Prof_1 [salon_4],---,---,---,---,---
+8:00 - 9:00,Fisica_Sistemas (Fisica_Sistemas_A) - Prof_3 [salon_14] | Intro_Programacion (Intro_Programacion_A) - Prof_1 [salon_4],---,Fisica_Sistemas (Fisica_Sistemas_A) - Prof_3 [salon_15],---,---,---
+9:00 - 10:00,Fisica_Sistemas (Fisica_Sistemas_A) - Prof_3 [salon_14],---,Fisica_Sistemas (Fisica_Sistemas_A) - Prof_3 [salon_15],---,Sist_Organizacionales (Sist_Organizacionales_A) - Prof_4 [salon_2],---
+10:00 - 11:00,---,---,Intro_Programacion (Intro_Programacion_A) - Prof_1 [salon_7],---,Sist_Organizacionales (Sist_Organizacionales_A) - Prof_4 [salon_2] | Estr_Discretas (Estr_Discretas_A) - Prof_2 [salon_18],IA_Aplicada (IA_Aplicada_B) - Prof_1 [salon_3]
+11:00 - 12:00,---,---,Intro_Programacion (Intro_Programacion_A) - Prof_1 [salon_7],---,Sist_Organizacionales (Sist_Organizacionales_A) - Prof_4 [salon_2] | Estr_Discretas (Estr_Discretas_A) - Prof_2 [salon_18],IA_Aplicada (IA_Aplicada_B) - Prof_1 [salon_3]
+12:00 - 13:00,---,---,---,---,---,IA_Aplicada (IA_Aplicada_B) - Prof_1 [salon_3]
+13:00 - 14:00,IA_Aplicada (IA_Aplicada_B) - Prof_1 [salon_3],---,---,---,---,---
+14:00 - 15:00,IA_Aplicada (IA_Aplicada_B) - Prof_1 [salon_3],---,---,---,---,---
+15:00 - 16:00,Calculo_II (Calculo_II_C) - Prof_2 [salon_3],Estr_Discretas (Estr_Discretas_A) - Prof_2 [salon_6],---,Calculo_II (Calculo_II_C) - Prof_2 [r_virtual],---,---
+16:00 - 17:00,Calculo_II (Calculo_II_C) - Prof_2 [salon_3],Estr_Discretas (Estr_Discretas_A) - Prof_2 [salon_6],---,Calculo_II (Calculo_II_C) - Prof_2 [r_virtual],Intro_Programacion (Intro_Programacion_A) - Prof_1 [salon_4],---
+17:00 - 18:00,Calculo_II (Calculo_II_C) - Prof_2 [salon_3],Estr_Discretas (Estr_Discretas_A) - Prof_2 [salon_6],---,Calculo_II (Calculo_II_C) - Prof_2 [r_virtual],Intro_Programacion (Intro_Programacion_A) - Prof_1 [salon_4],---
+18:00 - 19:00,---,Sist_Organizacionales (Sist_Organizacionales_A) - Prof_4 [salon_14],---,---,Intro_Programacion (Intro_Programacion_A) - Prof_1 [salon_4],---
+19:00 - 20:00,---,Sist_Organizacionales (Sist_Organizacionales_A) - Prof_4 [salon_14],---,IA_Aplicada (IA_Aplicada_B) - Prof_1 [r_virtual],---,---
+20:00 - 21:00,---,Sist_Organizacionales (Sist_Organizacionales_A) - Prof_4 [salon_14],---,IA_Aplicada (IA_Aplicada_B) - Prof_1 [r_virtual],---,---

@@ -1,6 +1,6 @@
 from mip import Model, BINARY, INTEGER, CONTINUOUS, xsum, minimize
 import time
-from exportador_horarios import imprimir_metricas, exportar_horarios
+from exportador_horarios import imprimir_metricas, exportar_horarios, exportar_metricas_mip
 from cargador_datos import cargar_datos_uctp
 import argparse
 
@@ -141,7 +141,7 @@ for p in P:
             for t in T_d[d] 
             if (e, r, t) in x
         )
-        model += suma_clases_diarias <= MAX_HORAS_DIARIAS, f"MaxHorasDiarias_{p}_{d}"
+        model += suma_clases_diarias <= MAX_HORAS_DIARIAS, f"CargaMaximaProfesor_{p}_{d}"
 
 # ============================================================================
 # 3. COBERTURA TOTAL DE EVENTOS
@@ -164,7 +164,7 @@ for s in S:
             model += suma_temporal <= Dur[e] * w[s, r], f"Vincular_w_{s}_{e}_{r}"
 
 for s in S:
-    model += xsum(w[s, r] for r in R if (s, r) in w) <= 2, f"Max_Salones_{s}"
+    model += xsum(w[s, r] for r in R if (s, r) in w) <= 2, f"EstabilidadSalones_{s}"
 
 # ============================================================================
 # 5. NO COLISIÓN DE SALONES FÍSICOS
@@ -173,7 +173,7 @@ for r in R:
     if not ES_VIRTUAL[r]:
         for t in T:
             suma_eventos_salon = xsum(x[e, r, t] for e in E if (e, r, t) in x)
-            model += suma_eventos_salon <= 1, f"NoColis_SalonFisico_{r}_franja_{t}"
+            model += suma_eventos_salon <= 1, f"ColisionSalonesFisicos_{r}_franja_{t}"
 
 # ============================================================================
 # 6. CONTINUIDAD Y NO FRAGMENTACIÓN
@@ -261,7 +261,7 @@ for k in K:
                         # Aplica el acoplamiento de capacidad agregada para evitar traslapes horarias en la oferta académica
                         model += (
                             xsum(vars_multi) + xsum(vars_other) <= num_secciones, 
-                            f"OfertaDirecta_{k}_{c}_{e_other}_t{t}"
+                            f"ConflictoCurricular_{k}_{c}_{e_other}_t{t}"
                         )
 
 # ============================================================================
@@ -288,14 +288,29 @@ if __name__ == '__main__':
 
     print(f"[INFO] Iniciando el proceso de optimización (máximo {tiempo_desc} / {max_seconds} segundos)...")
     
-    # Registra la estampa de tiempo inicial para medir la duración total del proceso de optimización
-    start_time = time.time()
+    # Registra la estampa de tiempo inicial para medir la duración total del proceso de optimización (CPU Time)
+    start_time = time.process_time()
     status = model.optimize(max_seconds=max_seconds)
-    cpu_time = time.time() - start_time
+    cpu_time = time.process_time() - start_time
+
+    # Extracción del número de nodos explorados vía CFFI directo (HiGHS C-API)
+    nodes_explored = 0
+    try:
+        solver = model.solver
+        lib = solver._lib
+        ffi = mip.highs.ffi
+        node_ptr = ffi.new("int64_t*")
+        lib.Highs_getInt64InfoValue(solver._model, b"mip_node_count", node_ptr)
+        nodes_explored = node_ptr[0]
+    except Exception:
+        nodes_explored = 0
+
+    # Guarda las métricas en un archivo CSV bajo resultados_MIP/
+    exportar_metricas_mip(status, cpu_time, nodes_explored, model, K)
 
     # Verifica si el optimizador ha encontrado al menos una solución factible antes de extraer los resultados
     if model.num_solutions > 0:
-        imprimir_metricas(status, cpu_time, model)
+        imprimir_metricas(status, cpu_time, model, nodes_explored=nodes_explored)
         print(" [DETALLE DE RESTRICCIONES BLANDAS]")
         print(" " + "-"*50)
         print(f"   - Almuerzo (franjas de clase) : {P_almuerzo.x:.0f}")
@@ -310,4 +325,5 @@ if __name__ == '__main__':
         exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, E_p=E_p, output_dir=out_path)
     else:
         print(f"\n[ALERTA] No se encontró ninguna solución factible. Estado final: {status.name if hasattr(status, 'name') else status}")
-        print(f"[INFO] Tiempo de Procesamiento invertido: {cpu_time:.2f} segundos")
+        print(f"[INFO] Tiempo de Procesamiento CPU: {cpu_time:.2f} segundos")
+        print(f"[INFO] Nodos B&B Explorados      : {nodes_explored}")

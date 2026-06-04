@@ -11,9 +11,10 @@ import pandas as pd
 import platform
 import psutil
 import mip
+import json
 
 
-def imprimir_metricas(status, cpu_time, model):
+def imprimir_metricas(status, cpu_time, model, nodes_explored=0):
     """
     Imprime las métricas de trazabilidad del entorno de ejecución y los indicadores
     de desempeño alcanzados por el solucionador durante el proceso de optimización.
@@ -38,11 +39,57 @@ def imprimir_metricas(status, cpu_time, model):
     print(" [MÉTRICAS DE EVALUACIÓN]")
     print("="*60)
     print(f" Estado Final (Status)      : {status.name if hasattr(status, 'name') else status}")
-    print(f" Tiempo de Procesamiento    : {cpu_time:.2f} segundos")
+    print(f" Tiempo de Procesamiento CPU: {cpu_time:.2f} segundos")
+    print(f" Nodos B&B Explorados      : {nodes_explored}")
     print(f" Valor Función Objetivo (Z) : {bestcost}")
     print(f" Límite Inferior (LB)       : {lowerbound}")
     print(f" Brecha de Optimalidad (Gap): {gap_pct:.4f} %")
     print("="*60 + "\n")
+
+
+def exportar_metricas_mip(status, cpu_time, nodes_explored, model, K, output_dir=None):
+    """
+    Exporta las métricas de la corrida MIP a un archivo CSV consolidado bajo la carpeta 'resultados_MIP/'.
+    """
+    if output_dir is None:
+        if len(K) == 1:
+            escala = "pequena"
+        elif len(K) in [4, 5]:
+            escala = "mediana"
+        else:
+            escala = "grande"
+    else:
+        escala = output_dir
+
+    bestcost = model.objective_value if model.num_solutions > 0 else float('nan')
+    lowerbound = model.objective_bound if hasattr(model, 'objective_bound') else float('nan')
+    epsilon = 1e-10
+    gap_pct = ((bestcost - lowerbound) / (abs(bestcost) + epsilon)) * 100 if model.num_solutions > 0 else float('nan')
+    status_str = status.name if hasattr(status, 'name') else str(status)
+
+    row = {
+        "escala": escala,
+        "Z": bestcost,
+        "HCV": 0 if (status_str in ["OPTIMAL", "FEASIBLE"] and model.num_solutions > 0) else 1,
+        "CPU_time": cpu_time,
+        "nodes_explored": nodes_explored,
+        "gap_pct": gap_pct,
+        "status": status_str
+    }
+
+    resultados_dir = "resultados_MIP"
+    os.makedirs(resultados_dir, exist_ok=True)
+    csv_filepath = os.path.join(resultados_dir, f"resultados_{escala}.csv")
+    df = pd.DataFrame([row])
+    df.to_csv(csv_filepath, index=False)
+    print(f"[ÉXITO] Métricas MIP persistidas en '{csv_filepath}'.")
+
+    # Persistir también en JSON para homogeneidad y fácil comparación
+    resumen_filepath = os.path.join(resultados_dir, f"resumen_{escala}.json")
+    with open(resumen_filepath, 'w', encoding='utf-8') as f:
+        json.dump(row, f, indent=2, ensure_ascii=False)
+    print(f"[ÉXITO] Resumen MIP guardado en '{resumen_filepath}'.")
+
 
 
 def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, E_p=None, output_dir=None):
@@ -212,7 +259,7 @@ def imprimir_metricas_ga(cpu_time, best_fitness, hard_violations, soft_penalty, 
     print(f" Generaciones (Epochs)   : {epoch}")
     print(f" Tamaño Población (Pop)  : {pop_size}")
     print(f" Crossover / Selección   : {crossover} / {selection}")
-    print(f" Tiempo de Procesamiento : {cpu_time:.2f} segundos")
+    print(f" Tiempo de Procesamiento CPU: {cpu_time:.2f} segundos")
     print(f" Aptitud (Fitness) Total : {best_fitness:.4f}")
     print(f" Violaciones Duras (HCV) : {hard_violations}")
     print(f" Penalización Blanda (Z) : {soft_penalty} (comparable con Z del MIP)")

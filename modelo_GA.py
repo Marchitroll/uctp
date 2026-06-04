@@ -8,6 +8,7 @@ import argparse
 import time
 import os
 import random
+import json
 import numpy as np
 import pandas as pd
 from mealpy import Problem, IntegerVar
@@ -150,7 +151,7 @@ print(f"       Configuración: Generaciones={config_base['epoch']} | Población=
 # ============================================================================
 class UCTPProblem(Problem):
     def __init__(self, E, R, T, D, T_d, P, S, K, E_k, E_p, E_s, Dur, EVENTO_SECCION, SECCION_CURSO, 
-                 Almuerzo, valid_starts, r9_constraints, bounds, ES_VIRTUAL, **kwargs):
+                 Almuerzo, valid_starts, restricciones_curriculares, bounds, ES_VIRTUAL, **kwargs):
         self.E = E
         self.R = R
         self.T = T
@@ -167,7 +168,7 @@ class UCTPProblem(Problem):
         self.SECCION_CURSO = SECCION_CURSO
         self.Almuerzo = Almuerzo
         self.valid_starts = valid_starts
-        self.r9_constraints = r9_constraints
+        self.restricciones_curriculares = restricciones_curriculares
         
         self.num_events = len(E)
         self.num_rooms = len(R)
@@ -237,11 +238,11 @@ class UCTPProblem(Problem):
         # Ordenar eventos por dificultad descendente (Most Constrained First)
         self.event_priority_order = np.argsort(self.event_difficulty)[::-1]
         
-        # Mapear cada evento a las restricciones R9 en las que participa para acelerar la validación
-        self.event_r9_constraints = {idx: [] for idx in range(self.num_events)}
-        for constraint in self.r9_constraints:
+        # Mapear cada evento a las restricciones curriculares en las que participa para acelerar la validación
+        self.event_curriculum_constraints = {idx: [] for idx in range(self.num_events)}
+        for constraint in self.restricciones_curriculares:
             for idx in constraint['evs_c'] + constraint['evs_other']:
-                self.event_r9_constraints[idx].append(constraint)
+                self.event_curriculum_constraints[idx].append(constraint)
 
         # Atributos optimizados para correct_solution (acceso directo sin NumPy)
         self.t_min = min(T)
@@ -253,11 +254,11 @@ class UCTPProblem(Problem):
         self.valid_starts_r_idx_list = {idx: list(self.valid_starts_r_idx[idx]) for idx in range(self.num_events)}
         self.valid_starts_t_list = {idx: list(self.valid_starts_t[idx]) for idx in range(self.num_events)}
 
-        self.fitness_evals = 0
+        self.evaluaciones_aptitud = 0
         super().__init__(bounds=bounds, minmax="min", name="UCTP_Problem", **kwargs)
 
     def obj_func(self, solution):
-        self.fitness_evals += 1
+        self.evaluaciones_aptitud += 1
         metrics = self.evaluate_solution(solution)
         return 1000.0 * metrics['violaciones_restricciones_duras'] + 1.0 * metrics['penalizacion_blanda']
 
@@ -345,8 +346,8 @@ class UCTPProblem(Problem):
             if r_idx not in unique_assigned and len(unique_assigned) >= 2:
                 return False
                 
-            # 4. Oferta curricular sin conflicto (R9)
-            for constraint in self.event_r9_constraints[idx]:
+            # 4. Conflicto curricular
+            for constraint in self.event_curriculum_constraints[idx]:
                 evs_c = constraint['evs_c']
                 num_secciones = constraint['num_secciones']
                 evs_other = constraint['evs_other']
@@ -490,21 +491,21 @@ class UCTPProblem(Problem):
                 room_slot[r_idx, t_idx] += 1
                 event_slot[idx, t_idx] = 1
                 
-        viol_colision_prof = int(np.sum(np.maximum(0, prof_slot - 1)))
+        viol_colision_profesor = int(np.sum(np.maximum(0, prof_slot - 1)))
         
-        viol_carga_prof = 0
+        viol_carga_maxima_profesor = 0
         for d_idx in range(self.num_days):
             daily_hours = np.sum(prof_slot[:, self.day_slots_indices[d_idx]], axis=1)
-            viol_carga_prof += int(np.sum(np.maximum(0, daily_hours - 8)))
+            viol_carga_maxima_profesor += int(np.sum(np.maximum(0, daily_hours - 8)))
             
-        viol_estabilidad_salon = 0
+        viol_estabilidad_salones = 0
         for s_idx in range(self.num_sections):
             ev_indices = self.section_events[s_idx]
             unique_rooms = len(np.unique(r_indices[ev_indices]))
             if unique_rooms > 2:
-                viol_estabilidad_salon += (unique_rooms - 2)
+                viol_estabilidad_salones += (unique_rooms - 2)
                 
-        viol_colision_salon = int(np.sum(np.maximum(0, room_slot[self.physical_room_indices, :] - 1)))
+        viol_colision_salones_fisicos = int(np.sum(np.maximum(0, room_slot[self.physical_room_indices, :] - 1)))
         
         viol_espaciado = 0
         for s_idx in range(self.num_sections):
@@ -519,8 +520,8 @@ class UCTPProblem(Problem):
                     if abs(d1 - d2) <= 1:
                         viol_espaciado += 1
                         
-        viol_r9 = 0
-        for constraint in self.r9_constraints:
+        viol_conflicto_curricular = 0
+        for constraint in self.restricciones_curriculares:
             evs_c = constraint['evs_c']
             num_secciones = constraint['num_secciones']
             evs_other = constraint['evs_other']
@@ -528,13 +529,13 @@ class UCTPProblem(Problem):
             active_c = np.sum(event_slot[evs_c, :], axis=0)
             full_slots = np.where(active_c == num_secciones)[0]
             if len(full_slots) > 0:
-                viol_r9 += int(np.sum(event_slot[evs_other][:, full_slots]))
+                viol_conflicto_curricular += int(np.sum(event_slot[evs_other][:, full_slots]))
                 
-        hcv = (viol_colision_prof + 
-               viol_carga_prof + 
-               viol_estabilidad_salon + 
-               viol_colision_salon + 
-               viol_r9)
+        hcv = (viol_colision_profesor + 
+               viol_carga_maxima_profesor + 
+               viol_estabilidad_salones + 
+               viol_colision_salones_fisicos + 
+               viol_conflicto_curricular)
                
         penalizacion_almuerzo = int(np.sum(event_slot * self.lunch_slots_mask))
         penalizacion_espaciado = viol_espaciado
@@ -543,14 +544,14 @@ class UCTPProblem(Problem):
         return {
             'violaciones_restricciones_duras': hcv,
             'penalizacion_blanda': total_blanda,
-            'P_almuerzo': penalizacion_almuerzo,
-            'P_espaciado': penalizacion_espaciado,
-            'disponibilidad_y_no_colision_profesor': viol_colision_prof,
-            'carga_diaria_maxima_profesor': viol_carga_prof,
-            'estabilidad_salones': viol_estabilidad_salon,
-            'no_colision_salones_fisicos': viol_colision_salon,
+            'penalizacion_almuerzo': penalizacion_almuerzo,
+            'penalizacion_espaciado': penalizacion_espaciado,
+            'colision_profesor': viol_colision_profesor,
+            'carga_maxima_profesor': viol_carga_maxima_profesor,
+            'estabilidad_salones': viol_estabilidad_salones,
+            'colision_salones_fisicos': viol_colision_salones_fisicos,
             'infracciones_espaciado': viol_espaciado,
-            'oferta_curricular_sin_conflicto': viol_r9
+            'conflicto_curricular': viol_conflicto_curricular
         }
 
     def get_hcv(self, solution):
@@ -572,7 +573,7 @@ class CustomGA(BaseGA):
     def solve(self, problem, **kwargs):
         self.primera_gen_factible = None
         self.primer_tiempo_factible = None
-        self.tiempo_inicio = time.time()
+        self.tiempo_inicio = time.process_time()
         self.generaciones_sin_mejora_z = 0
         self.mejor_z = float('inf')
         res = super().solve(problem, **kwargs)
@@ -602,7 +603,7 @@ class CustomGA(BaseGA):
             hcv = self.problem.get_hcv(g_best_sol)
             if hcv == 0:
                 self.primera_gen_factible = epoch
-                self.primer_tiempo_factible = time.time() - self.tiempo_inicio
+                self.primer_tiempo_factible = time.process_time() - self.tiempo_inicio
 
     def check_termination(self, mode="start", termination=None, epoch=None):
         finished = super().check_termination(mode, termination, epoch)
@@ -670,8 +671,8 @@ for idx_e, e in enumerate(E):
         raise ValueError(f"Infactibilidad critica detectada: El evento {e} no tiene ninguna combinacion de inicio valida.")
     valid_starts[idx_e] = starts
 
-# Pre-cómputo de restricciones R9
-r9_constraints = []
+# Pre-cómputo de restricciones curriculares
+restricciones_curriculares = []
 for k in K:
     cursos_en_k = {}
     for e in E_k[k]:
@@ -690,7 +691,7 @@ for k in K:
             evs_c_idx = [E.index(e) for e in evs_in_c]
             evs_other_idx = [E.index(e) for e in evs_other]
             
-            r9_constraints.append({
+            restricciones_curriculares.append({
                 'evs_c': evs_c_idx,
                 'num_secciones': num_secciones,
                 'evs_other': evs_other_idx,
@@ -726,7 +727,7 @@ for run in range(n_corridas):
     problem = UCTPProblem(
         E=E, R=R, T=T, D=D, T_d=T_d, P=P, S=S, K=K, E_k=E_k, E_p=E_p, E_s=E_s, Dur=Dur,
         EVENTO_SECCION=EVENTO_SECCION, SECCION_CURSO=SECCION_CURSO, Almuerzo=Almuerzo,
-        valid_starts=valid_starts, r9_constraints=r9_constraints, bounds=bounds, ES_VIRTUAL=ES_VIRTUAL
+        valid_starts=valid_starts, restricciones_curriculares=restricciones_curriculares, bounds=bounds, ES_VIRTUAL=ES_VIRTUAL
     )
     
     # Crear optimizador GA
@@ -744,9 +745,9 @@ for run in range(n_corridas):
     if max_seconds is not None:
         termination_dict["max_time"] = max_seconds
         
-    start_run_time = time.time()
+    start_run_time = time.process_time()
     best_agent = ga_model.solve(problem, termination=termination_dict, seed=seed)
-    cpu_time = time.time() - start_run_time
+    cpu_time = time.process_time() - start_run_time
     
     # Evaluar mejor solución de esta corrida
     run_solution = best_agent.solution
@@ -781,7 +782,7 @@ for run in range(n_corridas):
     print(f"    Resultado de Corrida: HCV={hcv} | Z={z} | Factible={'SÍ' if hcv == 0 else 'NO'} | Tiempo CPU={cpu_time:.2f} s")
     if hcv == 0:
         print(f"    Tiempo a Factible (TTF): {ttf:.2f} s (Generación {ga_model.primera_gen_factible})")
-    print(f"    Tasa Factib. Inicial: {init_feas:.2f}% | Evaluaciones de Aptitud (Fitness)={problem.fitness_evals}")
+    print(f"    Tasa Factib. Inicial: {init_feas:.2f}% | Evaluaciones de Aptitud (Fitness)={problem.evaluaciones_aptitud}")
     
     resultados_runs.append({
         "corrida": run + 1,
@@ -790,18 +791,18 @@ for run in range(n_corridas):
         "HCV": hcv,
         "TTF": ttf if hcv == 0 else float('nan'),
         "CPU_time": cpu_time,
-        "fitness_evals": problem.fitness_evals,
+        "evaluaciones_aptitud": problem.evaluaciones_aptitud,
         "tasa_factib_inicial": init_feas,
         "factible": hcv == 0,
         # Desglose de restricciones duras (HCV)
-        "hcv_prof_collision": run_metrics['disponibilidad_y_no_colision_profesor'],
-        "hcv_prof_carga": run_metrics['carga_diaria_maxima_profesor'],
-        "hcv_salon_estabilidad": run_metrics['estabilidad_salones'],
-        "hcv_salon_collision": run_metrics['no_colision_salones_fisicos'],
-        "hcv_r9": run_metrics['oferta_curricular_sin_conflicto'],
+        "hcv_colision_profesor": run_metrics['colision_profesor'],
+        "hcv_carga_maxima_profesor": run_metrics['carga_maxima_profesor'],
+        "hcv_estabilidad_salones": run_metrics['estabilidad_salones'],
+        "hcv_colision_salones_fisicos": run_metrics['colision_salones_fisicos'],
+        "hcv_conflicto_curricular": run_metrics['conflicto_curricular'],
         # Desglose de restricciones blandas
-        "soft_lunch": run_metrics['P_almuerzo'],
-        "soft_spacing": run_metrics['P_espaciado']
+        "penalizacion_almuerzo": run_metrics['penalizacion_almuerzo'],
+        "penalizacion_espaciado": run_metrics['penalizacion_espaciado']
     })
 
 print("="*80 + "\n")
@@ -825,17 +826,21 @@ tasa_factib_inicial_promedio = df_results['tasa_factib_inicial'].mean()
 
 if len(factibles_df) > 0:
     mejor_z = factibles_df['Z'].min()
+    peor_z = factibles_df['Z'].max()
     promedio_z = factibles_df['Z'].mean()
+    mediana_z = factibles_df['Z'].median()
     desviacion_z = factibles_df['Z'].std() if len(factibles_df) > 1 else 0.0
     ttf_promedio = factibles_df['TTF'].mean()
 else:
     mejor_z = float('nan')
+    peor_z = float('nan')
     promedio_z = float('nan')
+    mediana_z = float('nan')
     desviacion_z = float('nan')
     ttf_promedio = float('nan')
 
 cpu_promedio = df_results['CPU_time'].mean()
-evals_promedio = df_results['fitness_evals'].mean()
+evals_promedio = df_results['evaluaciones_aptitud'].mean()
 
 print("="*60)
 print(" [RESUMEN ESTADÍSTICO CONSOLIDADO]")
@@ -848,9 +853,32 @@ print(f" Tiempo CPU Promedio por Corrida  : {cpu_promedio:.2f} segundos")
 print(f" Evaluaciones Aptitud (Fitness) Prom: {evals_promedio:.1f}")
 print("-"*60)
 print(f" Mejor Valor Función Objetivo (Z) : {mejor_z}" if not np.isnan(mejor_z) else " Mejor Valor Función Objetivo (Z) : N/A")
+print(f" Peor Valor Función Objetivo (Z)  : {peor_z}" if not np.isnan(peor_z) else " Peor Valor Función Objetivo (Z)  : N/A")
 print(f" Valor Promedio Objetivo (Z)      : {promedio_z:.2f}" if not np.isnan(promedio_z) else " Valor Promedio Objetivo (Z)      : N/A")
+print(f" Mediana del Objetivo (Z)         : {mediana_z:.2f}" if not np.isnan(mediana_z) else " Mediana del Objetivo (Z)         : N/A")
 print(f" Desviación Estándar Objetivo (Z) : {desviacion_z:.4f}" if not np.isnan(desviacion_z) else " Desviación Estándar Objetivo (Z) : N/A")
 print("="*60 + "\n")
+
+# Persistir resumen de estadísticas consolidadas en JSON (con conversión de tipos numpy a nativos)
+resumen = {
+    "escala": escala_efectiva,
+    "total_corridas": int(total_runs),
+    "tasa_factibilidad_inicial": float(tasa_factib_inicial_promedio),
+    "tasa_factibilidad_final": float(tasa_factibilidad),
+    "ttf_promedio": float(ttf_promedio) if not np.isnan(ttf_promedio) else None,
+    "cpu_promedio": float(cpu_promedio),
+    "evaluaciones_aptitud_promedio": float(evals_promedio),
+    "mejor_z": float(mejor_z) if not np.isnan(mejor_z) else None,
+    "peor_z": float(peor_z) if not np.isnan(peor_z) else None,
+    "promedio_z": float(promedio_z) if not np.isnan(promedio_z) else None,
+    "mediana_z": float(mediana_z) if not np.isnan(mediana_z) else None,
+    "desviacion_z": float(desviacion_z) if not np.isnan(desviacion_z) else None
+}
+resumen_filepath = os.path.join(resultados_dir, f"resumen_{escala_efectiva}.json")
+with open(resumen_filepath, 'w', encoding='utf-8') as f:
+    json.dump(resumen, f, indent=2, ensure_ascii=False)
+print(f"[ÉXITO] Resumen estadístico consolidado guardado en '{resumen_filepath}'.\n")
+
 
 # ============================================================================
 # EXPORTACIÓN DEL HORARIO DE LA MEJOR CORRIDA
@@ -875,8 +903,8 @@ if best_global_solution is not None:
     best_metrics = problem.evaluate_solution(best_global_solution)
     print(" [DETALLE DE RESTRICCIONES BLANDAS DE LA MEJOR CORRIDA]")
     print(" " + "-"*50)
-    print(f"   - Almuerzo (franjas de clase) : {best_metrics['P_almuerzo']}")
-    print(f"   - Espaciado (infracciones)     : {best_metrics['P_espaciado']}")
+    print(f"   - Almuerzo (franjas de clase) : {best_metrics['penalizacion_almuerzo']}")
+    print(f"   - Espaciado (infracciones)     : {best_metrics['penalizacion_espaciado']}")
     print(" " + "-"*50 + "\n")
     
     # Exportar horario en formato CSV desagregado
