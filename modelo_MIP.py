@@ -28,8 +28,8 @@ elif args.minutos is not None:
     max_seconds = int(args.minutos * 60)
     tiempo_desc = f"{args.minutos} minutos"
 else:
-    max_seconds = 3600
-    tiempo_desc = "1.0 horas (por defecto)"
+    max_seconds = 7200
+    tiempo_desc = "2.0 horas (por defecto)"
 
 
 # ============================================================================

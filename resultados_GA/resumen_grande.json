@@ -1,0 +1,14 @@
+{
+  "escala": "grande",
+  "total_corridas": 20,
+  "tasa_factibilidad_inicial": 0.0,
+  "tasa_factibilidad_final": 100.0,
+  "ttf_promedio": 484.19609375,
+  "cpu_promedio": 1210.2578125,
+  "evaluaciones_aptitud_promedio": 8175.0,
+  "mejor_z": 973.0,
+  "peor_z": 1181.0,
+  "promedio_z": 1061.45,
+  "mediana_z": 1061.0,
+  "desviacion_z": 54.91570094723654
+}

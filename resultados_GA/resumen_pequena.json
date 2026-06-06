@@ -3,12 +3,12 @@
   "total_corridas": 20,
   "tasa_factibilidad_inicial": 0.0,
   "tasa_factibilidad_final": 100.0,
-  "ttf_promedio": 0.084375,
-  "cpu_promedio": 1.42734375,
-  "evaluaciones_aptitud_promedio": 2072.5,
+  "ttf_promedio": 0.08671875,
+  "cpu_promedio": 1.4484375,
+  "evaluaciones_aptitud_promedio": 2007.5,
   "mejor_z": 0.0,
-  "peor_z": 10.0,
-  "promedio_z": 0.65,
+  "peor_z": 2.0,
+  "promedio_z": 0.2,
   "mediana_z": 0.0,
-  "desviacion_z": 2.2307657406087453
+  "desviacion_z": 0.523148363780597
 }

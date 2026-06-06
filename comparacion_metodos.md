@@ -6,9 +6,9 @@ Este reporte compara el desempeño del Algoritmo Genético (GA) contra el modelo
 
 | Escala | $Z_{\text{MIP}}$ | $Z_{\text{AG}}$ (Mejor) | $Z_{\text{AG}}$ (Promedio) | Desviación Relativa (DR %) | Tiempo CPU MIP (s) | Tiempo CPU GA (Prom, s) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| Pequena | 0.0 | 0.0 | 0.65 | **0.00%** | 37.03 | 1.43 |
-| Mediana | N/A | N/A | N/A | Faltan resultados de: MIP | N/A | N/A |
-| Grande | N/A | N/A | N/A | Faltan resultados de: MIP, GA | N/A | N/A |
+| Pequena | 0.0 | 0.0 | 0.20 | **0.00%** | 44.09 | 1.45 |
+| Mediana | 325078.0 | 502.0 | 538.70 | **-99.85%** | 7704.53 | 74.78 |
+| Grande | 7328514.0 | 973.0 | 1061.45 | **-99.99%** | 183286.53 | 1210.26 |
 
 ## Definiciones
 

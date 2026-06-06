@@ -73,8 +73,8 @@ elif args.minutos is not None:
     max_seconds = args.minutos * 60.0
     tiempo_desc = f"{args.minutos} minutos"
 else:
-    max_seconds = None
-    tiempo_desc = "sin limite de tiempo"
+    max_seconds = 7200.0
+    tiempo_desc = "2.0 horas (por defecto)"
 
 # Pesos de penalización constantes de la función objetivo (Sección 4.3)
 W_A = 1

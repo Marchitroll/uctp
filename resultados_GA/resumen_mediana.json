@@ -3,12 +3,12 @@
   "total_corridas": 20,
   "tasa_factibilidad_inicial": 0.0,
   "tasa_factibilidad_final": 100.0,
-  "ttf_promedio": 14.48515625,
-  "cpu_promedio": 67.51328125,
-  "evaluaciones_aptitud_promedio": 3408.0,
-  "mejor_z": 432.0,
-  "peor_z": 589.0,
-  "promedio_z": 539.25,
-  "mediana_z": 543.0,
-  "desviacion_z": 35.41316288138011
+  "ttf_promedio": 14.3796875,
+  "cpu_promedio": 74.78203125,
+  "evaluaciones_aptitud_promedio": 3660.0,
+  "mejor_z": 502.0,
+  "peor_z": 600.0,
+  "promedio_z": 538.7,
+  "mediana_z": 533.5,
+  "desviacion_z": 26.616378020823355
 }
