@@ -187,7 +187,14 @@ def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, E_p=None
         bloques_secciones = [list(secciones_activas_por_curso[c]) for c in lista_cursos]
 
         # Genera todas las combinaciones posibles tomando exactamente una sección de cada curso
-        caminos_matricula = list(itertools.product(*bloques_secciones))
+        # Limitamos a un máximo de 100 caminos para evitar explosión de archivos
+        iterator = itertools.product(*bloques_secciones)
+        caminos_matricula = []
+        for idx, camino in enumerate(iterator):
+            if idx >= 100:
+                print(f"[ADVERTENCIA] Ciclo {k}: Se detectaron más de 100 caminos de matrícula. Se limita la exportación a los primeros 100 para evitar explosión de archivos.")
+                break
+            caminos_matricula.append(camino)
 
         # Crea la subcarpeta correspondiente al ciclo académico
         ciclo_dir = os.path.join(output_dir, f"ciclo_{k}")
