@@ -1,14 +1,14 @@
 {
   "escala": "grande",
-  "total_corridas": 20,
+  "total_corridas": 30,
   "tasa_factibilidad_inicial": 0.0,
   "tasa_factibilidad_final": 100.0,
-  "ttf_promedio": 484.19609375,
-  "cpu_promedio": 1210.2578125,
-  "evaluaciones_aptitud_promedio": 8175.0,
-  "mejor_z": 973.0,
-  "peor_z": 1181.0,
-  "promedio_z": 1061.45,
-  "mediana_z": 1061.0,
-  "desviacion_z": 54.91570094723654
+  "ttf_promedio": 752.1640625,
+  "cpu_promedio": 1839.9802083333334,
+  "evaluaciones_aptitud_promedio": 7960.0,
+  "mejor_z": 928.0,
+  "peor_z": 1202.0,
+  "promedio_z": 1050.0666666666666,
+  "mediana_z": 1051.5,
+  "desviacion_z": 66.55562015872621
 }

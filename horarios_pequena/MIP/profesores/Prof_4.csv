@@ -1,7 +1,7 @@
 ,Lunes,Martes,Miercoles,Jueves,Viernes,Sabado
-7:00 - 8:00,---,---,---,---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_10],---
-8:00 - 9:00,---,---,---,---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_10],---
-9:00 - 10:00,---,---,---,---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_10],---
+7:00 - 8:00,---,---,---,---,---,---
+8:00 - 9:00,---,---,---,---,---,---
+9:00 - 10:00,---,---,---,---,---,---
 10:00 - 11:00,---,---,---,---,---,---
 11:00 - 12:00,---,---,---,---,---,---
 12:00 - 13:00,---,---,---,---,---,---
@@ -9,7 +9,8 @@
 14:00 - 15:00,---,---,---,---,---,---
 15:00 - 16:00,---,---,---,---,---,---
 16:00 - 17:00,---,---,---,---,---,---
-17:00 - 18:00,---,---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_10],---,---,---
-18:00 - 19:00,---,---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_10],---,---,---
-19:00 - 20:00,---,---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_10],---,---,---
-20:00 - 21:00,---,---,---,---,---,---
+17:00 - 18:00,---,---,---,---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_7],---
+18:00 - 19:00,---,---,---,---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_7],---
+19:00 - 20:00,---,---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_7],---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_7],---
+20:00 - 21:00,---,---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_7],---,---,---
+21:00 - 22:00,---,---,Sist_Organizacionales (Sist_Organizacionales_A) [salon_7],---,---,---

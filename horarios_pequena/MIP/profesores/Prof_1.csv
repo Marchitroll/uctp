@@ -1,15 +1,16 @@
 ,Lunes,Martes,Miercoles,Jueves,Viernes,Sabado
-7:00 - 8:00,Intro_Programacion (Intro_Programacion_A) [salon_4],---,IA_Aplicada (IA_Aplicada_A) [salon_7],---,---,---
-8:00 - 9:00,Intro_Programacion (Intro_Programacion_A) [salon_4],---,IA_Aplicada (IA_Aplicada_A) [salon_7],---,Intro_Programacion (Intro_Programacion_A) [salon_3],---
-9:00 - 10:00,---,---,IA_Aplicada (IA_Aplicada_A) [salon_7],---,Intro_Programacion (Intro_Programacion_A) [salon_3],---
-10:00 - 11:00,---,---,---,---,Intro_Programacion (Intro_Programacion_A) [salon_3],---
+7:00 - 8:00,IA_Aplicada (IA_Aplicada_B) [salon_11],---,IA_Aplicada (IA_Aplicada_B) [salon_11],---,IA_Aplicada (IA_Aplicada_A) [salon_12],Intro_Programacion (Intro_Programacion_A) [salon_2]
+8:00 - 9:00,IA_Aplicada (IA_Aplicada_B) [salon_11],---,IA_Aplicada (IA_Aplicada_B) [salon_11],---,IA_Aplicada (IA_Aplicada_A) [salon_12],Intro_Programacion (Intro_Programacion_A) [salon_2]
+9:00 - 10:00,Intro_Programacion (Intro_Programacion_A) [salon_2],---,---,---,---,Intro_Programacion (Intro_Programacion_A) [salon_2]
+10:00 - 11:00,Intro_Programacion (Intro_Programacion_A) [salon_2],---,---,---,---,---
 11:00 - 12:00,---,---,---,---,---,---
 12:00 - 13:00,---,---,---,---,---,---
-13:00 - 14:00,---,---,---,---,---,IA_Aplicada (IA_Aplicada_A) [salon_7]
-14:00 - 15:00,---,---,---,---,---,IA_Aplicada (IA_Aplicada_A) [salon_7]
-15:00 - 16:00,IA_Aplicada (IA_Aplicada_A) [salon_7],---,---,---,---,---
-16:00 - 17:00,IA_Aplicada (IA_Aplicada_A) [salon_7],---,---,---,---,---
-17:00 - 18:00,---,---,Intro_Programacion (Intro_Programacion_A) [salon_4],---,---,---
-18:00 - 19:00,---,---,Intro_Programacion (Intro_Programacion_A) [salon_4],---,IA_Aplicada (IA_Aplicada_B) [salon_7],---
-19:00 - 20:00,IA_Aplicada (IA_Aplicada_B) [salon_7],---,IA_Aplicada (IA_Aplicada_B) [salon_7],---,IA_Aplicada (IA_Aplicada_B) [salon_7],---
-20:00 - 21:00,IA_Aplicada (IA_Aplicada_B) [salon_7],---,IA_Aplicada (IA_Aplicada_B) [salon_7],---,IA_Aplicada (IA_Aplicada_B) [salon_7],---
+13:00 - 14:00,---,---,---,---,---,---
+14:00 - 15:00,---,---,---,---,---,---
+15:00 - 16:00,---,---,Intro_Programacion (Intro_Programacion_A) [salon_2],---,---,---
+16:00 - 17:00,IA_Aplicada (IA_Aplicada_A) [salon_12],---,Intro_Programacion (Intro_Programacion_A) [salon_2],---,IA_Aplicada (IA_Aplicada_B) [salon_11],---
+17:00 - 18:00,IA_Aplicada (IA_Aplicada_A) [salon_12],---,---,---,IA_Aplicada (IA_Aplicada_B) [salon_11],---
+18:00 - 19:00,IA_Aplicada (IA_Aplicada_A) [salon_12],---,---,---,IA_Aplicada (IA_Aplicada_B) [salon_11],---
+19:00 - 20:00,---,---,---,---,---,---
+20:00 - 21:00,---,---,IA_Aplicada (IA_Aplicada_A) [salon_12],---,---,---
+21:00 - 22:00,---,---,IA_Aplicada (IA_Aplicada_A) [salon_12],---,---,---

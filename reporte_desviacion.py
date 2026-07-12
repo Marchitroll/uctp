@@ -88,7 +88,7 @@ def calcular_desviacion():
     print("="*80 + "\n")
     
     # Generar reporte Markdown
-    report_path = "comparacion_metodos.md"
+    report_path = os.path.join("docs", "comparacion_metodos.md")
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("# Comparación de Rendimiento y Desviación Relativa\n\n")
         f.write("Este reporte compara el desempeño del Algoritmo Genético (GA) contra el modelo exacto de Programación Lineal Entera Mixta (MIP) para la planificación horaria de la UCTP.\n\n")

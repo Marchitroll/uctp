@@ -1,14 +1,14 @@
 {
   "escala": "pequena",
-  "total_corridas": 20,
+  "total_corridas": 30,
   "tasa_factibilidad_inicial": 0.0,
   "tasa_factibilidad_final": 100.0,
-  "ttf_promedio": 0.08671875,
-  "cpu_promedio": 1.4484375,
-  "evaluaciones_aptitud_promedio": 2007.5,
+  "ttf_promedio": 0.1484375,
+  "cpu_promedio": 2.488020833333333,
+  "evaluaciones_aptitud_promedio": 1998.3333333333333,
   "mejor_z": 0.0,
-  "peor_z": 2.0,
-  "promedio_z": 0.2,
+  "peor_z": 1.0,
+  "promedio_z": 0.1,
   "mediana_z": 0.0,
-  "desviacion_z": 0.523148363780597
+  "desviacion_z": 0.30512857662936466
 }

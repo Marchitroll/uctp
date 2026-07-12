@@ -4,11 +4,11 @@
   "posicion_almuerzo": 6,
   "dias_sin_almuerzo": ["Jueves", "Sabado"],
   "franjas_por_dia": {
-    "Lunes": 14,
-    "Martes": 14,
-    "Miercoles": 14,
-    "Jueves": 14,
-    "Viernes": 14,
+    "Lunes": 15,
+    "Martes": 15,
+    "Miercoles": 15,
+    "Jueves": 15,
+    "Viernes": 15,
     "Sabado": 8
   }
 }

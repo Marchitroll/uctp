@@ -18,12 +18,12 @@ A continuación se detallan las métricas unificadas para cada escala analizada:
 
 | Escala | Solucionador | Estado Final | CPU Time (s) | $Z$ (Mejor / Único) | $Z$ (Promedio) | Desviación Relativa (DR %) | Nodos B&B / Evals Promedio |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Pequeña** | **MIP** | `OPTIMAL` | 44.09 | 0.0 | N/A | Ref. | 0 |
-| | **GA** | `CONVERGED` | 1.45 | 0.0 | 0.20 | **0.00%** | 2,007.5 |
-| **Mediana** | **MIP** | `FEASIBLE` | 7,704.53 | 325,078.0 | N/A | Ref. | 0 |
-| | **GA** | `CONVERGED` | 74.78 | 502.0 | 538.70 | **-99.85%** | 3,660.0 |
+| **Pequeña** | **MIP** | `OPTIMAL` | 42.03 | 0.0 | N/A | Ref. | 0 |
+| | **GA** | `CONVERGED` | 2.49 | 0.0 | 0.10 | **0.00%** | 1,998.3 |
+| **Mediana** | **MIP** | `FEASIBLE` | 7,874.11 | 434,144.0 | N/A | Ref. | 0 |
+| | **GA** | `CONVERGED` | 119.16 | 457.0 | 540.47 | **-99.89%** | 3,576.0 |
 | **Grande** | **MIP** | `FEASIBLE` | 13,935.66 | 3,927,356.0 | N/A | Ref. | 0 |
-| | **GA** | `CONVERGED` | 1,210.26 | 973.0 | 1,061.45 | **-99.98%** | 8,175.0 |
+| | **GA** | `CONVERGED` | 1,839.98 | 928.0 | 1,050.07 | **-99.98%** | 7,960.0 |
 
 * **Desviación Relativa (DR %)**: Calcula la diferencia porcentual de calidad de la metaheurística frente al solver exacto:
   $$\text{DR } (\%) = \frac{Z_{\text{AG}} - Z_{\text{MIP}}}{Z_{\text{MIP}}} \times 100$$
@@ -35,61 +35,83 @@ A continuación se detallan las métricas unificadas para cada escala analizada:
 ## 3. Desglose Detallado por Escenario
 
 ### A. Escala Pequeña
-* **Alcance del escenario**: 23 eventos, 21 salones, 15 profesores (4 activos), 78 franjas semanales.
+* **Alcance del escenario**: 23 eventos, 21 salones, 15 profesores (4 activos), 83 franjas semanales.
 * **Resultados MIP**:
   * **Estado**: `OPTIMAL` (Óptimo global absoluto certificado).
   * **Z**: 0.0 (Cero penalizaciones de restricciones blandas).
-  * **Tiempo CPU**: 44.09 segundos.
+  * **Tiempo CPU**: 42.03 segundos.
   * **Nodos explorados B&B**: 0 (resuelto en pre-solve y nodo raíz).
-* **Resultados GA (20 corridas)**:
-  * **Tasa de Factibilidad Final**: 100.0% (Las 20 corridas alcanzaron $HCV=0$).
-  * **Mejor Z**: 0.0 (Corrida 1 / Semilla 42).
-  * **Peor Z**: 2.0 (Corrida 13 / Semilla 54).
-  * **Promedio Z**: 0.20 ($\pm 0.52$).
-  * **Tiempo CPU Promedio**: 1.45 segundos.
-  * **Tiempo hacia la factibilidad (TTF) Promedio**: 0.09 segundos.
-  * **Evaluaciones de aptitud promedio**: 2,007.5.
+* **Resultados GA (30 corridas)**:
+  * **Tasa de Factibilidad Final**: 100.0% (Las 30 corridas alcanzaron $HCV=0$).
+  * **Mejor Z**: 0.0.
+  * **Peor Z**: 1.0.
+  * **Promedio Z**: 0.10 ($\pm 0.31$).
+  * **Tiempo CPU Promedio**: 2.49 segundos.
+  * **Tiempo hacia la factibilidad (TTF) Promedio**: 0.15 segundos.
+  * **Evaluaciones de aptitud promedio**: 1,998.3.
+* **Ocupación y Uso de Salones**:
+  * **Capacidad Operativa Total**: 1,375 slots semanales (20 salones físicos $\times$ 68 slots + 1 virtual $\times$ 15 slots).
+  * **Slots Utilizados**: 58 slots (100% de los eventos programados en su totalidad).
+  * **Porcentaje de Uso General (Global)**: **4.22%** (idéntico en MIP y GA), con **4.26%** de ocupación promedio en salones físicos.
+  * **Distribución de Uso por Salón (MIP vs. GA)**:
+    * **MIP**: Concentró la mayor ocupación física en `salon_20` (10 slots, **14.71%**), `salon_2` (9 slots, **13.24%**), y `salon_6` (8 slots, **11.76%**).
+    * **GA**: Concentró la mayor ocupación física en `salon_3` (11 slots, **16.18%**), `salon_19` (9 slots, **13.24%**), y `salon_2` (7 slots, **10.29%**).
 
 ---
 
 ### B. Escala Mediana
-* **Alcance del escenario**: 176 eventos, 21 salones, 15 profesores (todos activos), 78 franjas semanales.
+* **Alcance del escenario**: 176 eventos, 21 salones, 15 profesores (todos activos), 83 franjas semanales.
 * **Resultados MIP**:
   * **Estado**: `FEASIBLE` (Límite de tiempo agotado).
-  * **Z**: 325,078.0.
-  * **Desglose de penalizaciones**: 18 clases programadas en hora de almuerzo ($18 \times W_A$) y 32,506 infracciones de espaciado en días consecutivos ($32,506 \times W_E$).
-  * **Tiempo CPU**: 7,704.53 segundos (2.14 horas de CPU, limitado por el tiempo de parada de 2h).
-  * **Nodos explorados B&B**: 0 (se quedó en el nodo raíz debido a la magnitud de la matriz de 9.7M de coeficientes).
-* **Resultados GA (20 corridas)**:
-  * **Tasa de Factibilidad Final**: 100.0% (Las 20 corridas alcanzaron $HCV=0$).
-  * **Mejor Z**: 502.0 (Corrida 13 / Semilla 54).
-    * *Desglose de la mejor corrida*: 22 clases en hora de almuerzo ($22 \times 1$) y 48 infracciones de espaciado ($48 \times 10$).
-  * **Peor Z**: 600.0.
-  * **Promedio Z**: 538.70 ($\pm 26.61$).
-  * **Tiempo CPU Promedio**: 74.78 segundos.
-  * **Tiempo hacia la factibilidad (TTF) Promedio**: 14.38 segundos.
-  * **Evaluaciones de aptitud promedio**: 3,660.0.
-  * **Mejora en calidad vs MIP**: **99.85% inferior en penalizaciones** y **103 veces más rápido** en tiempo de ejecución.
+  * **Z**: 434,144.0.
+  * **Desglose de penalizaciones**: 14 clases programadas en hora de almuerzo ($14 \times 1$) y 43,413 infracciones de espaciado en días consecutivos ($43,413 \times 10$).
+  * **Tiempo CPU**: 7,874.11 segundos (limitado por el tiempo de parada de 2h).
+  * **Nodos explorados B&B**: 0 (se quedó en el nodo raíz).
+* **Resultados GA (30 corridas)**:
+  * **Tasa de Factibilidad Final**: 100.0% (Las 30 corridas alcanzaron $HCV=0$).
+  * **Mejor Z**: 457.0.
+    * *Desglose de la mejor corrida*: 27 clases en hora de almuerzo ($27 \times 1$) y 43 infracciones de espaciado ($43 \times 10$).
+  * **Peor Z**: 583.0.
+  * **Promedio Z**: 540.47 ($\pm 29.75$).
+  * **Tiempo CPU Promedio**: 119.16 segundos.
+  * **Tiempo hacia la factibilidad (TTF) Promedio**: 26.38 segundos.
+  * **Evaluaciones de aptitud promedio**: 3,576.0.
+  * **Mejora en calidad vs MIP**: **99.89% inferior en penalizaciones** y **66 veces más rápido** por corrida en tiempo de ejecución.
+* **Ocupación y Uso de Salones**:
+  * **Capacidad Operativa Total**: 1,375 slots semanales (20 salones físicos $\times$ 68 slots + 1 virtual $\times$ 15 slots).
+  * **Slots Utilizados**: 366 slots para MIP, 379 slots para GA.
+  * **Porcentaje de Uso General (Global)**: **26.62%** para MIP y **27.56%** para GA, con **26.91%** y **27.87%** de ocupación física respectivamente.
+  * **Distribución de Uso por Salón (MIP vs. GA)**:
+    * **MIP**: Concentró la mayor ocupación física en `salon_11` (27 slots, **39.71%**), `salon_3` (27 slots, **39.71%**) y `salon_2` (25 slots, **36.76%**).
+    * **GA**: Concentró la mayor ocupación física en `salon_11` (39 slots, **57.35%**), `salon_8` (35 slots, **51.47%**) y `salon_10`/`salon_2` (32 slots, **47.06%** c/u).
+    * Ambos programaron la ocupación de `r_virtual` (14 slots, **93.33%**).
 
 ---
 
 ### C. Escala Grande
-* **Alcance del escenario**: 298 eventos, 101 salones, 50 profesores, 78 franjas semanales.
+* **Alcance del escenario**: 298 eventos, 101 salones, 50 profesores, 83 franjas semanales.
 * **Resultados MIP**:
   * **Estado**: `FEASIBLE` (Límite de tiempo agotado).
   * **Z**: 3,927,356.0.
   * **Tiempo CPU**: 13,935.66 segundos (multinúcleo, limitado por el tiempo real de 2 horas).
   * **Nodos explorados B&B**: 0.
-* **Resultados GA (20 corridas)**:
-  * **Tasa de Factibilidad Final**: 100.0% (Las 20 corridas alcanzaron $HCV=0$).
-  * **Mejor Z**: 973.0 (Corrida 3 / Semilla 44).
-    * *Desglose de la mejor corrida*: 43 clases en hora de almuerzo ($43 \times 1$) y 93 infracciones de espaciado ($93 \times 10$).
-  * **Peor Z**: 1,181.0 (Corrida 20 / Semilla 61).
-  * **Promedio Z**: 1,061.45 ($\pm 54.91$).
-  * **Tiempo CPU Promedio**: 1,210.26 segundos (~20.1 minutos por corrida).
-  * **Tiempo hacia la factibilidad (TTF) Promedio**: 484.20 segundos.
-  * **Evaluaciones de aptitud promedio**: 8,175.0.
-  * **Mejora en calidad vs MIP**: **99.98% inferior en penalizaciones** y **11.5 veces más rápido** por corrida.
+* **Resultados GA (30 corridas)**:
+  * **Tasa de Factibilidad Final**: 100.0% (Las 30 corridas alcanzaron $HCV=0$).
+  * **Mejor Z**: 928.0.
+    * *Desglose de la mejor corrida*: 38 clases en hora de almuerzo ($38 \times 1$) y 89 infracciones de espaciado ($89 \times 10$).
+  * **Peor Z**: 1,202.0.
+  * **Promedio Z**: 1,050.07 ($\pm 66.56$).
+  * **Tiempo CPU Promedio**: 1,839.98 segundos.
+  * **Tiempo hacia la factibilidad (TTF) Promedio**: 752.16 segundos (~12.5 minutos).
+  * **Evaluaciones de aptitud promedio**: 7,960.0.
+  * **Mejora en calidad vs MIP**: **99.98% inferior en penalizaciones** y **7.6 veces más rápido** por corrida.
+* **Ocupación y Uso de Salones**:
+  * **Capacidad Operativa Total**: 6,815 slots semanales (100 salones físicos $\times$ 68 slots + 1 virtual $\times$ 15 slots).
+  * **Slots Utilizados**: 651 slots para GA (MIP N/D debido a que la optimización local excedió la memoria RAM del sistema).
+  * **Porcentaje de Uso General (Global)**: **9.55%** para GA (MIP N/D), con **9.57%** de ocupación física.
+  * **Distribución de Uso por Salón (GA)**:
+    * **GA**: Concentró la mayor ocupación física en `salon_14` (22 slots, **32.35%**), `salon_2` (22 slots, **32.35%**), y `salon_44`/`salon_47` (19 slots, **27.94%** c/u).
+    * La ocupación del aula virtual `r_virtual` fue de 0 slots (**0.00%**).
 
 ---
 

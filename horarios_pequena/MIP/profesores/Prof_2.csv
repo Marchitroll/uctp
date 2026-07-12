@@ -1,15 +1,16 @@
 ,Lunes,Martes,Miercoles,Jueves,Viernes,Sabado
-7:00 - 8:00,Calculo_II (Calculo_II_B) [salon_15],Estr_Discretas (Estr_Discretas_A) [salon_1],Calculo_II (Calculo_II_B) [salon_15],---,Calculo_II (Calculo_II_A) [salon_15],Estr_Discretas (Estr_Discretas_A) [salon_1]
-8:00 - 9:00,Calculo_II (Calculo_II_B) [salon_15],Estr_Discretas (Estr_Discretas_A) [salon_1],Calculo_II (Calculo_II_B) [salon_15],---,Calculo_II (Calculo_II_A) [salon_15],Estr_Discretas (Estr_Discretas_A) [salon_1]
-9:00 - 10:00,Calculo_II (Calculo_II_B) [salon_15],Estr_Discretas (Estr_Discretas_A) [salon_1],---,---,Calculo_II (Calculo_II_A) [salon_15],---
+7:00 - 8:00,Estr_Discretas (Estr_Discretas_A) [salon_20],---,---,---,Calculo_II (Calculo_II_B) [salon_20],---
+8:00 - 9:00,Estr_Discretas (Estr_Discretas_A) [salon_20],---,---,---,Calculo_II (Calculo_II_B) [salon_20],---
+9:00 - 10:00,Estr_Discretas (Estr_Discretas_A) [salon_20],---,---,---,---,---
 10:00 - 11:00,---,---,---,---,---,---
-11:00 - 12:00,---,---,---,---,---,---
-12:00 - 13:00,---,---,---,---,---,---
+11:00 - 12:00,---,---,---,---,---,Estr_Discretas (Estr_Discretas_A) [salon_20]
+12:00 - 13:00,---,---,---,---,---,Estr_Discretas (Estr_Discretas_A) [salon_20]
 13:00 - 14:00,---,---,---,---,---,---
 14:00 - 15:00,---,---,---,---,---,---
 15:00 - 16:00,---,---,---,---,---,---
-16:00 - 17:00,---,---,---,---,Calculo_II (Calculo_II_C) [salon_18],---
-17:00 - 18:00,---,---,---,---,Calculo_II (Calculo_II_C) [salon_18],---
-18:00 - 19:00,---,Calculo_II (Calculo_II_C) [salon_18],Calculo_II (Calculo_II_A) [salon_15],---,Calculo_II (Calculo_II_C) [salon_18],---
-19:00 - 20:00,Calculo_II (Calculo_II_A) [salon_15],Calculo_II (Calculo_II_C) [salon_18],Calculo_II (Calculo_II_A) [salon_15],---,Calculo_II (Calculo_II_B) [salon_15],---
-20:00 - 21:00,Calculo_II (Calculo_II_A) [salon_15],Calculo_II (Calculo_II_C) [salon_18],Calculo_II (Calculo_II_A) [salon_15],---,Calculo_II (Calculo_II_B) [salon_15],---
+16:00 - 17:00,Calculo_II (Calculo_II_B) [salon_20],Calculo_II (Calculo_II_C) [salon_15],Calculo_II (Calculo_II_A) [salon_6],---,Calculo_II (Calculo_II_C) [salon_15],---
+17:00 - 18:00,Calculo_II (Calculo_II_B) [salon_20],Calculo_II (Calculo_II_C) [salon_15],Calculo_II (Calculo_II_A) [salon_6],---,Calculo_II (Calculo_II_C) [salon_15],---
+18:00 - 19:00,Calculo_II (Calculo_II_B) [salon_20],Calculo_II (Calculo_II_C) [salon_15],Calculo_II (Calculo_II_A) [salon_6],---,Calculo_II (Calculo_II_C) [salon_15],---
+19:00 - 20:00,---,---,---,---,Calculo_II (Calculo_II_A) [salon_6],---
+20:00 - 21:00,Calculo_II (Calculo_II_A) [salon_6],---,Calculo_II (Calculo_II_B) [salon_2],---,Calculo_II (Calculo_II_A) [salon_6],---
+21:00 - 22:00,Calculo_II (Calculo_II_A) [salon_6],---,Calculo_II (Calculo_II_B) [salon_2],---,Calculo_II (Calculo_II_A) [salon_6],---

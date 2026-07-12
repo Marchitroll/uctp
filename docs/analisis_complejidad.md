@@ -40,18 +40,21 @@ A continuación se detallan las métricas teóricas frente a las reales obtenida
 | :--- | :---: | :---: | :---: |
 | **Eventos ($\|E\|$)** | 23 | 176 | 298 |
 | **Salones ($\|R\|$)** | 21 | 21 | 101 |
-| **Franjas Horarias ($\|T\|$)** | 78 | 78 | 78 |
+| **Franjas Horarias ($\|T\|$)** | 83 | 83 | 83 |
 | **Secciones ($\|S\|$)** | 9 | 68 | 115 |
 | **Docentes ($\|P\|$)** | 4 | 11 | 19 |
 | **Currículos ($\|K\|$)** | 1 | 4 | 8 |
 | **Combinaciones *Valid_SR*** | 165 | 1,100 | 8,916 |
 | **Combinaciones *Valid_ERT*** | 23,234 | 173,784 | 1,466,940 |
-| **Variables Teóricas** | 75,584 | 578,346 | 4,707,480 |
-| **Variables Reales (MIP/GA)** | **46,680** | **349,010** | **2,943,373** |
-| *Reducción de Variables* | *38.24 %* | *39.65 %* | *37.47 %* |
+| **Variables Teóricas** | 80,399 | 578,346 | 4,707,480 |
+| **Variables Reales (MIP/GA)** | **49,670** | **349,010** | **2,943,373** |
+| *Reducción de Variables* | *38.22 %* | *39.65 %* | *37.47 %* |
 | **Restricciones Teóricas** | 232,442 | 1,984,348 | 17,557,776 |
-| **Restricciones Reales (MIP)** | **30,802** | **287,167** | **2,286,849** |
-| *Reducción de Restricciones* | *86.75 %* | *85.53 %* | *86.97 %* |
+| **Restricciones Reales (MIP)** | **32,569** | **287,167** | **2,286,849** |
+| *Reducción de Restricciones* | *85.99 %* | *85.53 %* | *86.97 %* |
+
+> [!NOTE]
+> Las métricas reales de las escalas **Mediana** y **Grande** corresponden al histórico de ejecución del baseline de 78 franjas horarias semanales y serán actualizadas cuando se ejecuten formalmente dichos escenarios en su versión de 83 franjas.
 
 ---
 
@@ -62,6 +65,6 @@ A continuación se detallan las métricas teóricas frente a las reales obtenida
    * La **reducción de restricciones supera el 85%** de manera uniforme. Esto se debe a que las restricciones complejas (como continuidad y desbordamiento diario) solo se instancian sobre el dominio factible prefiltrado.
 
 2. **Dificultad de los Escenarios**:
-   * **Escenario Pequeño** (46,680 variables reales): Es de baja complejidad. Resuelve en segundos tanto por MIP como por GA (el GA converge a factibilidad en fracciones de segundo).
+   * **Escenario Pequeño** (49,670 variables reales): Es de baja complejidad. Resuelve en segundos tanto por MIP como por GA (el GA converge a factibilidad en fracciones de segundo).
    * **Escenario Mediano** (349,010 variables reales): Representa un reto intermedio, requiriendo un proceso de presolve robusto en el solucionador MIP y un número de generaciones moderado (800 epochs) en el algoritmo genético.
    * **Escenario Grande** (2,943,373 variables reales): Es un problema de gran escala. Sin la reducción de dominio, las 17 millones de restricciones provocarían fallos por falta de memoria RAM. Con el prefiltrado de variables, el espacio de búsqueda se reduce a un tamaño manejable por resolvedores modernos.

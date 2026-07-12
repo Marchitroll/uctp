@@ -1,8 +1,8 @@
 {
   "escala": "mediana",
-  "Z": 325078.0,
+  "Z": 434144.0,
   "HCV": 0,
-  "CPU_time": 7704.53125,
+  "CPU_time": 7874.109375,
   "nodes_explored": 0,
   "gap_pct": 99.99999999999997,
   "status": "FEASIBLE"

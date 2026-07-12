@@ -14,7 +14,7 @@ Toda la documentación conceptual, matemática y experimental del proyecto se en
 
 * **[modelo_matematico.md](docs/modelo_matematico.md)**: Especificación teórica del modelo matemático de optimización, incluyendo definiciones de conjuntos, variables de decisión, parámetros y la formulación formal de todas las restricciones duras y blandas.
 * **[analisis_complejidad.md](docs/analisis_complejidad.md)**: Estimación teórica y auditoría real del tamaño del espacio de búsqueda (variables, restricciones y dominios factibles) para los escenarios Pequeño, Mediano y Grande.
-* **[franjas_horarias.md](docs/franjas_horarias.md)**: Estructuración semanal de las 78 franjas horarias académicas, mapeo de periodos de almuerzo y políticas de operatividad presencial vs. virtual.
+* **[franjas_horarias.md](docs/franjas_horarias.md)**: Estructuración semanal de las 83 franjas horarias académicas, mapeo de periodos de almuerzo y políticas de operatividad presencial vs. virtual.
 * **[pseudocodigo_ga.md](docs/pseudocodigo_ga.md)**: Descripción lógica detallada del Algoritmo Genético, su bucle evolutivo y el operador de reparación heurística.
 * **[resultados_experimentales.md](docs/resultados_experimentales.md)**: Reporte consolidado de resultados en las tres escalas, desglosando tiempos de CPU, penalizaciones blandas e indicadores de factibilidad.
 * **[comparacion_metodos.md](docs/comparacion_metodos.md)**: Tabla unificada de rendimientos y cálculo del indicador de Desviación Relativa (DR %) entre ambos métodos.
