@@ -1,12 +1,12 @@
 # Matriz de Franjas Horarias (UCTP)
 
-Esta guía detalla cómo se organizan y codifican las 83 franjas horarias semanales del problema UCTP. 
+Esta guía detalla cómo se organizan y codifican las 86 franjas horarias semanales del problema UCTP. 
 
-En el modelo de optimización, el tiempo se representa mediante números enteros continuos del 1 al 83 (IDs globales). Esta matriz detalla cómo se mapea cada ID global a un día, hora local, periodo de almuerzo y restricción de infraestructura.
+En el modelo de optimización, el tiempo se representa mediante números enteros continuos del 1 al 86 (IDs globales). Esta matriz detalla cómo se mapea cada ID global a un día, hora local, periodo de almuerzo y restricción de infraestructura.
 
 ---
 
-## Matriz Semanal de Franjas (1 a 83)
+## Matriz Semanal de Franjas (1 a 86)
 
 | Hora / Franja Local | Lunes | Martes | Miércoles | Jueves (Virtual) | Viernes | Sábado |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -18,9 +18,9 @@ En el modelo de optimización, el tiempo se representa mediante números enteros
 | **12:00 - 13:00** (F6) | **6** (Almuerzo) | **21** (Almuerzo) | **36** (Almuerzo) | **51** | **66** (Almuerzo) | **81** |
 | **13:00 - 14:00** (F7) | **7** | **22** | **37** | **52** | **67** | **82** |
 | **14:00 - 15:00** (F8) | **8** | **23** | **38** | **53** | **68** | **83** |
-| **15:00 - 16:00** (F9) | **9** | **24** | **39** | **54** | **69** | *No Disponible* |
-| **16:00 - 17:00** (F10) | **10** | **25** | **40** | **55** | **70** | *No Disponible* |
-| **17:00 - 18:00** (F11) | **11** | **26** | **41** | **56** | **71** | *No Disponible* |
+| **15:00 - 16:00** (F9) | **9** | **24** | **39** | **54** | **69** | **84** |
+| **16:00 - 17:00** (F10) | **10** | **25** | **40** | **55** | **70** | **85** |
+| **17:00 - 18:00** (F11) | **11** | **26** | **41** | **56** | **71** | **86** |
 | **18:00 - 19:00** (F12) | **12** | **27** | **42** | **57** | **72** | *No Disponible* |
 | **19:00 - 20:00** (F13) | **13** | **28** | **43** | **58** | **73** | *No Disponible* |
 | **20:00 - 21:00** (F14) | **14** | **29** | **44** | **59** | **74** | *No Disponible* |
@@ -32,7 +32,7 @@ En el modelo de optimización, el tiempo se representa mediante números enteros
 
 ### 1. Franjas Totales por Día
 * **Lunes a Viernes:** Cuentan con 15 franjas diarias (de 07:00 a 22:00).
-* **Sábado:** Cuenta únicamente con 8 franjas diarias (de 07:00 a 15:00). Las celdas marcadas como *No Disponible* no forman parte del conjunto de variables del modelo.
+* **Sábado:** Cuenta con 11 franjas diarias (de 07:00 a 18:00). Las celdas marcadas como *No Disponible* no forman parte del conjunto de variables del modelo.
 
 ### 2. Periodos de Almuerzo (Penalizados con peso WA = 1)
 El almuerzo está fijado en la F6 (12:00 - 13:00) de cada día, pero con excepciones:

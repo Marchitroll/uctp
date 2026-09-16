@@ -130,7 +130,7 @@ NUM_PROFESORES = 50                 # Número total de profesores disponibles en
 NUM_SALONES_FISICOS = 100            # Número total de salones físicos en la institución.
 NUM_SALONES_CON_PC = 60             # Subconjunto de salones equipados con computadoras personales.
 NUM_SALONES_DEEP_LEARNING = 1       # Subconjunto de salones equipados con infraestructura para aprendizaje profundo.
-CAPACIDAD_SALON_FISICO = 40        # Capacidad máxima de estudiantes admitidos en un salón físico.
+CAPACIDAD_SALON_FISICO = 36        # Capacidad máxima de estudiantes admitidos en un salón físico.
 CAPACIDAD_VIRTUAL = 99999          # Capacidad virtual teóricamente ilimitada para sesiones no presenciales.
 LIMITE_HORAS_SEMANAL = 48          # Límite máximo de horas de carga lectiva semanal permitida para un profesor.
 MIN_DIAS_PROFESOR = 4              # Número mínimo de días en los que un profesor debe tener disponibilidad.
@@ -141,7 +141,7 @@ LETRAS_SECCIONES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' # Secuencia utilizada para la no
 PROFES_PEQ_INSTANCIA = 15          # Cantidad reducida de profesores asignada para escenarios de menor escala.
 SALONES_PEQ_INSTANCIA = 20         # Cantidad reducida de salones asignada para escenarios de menor escala.
 RATIO_SALONES_CON_PC = 0.6         # Proporción de salones físicos que disponen de computadoras personales.
-ALUMNOS_POR_SECCION = (25, 40)     # Rango de cantidad de estudiantes matriculados por sección.
+ALUMNOS_POR_SECCION = (25, 36)     # Rango de cantidad de estudiantes matriculados por sección.
 CARACTERISTICAS_POSIBLES = ['mesa', 'pc', 'deep_learning'] # Características de infraestructura reconocidas por el modelo.
 
 SEED = 50                          # Semilla para garantizar la reproducibilidad de la generación de datos.
