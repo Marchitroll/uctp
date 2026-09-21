@@ -1,2 +1,2 @@
 corrida,seed,Z,HCV,DF,TTF,CPU_time,evaluaciones_aptitud,tasa_factib_inicial,factible,penalizacion_almuerzo,penalizacion_espaciado,penalizacion_jueves,penalizacion_sabado,penalizacion_huecos,hcv_colision_profesor,hcv_carga_maxima_profesor,hcv_estabilidad_salones,hcv_colision_salones_fisicos,hcv_conflicto_curricular
-1,42,91,0,0,0.859375,2.140625,4200,0.0,True,6,3,3,10,11,0,0,0,0,0
+1,42,87,0,0,1.34375,3.34375,5622,0.0,True,4,4,5,6,10,0,0,0,0,0

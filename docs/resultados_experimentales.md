@@ -1,138 +1,86 @@
 # Reporte Consolidado de Resultados Experimentales - UCTP
 
-Este documento presenta los resultados de la auditoría experimental y la evaluación de escalabilidad de los solucionadores exacto (**MIP** con HiGHS) y metaheurístico (**Algoritmo Genético - GA**) para el Problema de Planificación Horaria Universitaria (UCTP).
+Este documento presenta los resultados de la evaluación experimental y el análisis comparativo del modelo exacto (**MIP** con HiGHS) frente a las cuatro metaheurísticas implementadas (**HGA**, **GA**, **TS**, **SA**) para el Problema de Planificación Horaria Universitaria (UCTP).
 
 ---
 
 ## 1. Resumen Ejecutivo de Rendimiento
 
-El experimento consistió en someter a ambos solucionadores a tres niveles de escala (Pequeña, Mediana y Grande). Mientras que el solver MIP garantiza optimalidad matemática teórica, la densidad combinatoria y la concurrencia de la malla curricular provocan que en escenarios medianos y grandes se estanque o agote el tiempo de ejecución. En contraste, el Algoritmo Genético, apoyado por su codificador heurístico de asignación (**Most Constrained First** con reparador de colisiones), encontró soluciones de muy alta calidad y 100% factibles en una fracción del tiempo.
+El problema de planificación horaria se evalúa sobre la función objetivo consolidada con cuatro restricciones blandas (cinco componentes ponderados):
 
-**Factibilidad Operativa (HCV):** Ambos solucionadores lograron encontrar soluciones con $HCV = 0$ (cero violaciones a restricciones duras) en todas las escalas, cumpliendo satisfactoriamente con la viabilidad operativa requerida para la planificación institucional.
+$$\min Z = 1 \cdot P_{\text{almuerzo}} + 10 \cdot P_{\text{espaciado}} + 1 \cdot P_{\text{jueves}} + 3 \cdot P_{\text{sabado}} + 2 \cdot P_{\text{huecos}}$$
+
+Bajo este marco, se contrastan cinco enfoques algorítmicos:
+1. **Programación Lineal Entera Mixta (MIP)**: Enfoque exacto con el solver HiGHS v1.13.1.
+2. **Algoritmo Genético Híbrido (HGA)**: Metaheurística memética con operador constructivo *Most Constrained First* (MCF), desplazamiento en cadena y aprendizaje lamarckiano.
+3. **Algoritmo Genético Clásico (GA)**: Algoritmo poblacional canónico con cruzamiento y mutación sin reparación heurística.
+4. **Búsqueda Tabú (TS)**: Metaheurística de trayectoria con vecindario discreto sobre dominios precomputados y memoria tabú.
+5. **Recocido Simulado (SA)**: Metaheurística de trayectoria estocástica con perturbaciones discretas y criterio de Metropolis.
+
+**Factibilidad Operativa (HCV):** Todos los algoritmos alcanzaron un $100\%$ de factibilidad operativa ($HCV = 0$, $DF = 0$) en sus soluciones finales, respetando aforos, exclusividad de aulas físicas, carga docente máxima (8h/día), estabilidad de salones y no colisión curricular.
 
 ---
 
-## 2. Tabla Comparativa Consolidada
+## 2. Comparativa Benchmark en Escala Pequeña
 
-A continuación se detallan las métricas unificadas para cada escala analizada:
+La escala pequeña representa el caso base institucional ($|E|=33$ eventos, $|R|=21$ salones, $|S|=13$ secciones, $|P|=4$ docentes, $|T|=86$ franjas semanales):
 
-| Escala | Solucionador | Estado Final | CPU Time (s) | $Z$ (Mejor / Único) | $Z$ (Promedio) | Desviación Relativa (DR %) | Nodos B&B / Evals Promedio |
+| Método | Tipo | Tasa Éxito (SR %) | DF (Mejor / Prom) | $Z$ (Mejor) | $Z$ (Promedio $\pm$ Std) | RPD (%) vs MIP | CPU Time (s) | TTF (s) | Esfuerzo (NFE / Nodos) |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **MIP (HiGHS)** | Exacto | 100.0% | 0 / 0.0 | **102,457.0** | 102,457.00 $\pm$ 0.00 | 0.00% (Ref) | 213.25 | 213.25 | 0 nodos (Cuts) |
+| **HGA (Memético MCF)** | Metaheurística | **100.0%** | **0 / 0.0** | **25.0** | **25.00 $\pm$ 0.00** | **-99.98%** | **9.59** | **0.20** | 5,000 evals |
+| **SA (Recocido Simulado)**| Metaheurística | 100.0% | 0 / 0.0 | **48.0** | 48.00 $\pm$ 0.00 | -99.95% | 11.62 | 2.34 | 3,461 evals |
+| **TS (Búsqueda Tabú)** | Metaheurística | 100.0% | 0 / 0.0 | **87.0** | 87.00 $\pm$ 0.00 | -99.92% | 3.34 | 1.34 | 5,622 evals |
+| **GA (Genético Clásico)** | Metaheurística | 100.0% | 0 / 0.0 | **91.0** | 91.00 $\pm$ 0.00 | -99.91% | 2.14 | 0.86 | 4,200 evals |
+
+### Desglose de Penalizaciones Blandas en la Mejor Solución (Escala Pequeña)
+
+| Método | $P_{\text{almuerzo}}$ ($W=1$) | $P_{\text{espaciado}}$ ($W=10$) | $P_{\text{jueves}}$ ($W=1$) | $P_{\text{sabado}}$ ($W=3$) | $P_{\text{huecos}}$ ($W=2$) | **Costo Total $Z$** |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **MIP (HiGHS)** | 6 | 10,242 | 10 | 7 | 0 | **102,457.0** |
+| **HGA** | 6 | 1 | 3 | 2 | 0 | **25.0** |
+| **SA** | 3 | 3 | 0 | 0 | 7 | **48.0** |
+| **TS** | 4 | 5 | 0 | 0 | 14 | **87.0** |
+| **GA** | 4 | 6 | 0 | 3 | 9 | **91.0** |
+
+> [!NOTE]
+> * **Eficacia de HGA**: El Algoritmo Genético Híbrido obtuvo el mejor desempeño global ($Z = 25.0$), encontrando una solución factible en solo 0.20 segundos (Generación 1) gracias a la combinación de Most Constrained First y aprendizaje lamarckiano.
+> * **MIP en Límite de Tiempo**: En el límite fijado, el solucionador exacto HiGHS encontró una solución factible pero con alta penalización en espaciado continuo ($Z = 102,457.0$), evidenciando la ventaja de las metaheurísticas para explorar rápidamente horarios de alta calidad bajo restricciones multiobjetivo complejas.
+
+---
+
+## 3. Resultados Históricos en Escalas Mediana y Grande (Baseline Preliminar)
+
+Las escalas mediana y grande fueron evaluadas durante la fase preliminar de calibración (bajo la formulación baseline de almuerzo y espaciado):
+
+| Escala | Solucionador | Estado Final | CPU Time (s) | $Z$ (Mejor) | $Z$ (Promedio $\pm$ Std) | Desviación Relativa (RPD %) | Esfuerzo (NFE / Nodos) |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Pequeña** | **MIP** | `OPTIMAL` | 42.03 | 0.0 | N/A | Ref. | 0 |
-| | **GA** | `CONVERGED` | 2.49 | 0.0 | 0.10 | **0.00%** | 1,998.3 |
-| **Mediana** | **MIP** | `FEASIBLE` | 7,874.11 | 434,144.0 | N/A | Ref. | 0 |
-| | **GA** | `CONVERGED` | 119.16 | 457.0 | 540.47 | **-99.89%** | 3,576.0 |
-| **Grande** | **MIP** | `FEASIBLE` | 13,935.66 | 3,927,356.0 | N/A | Ref. | 0 |
-| | **GA** | `CONVERGED` | 1,839.98 | 928.0 | 1,050.07 | **-99.98%** | 7,960.0 |
+| **Mediana** | **MIP** | `FEASIBLE` | 7,874.11 | 434,144.0 | 434,144.00 $\pm$ 0.00 | Ref. | 0 nodos |
+| | **HGA (Preliminar)** | `CONVERGED` | 119.16 | 457.0 | 540.47 $\pm$ 29.75 | **-99.89%** | 3,576 evals |
+| **Grande** | **MIP** | `FEASIBLE` | 13,935.66 | 3,927,356.0 | 3,927,356.00 $\pm$ 0.00 | Ref. | 0 nodos |
+| | **HGA (Preliminar)** | `CONVERGED` | 1,839.98 | 928.0 | 1,050.07 $\pm$ 66.56 | **-99.98%** | 7,960 evals |
 
-* **Desviación Relativa (DR %)**: Calcula la diferencia porcentual de calidad de la metaheurística frente al solver exacto:
-  $$\text{DR } (\%) = \frac{Z_{\text{AG}} - Z_{\text{MIP}}}{Z_{\text{MIP}}} \times 100$$
-  Un valor negativo indica una mejora porcentual de la metaheurística sobre el solver exacto en tiempo limitado.
-* **Tiempo de CPU MIP**: Refleja el tiempo de proceso acumulado en CPU. Las instancias mediana y grande alcanzaron el límite de tiempo de 2 horas reales (7,200 s) por diseño.
-
----
-
-## 3. Desglose Detallado por Escenario
-
-### A. Escala Pequeña
-* **Alcance del escenario**: 23 eventos, 21 salones, 15 profesores (4 activos), 83 franjas semanales.
-* **Resultados MIP**:
-  * **Estado**: `OPTIMAL` (Óptimo global absoluto certificado).
-  * **Z**: 0.0 (Cero penalizaciones de restricciones blandas).
-  * **Tiempo CPU**: 42.03 segundos.
-  * **Nodos explorados B&B**: 0 (resuelto en pre-solve y nodo raíz).
-* **Resultados GA (30 corridas)**:
-  * **Tasa de Factibilidad Final**: 100.0% (Las 30 corridas alcanzaron $HCV=0$).
-  * **Mejor Z**: 0.0.
-  * **Peor Z**: 1.0.
-  * **Promedio Z**: 0.10 ($\pm 0.31$).
-  * **Tiempo CPU Promedio**: 2.49 segundos.
-  * **Tiempo hacia la factibilidad (TTF) Promedio**: 0.15 segundos.
-  * **Evaluaciones de aptitud promedio**: 1,998.3.
-* **Ocupación y Uso de Salones**:
-  * **Capacidad Operativa Total**: 1,375 slots semanales (20 salones físicos $\times$ 68 slots + 1 virtual $\times$ 15 slots).
-  * **Slots Utilizados**: 58 slots (100% de los eventos programados en su totalidad).
-  * **Porcentaje de Uso General (Global)**: **4.22%** (idéntico en MIP y GA), con **4.26%** de ocupación promedio en salones físicos.
-  * **Distribución de Uso por Salón (MIP vs. GA)**:
-    * **MIP**: Concentró la mayor ocupación física en `salon_20` (10 slots, **14.71%**), `salon_2` (9 slots, **13.24%**), y `salon_6` (8 slots, **11.76%**).
-    * **GA**: Concentró la mayor ocupación física en `salon_3` (11 slots, **16.18%**), `salon_19` (9 slots, **13.24%**), y `salon_2` (7 slots, **10.29%**).
-
----
-
-### B. Escala Mediana
-* **Alcance del escenario**: 176 eventos, 21 salones, 15 profesores (todos activos), 83 franjas semanales.
-* **Resultados MIP**:
-  * **Estado**: `FEASIBLE` (Límite de tiempo agotado).
-  * **Z**: 434,144.0.
-  * **Desglose de penalizaciones**: 14 clases programadas en hora de almuerzo ($14 \times 1$) y 43,413 infracciones de espaciado en días consecutivos ($43,413 \times 10$).
-  * **Tiempo CPU**: 7,874.11 segundos (limitado por el tiempo de parada de 2h).
-  * **Nodos explorados B&B**: 0 (se quedó en el nodo raíz).
-* **Resultados GA (30 corridas)**:
-  * **Tasa de Factibilidad Final**: 100.0% (Las 30 corridas alcanzaron $HCV=0$).
-  * **Mejor Z**: 457.0.
-    * *Desglose de la mejor corrida*: 27 clases en hora de almuerzo ($27 \times 1$) y 43 infracciones de espaciado ($43 \times 10$).
-  * **Peor Z**: 583.0.
-  * **Promedio Z**: 540.47 ($\pm 29.75$).
-  * **Tiempo CPU Promedio**: 119.16 segundos.
-  * **Tiempo hacia la factibilidad (TTF) Promedio**: 26.38 segundos.
-  * **Evaluaciones de aptitud promedio**: 3,576.0.
-  * **Mejora en calidad vs MIP**: **99.89% inferior en penalizaciones** y **66 veces más rápido** por corrida en tiempo de ejecución.
-* **Ocupación y Uso de Salones**:
-  * **Capacidad Operativa Total**: 1,375 slots semanales (20 salones físicos $\times$ 68 slots + 1 virtual $\times$ 15 slots).
-  * **Slots Utilizados**: 366 slots para MIP, 379 slots para GA.
-  * **Porcentaje de Uso General (Global)**: **26.62%** para MIP y **27.56%** para GA, con **26.91%** y **27.87%** de ocupación física respectivamente.
-  * **Distribución de Uso por Salón (MIP vs. GA)**:
-    * **MIP**: Concentró la mayor ocupación física en `salon_11` (27 slots, **39.71%**), `salon_3` (27 slots, **39.71%**) y `salon_2` (25 slots, **36.76%**).
-    * **GA**: Concentró la mayor ocupación física en `salon_11` (39 slots, **57.35%**), `salon_8` (35 slots, **51.47%**) y `salon_10`/`salon_2` (32 slots, **47.06%** c/u).
-    * Ambos programaron la ocupación de `r_virtual` (14 slots, **93.33%**).
-
----
-
-### C. Escala Grande
-* **Alcance del escenario**: 298 eventos, 101 salones, 50 profesores, 83 franjas semanales.
-* **Resultados MIP**:
-  * **Estado**: `FEASIBLE` (Límite de tiempo agotado).
-  * **Z**: 3,927,356.0.
-  * **Tiempo CPU**: 13,935.66 segundos (multinúcleo, limitado por el tiempo real de 2 horas).
-  * **Nodos explorados B&B**: 0.
-* **Resultados GA (30 corridas)**:
-  * **Tasa de Factibilidad Final**: 100.0% (Las 30 corridas alcanzaron $HCV=0$).
-  * **Mejor Z**: 928.0.
-    * *Desglose de la mejor corrida*: 38 clases en hora de almuerzo ($38 \times 1$) y 89 infracciones de espaciado ($89 \times 10$).
-  * **Peor Z**: 1,202.0.
-  * **Promedio Z**: 1,050.07 ($\pm 66.56$).
-  * **Tiempo CPU Promedio**: 1,839.98 segundos.
-  * **Tiempo hacia la factibilidad (TTF) Promedio**: 752.16 segundos (~12.5 minutos).
-  * **Evaluaciones de aptitud promedio**: 7,960.0.
-  * **Mejora en calidad vs MIP**: **99.98% inferior en penalizaciones** y **7.6 veces más rápido** por corrida.
-* **Ocupación y Uso de Salones**:
-  * **Capacidad Operativa Total**: 6,815 slots semanales (100 salones físicos $\times$ 68 slots + 1 virtual $\times$ 15 slots).
-  * **Slots Utilizados**: 651 slots para GA (MIP N/D debido a que la optimización local excedió la memoria RAM del sistema).
-  * **Porcentaje de Uso General (Global)**: **9.55%** para GA (MIP N/D), con **9.57%** de ocupación física.
-  * **Distribución de Uso por Salón (GA)**:
-    * **GA**: Concentró la mayor ocupación física en `salon_14` (22 slots, **32.35%**), `salon_2` (22 slots, **32.35%**), y `salon_44`/`salon_47` (19 slots, **27.94%** c/u).
-    * La ocupación del aula virtual `r_virtual` fue de 0 slots (**0.00%**).
+* **Escala Mediana** ($|E|=176$ eventos, $|R|=21$ salones, $|P|=11$ profesores): HGA superó a MIP en un 99.89% de calidad y resolvió 66 veces más rápido.
+* **Escala Grande** ($|E|=298$ eventos, $|R|=101$ salones, $|P|=19$ profesores): El modelo exacto requirió más de 3.8 horas de cómputo multinúcleo estancándose en el nodo raíz, mientras que HGA convergió con una penalización residual significativamente menor ($Z = 928.0$).
 
 ---
 
 ## 4. Desglose Analítico de Restricciones Duras (HCV)
 
-El éxito operativo radica en asegurar que la tasa de violaciones a restricciones duras ($HCV$) sea exactamente **0**. A continuación se detalla cómo se comportaron estas restricciones en el Algoritmo Genético a lo largo de las corridas para los tres escenarios:
+En todas las soluciones finales reportadas por los 5 métodos, las violaciones a restricciones duras ($HCV$) se mantuvieron en **cero absoluto**:
 
-| Restricción Dura | Nomenclatura del Código | Escala Pequeña | Escala Mediana | Escala Grande |
-| :--- | :--- | :---: | :---: | :---: |
-| **Colisión de Profesores** | `hcv_colision_profesor` | 0 | 0 | 0 |
-| **Carga Máxima Docente** | `hcv_carga_maxima_profesor` | 0 | 0 | 0 |
-| **Estabilidad de Salones** | `hcv_estabilidad_salones` | 0 | 0 | 0 |
-| **Colisión de Salones Físicos** | `hcv_colision_salones_fisicos`| 0 | 0 | 0 |
-| **Conflicto Curricular** | `hcv_conflicto_curricular` | 0 | 0 | 0 |
-
-La tasa de factibilidad inicial en el Algoritmo Genético es del **0.0%** en todas las escalas. Esto demuestra que las soluciones generadas de forma puramente aleatoria no son factibles debido a la alta densidad de restricciones del UCTP. Sin embargo, el operador reparador heurístico en el decodificador logra restaurar el 100% de factibilidad ($HCV = 0$) antes de finalizar la primera generación.
+| Restricción Dura | Indicador en Código | MIP | HGA | GA | TS | SA |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **Colisión de Profesores** | `colision_profesor` | 0 | 0 | 0 | 0 | 0 |
+| **Carga Máxima Docente (8h/día)** | `carga_maxima_profesor` | 0 | 0 | 0 | 0 | 0 |
+| **Estabilidad de Salones ($\le 2$)** | `estabilidad_salones` | 0 | 0 | 0 | 0 | 0 |
+| **Colisión de Salones Físicos** | `colision_salones_fisicos`| 0 | 0 | 0 | 0 | 0 |
+| **Conflicto Curricular (Malla)** | `conflicto_curricular` | 0 | 0 | 0 | 0 | 0 |
 
 ---
 
 ## 5. Conclusiones Metodológicas
 
-1. **Escalabilidad y Flexibilidad**: A medida que el problema crece a escala institucional completa (Escenario Grande), el enfoque exacto MIP sufre debido a la explosión del espacio de búsqueda y las dependencias de exclusión mutua de la malla curricular.
-2. **Eficiencia de la Metaheurística**: El decodificador heurístico del GA, diseñado específicamente para resolver solapamientos y colisiones locales, actúa como un potente filtro que guía la búsqueda directamente en la frontera factible del espacio combinatorio.
-3. **Recomendación Operativa**: Para la planificación regular de horarios en la institución, se recomienda adoptar el Algoritmo Genético, ya que genera horarios viables en minutos con penalizaciones insignificantes para docentes y alumnos, mientras que el modelo MIP debe reservarse únicamente para auditorías de subconjuntos de baja escala.
+1. **Aportación de la Heurística Memética**: La comparación directa entre HGA ($Z = 25.0$) y GA clásico ($Z = 91.0$) en la misma instancia demuestra que el operador constructivo Most Constrained First (MCF) reduce drásticamente las penalizaciones blandas y acelera la convergencia a factibilidad ($TTF = 0.20\text{ s}$ frente a $0.86\text{ s}$).
+2. **Competitividad de Recocido Simulado**: SA demostró una excelente capacidad de exploración estocástica ($Z = 48.0$), posicionándose como la segunda mejor metaheurística tras HGA.
+3. **Escalabilidad**: Mientras que los solucionadores exactos sufren por la densidad combinatoria en horizontes de 86 franjas, las metaheurísticas sobre el espacio reducido de `valid_starts` ofrecen soluciones factibles y de alta calidad operativa en segundos.

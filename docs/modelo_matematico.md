@@ -85,8 +85,11 @@ Se definen los siguientes parámetros del modelo:
 * **Disponibilidad del profesor** $Disp_{p,t}$: Parámetro binario que vale 1 si el profesor $p \in P$ se encuentra disponible para dictar clase en la franja horaria $t \in T$, y 0 en caso contrario.
 * **Almuerzo** $Almuerzo_t$: Parámetro binario que vale 1 si la franja horaria $t \in T$ corresponde al período de almuerzo, y 0 en caso contrario.
 * **Duración del evento** $Dur_e$: Número entero que indica cuántas franjas horarias consecutivas ocupa el evento $e \in E$.
-* **Peso de penalización por almuerzo** $W_A$: Escalar abstracto que pondera la importancia de las clases programadas durante el período de almuerzo en la función objetivo.
-* **Peso de penalización por espaciado** $W_E$: Escalar abstracto que pondera la importancia de las infracciones por sesiones dictadas en días consecutivos en la función objetivo.
+* **Peso de penalización por almuerzo** $W_A$: Escalar abstracto que pondera la importancia de las clases programadas durante el período de almuerzo en la función objetivo ($W_A = 1$).
+* **Peso de penalización por espaciado** $W_E$: Escalar abstracto que pondera la importancia de las infracciones por sesiones dictadas en días consecutivos en la función objetivo ($W_E = 10$).
+* **Peso de penalización por clases en jueves** $W_{\text{jue}}$: Ponderación de franjas dictadas el día de cierre presencial ($W_{\text{jue}} = 1$).
+* **Peso de penalización por clases en sábado** $W_{\text{sab}}$: Ponderación de franjas dictadas en fin de semana ($W_{\text{sab}} = 3$).
+* **Peso de penalización por huecos docentes** $W_G$: Ponderación por cada hora inactiva entre la primera y última clase diaria del docente, excluyendo almuerzo ($W_G = 2$).
 
 ## Variables de decisión
 
@@ -98,6 +101,10 @@ Las variables de decisión se crean exclusivamente sobre las combinaciones de lo
 * **Penalización por clases en almuerzo** $P_{\text{almuerzo}}$: Variable entera no negativa que acumula el total de franjas de clase programadas durante el período de almuerzo.
 * **Infracción de espaciado por curso y día** $v_{\text{espaciado}, c, i}$: Variable entera no negativa que vale 1 (o más) si el curso $c$ se programa en días consecutivos $i$ e $i+1$, y 0 en caso contrario.
 * **Penalización total por espaciado** $P_{\text{espaciado}}$: Variable entera no negativa que acumula el total de infracciones de espaciado temporal de sesiones.
+* **Penalización por clases en jueves** $P_{\text{jueves}}$: Variable entera no negativa que acumula las franjas de clase impartidas los días jueves.
+* **Penalización por clases en sábado** $P_{\text{sabado}}$: Variable entera no negativa que acumula las franjas de clase impartidas los días sábados.
+* **Hueco docente por profesor y franja** $gap_{p,t}$: Variable continua en $[0, 1]$ que indica si la franja $t$ constituye una ventana ociosa para el docente $p$.
+* **Penalización total por huecos docentes** $P_{\text{huecos}}$: Variable no negativa que suma las ventanas ociosas de todos los profesores a lo largo de la semana.
 
 ### Dominio de las variables
 
@@ -109,9 +116,9 @@ $$ w_{s,r} \in \{0,1\} \quad \forall (s,r) \in Valid\_SR $$
 
 $$ v_{\text{espaciado}, c, i} \ge 0 \quad \forall c \in C,\; \forall i \in \{1, \dots, |D|-1\} $$
 
-$$ P_{\text{almuerzo}} \in \mathbb{Z}^{+} \cup \{0\} $$
+$$ P_{\text{almuerzo}}, P_{\text{jueves}}, P_{\text{sabado}} \in \mathbb{Z}^{+} \cup \{0\} $$
 
-$$ P_{\text{espaciado}} \ge 0 $$
+$$ P_{\text{espaciado}}, P_{\text{huecos}} \ge 0 $$
 
 > **Nota:** En todas las sumatorias que se presentan a continuación, si una combinación evaluada no pertenece al conjunto de combinaciones válidas correspondiente, la variable asociada no existe y se considera con valor 0. Esto evita la formulación de restricciones sobre variables inexistentes.
 
@@ -185,8 +192,28 @@ $$ \sum_{\substack{e \in E_c, r \in R, t \in T_{d_i} \\ (e,r,t) \in Valid\_ERT}}
 
 $$ P_{\text{espaciado}} = \sum_{c \in C} \sum_{i=1}^{|D|-1} v_{\text{espaciado}, c, i} $$
 
+### 3. Penalización por clases en días de baja preferencia (Jueves y Sábado)
+
+Contabiliza las franjas horarias de clase impartidas en los días institucionalmente menos preferidos:
+
+$$ P_{\text{jueves}} = \sum_{\substack{(e,r,t) \in Valid\_ERT \\ t \in T_{d_{\text{jue}}}}} x_{e,r,t} $$
+
+$$ P_{\text{sabado}} = \sum_{\substack{(e,r,t) \in Valid\_ERT \\ t \in T_{d_{\text{sab}}}}} x_{e,r,t} $$
+
+### 4. Penalización por horarios no compactos para los profesores (Huecos/Ventanas)
+
+Para cada docente $p \in P$ y día $d \in D$, se penalizan las franjas horarias ociosas $gap_{p,t}$ situadas entre la primera y la última clase del día, **excluyendo** el período de almuerzo ($Almuerzo_t = 0$). Sea $u_{p,t} = \sum_{\substack{e \in E_p, r \in R \\ (e,r,t) \in Valid\_ERT}} x_{e,r,t}$ el indicador de dictado del profesor $p$ en la franja $t$, y sean $f_{p,t}, l_{p,t} \in [0, 1]$ variables auxiliares de propagación temporal (inicio antes de $t$ y fin después de $t$):
+
+$$ f_{p,t} \ge u_{p,t}, \quad f_{p,t} \ge f_{p,t-1} \quad \forall t \in T_d $$
+
+$$ l_{p,t} \ge u_{p,t}, \quad l_{p,t} \ge l_{p,t+1} \quad \forall t \in T_d $$
+
+$$ gap_{p,t} \ge f_{p,t} + l_{p,t} - 1 - u_{p,t} \quad \forall t \in T_d \mid Almuerzo_t = 0 $$
+
+$$ P_{\text{huecos}} = \sum_{p \in P} \sum_{t \in T \mid Almuerzo_t = 0} gap_{p,t} $$
+
 ## Función objetivo
 
-El propósito del modelo consiste en encontrar un horario que cumpla con todas las restricciones operativas duras y, al mismo tiempo, minimice de manera conjunta las penalizaciones por clases en almuerzo y las infracciones de espaciado de sesiones:
+El propósito del modelo consiste en encontrar un horario que cumpla con todas las restricciones operativas duras y, al mismo tiempo, minimice de manera conjunta las cinco penalizaciones blandas ponderadas:
 
-$$ \min Z = W_A \cdot P_{\text{almuerzo}} + W_E \cdot P_{\text{espaciado}} $$
+$$ \min Z = W_A \cdot P_{\text{almuerzo}} + W_E \cdot P_{\text{espaciado}} + W_{\text{jue}} \cdot P_{\text{jueves}} + W_{\text{sab}} \cdot P_{\text{sabado}} + W_G \cdot P_{\text{huecos}} $$

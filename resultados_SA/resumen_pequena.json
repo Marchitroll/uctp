@@ -1,17 +1,17 @@
 {
-  "metodo": "GA",
+  "metodo": "SA",
   "escala": "pequena",
   "total_corridas": 1,
   "tasa_factibilidad_final": 100.0,
   "mejor_df": 0,
   "promedio_df": 0.0,
-  "ttf_promedio": 0.859375,
-  "cpu_promedio": 2.140625,
-  "evaluaciones_aptitud_promedio": 4200.0,
-  "mejor_z": 91.0,
-  "peor_z": 91.0,
-  "promedio_z": 91.0,
-  "mediana_z": 91.0,
+  "ttf_promedio": 2.34375,
+  "cpu_promedio": 11.625,
+  "evaluaciones_aptitud_promedio": 3461.0,
+  "mejor_z": 48.0,
+  "peor_z": 48.0,
+  "promedio_z": 48.0,
+  "mediana_z": 48.0,
   "desviacion_z": 0.0,
   "entorno": {
     "sistema_operativo": "Windows 11",
@@ -20,7 +20,7 @@
     "version_python": "3.13.15",
     "version_mip": "2.0.0",
     "version_mealpy": "3.0.2",
-    "libreria_optimizacion": "mealpy.evolutionary_based.GA.BaseGA (Classical)",
+    "libreria_optimizacion": "mealpy.physics_based.SA.OriginalSA (Discrete)",
     "version_optimizacion": "3.0.x"
   }
 }

@@ -16,16 +16,16 @@ from exportador_horarios import (
     obtener_metadatos_entorno
 )
 from problema_uctp import (
-    UCTPProblemBase,
+    UCTPHybridProblem,
     precomputar_combinaciones_inicio,
     precomputar_restricciones_curriculares
 )
 
 
-class CustomGA(BaseGA):
+class CustomHGA(BaseGA):
     """
-    Subclase de BaseGA adaptada para el algoritmo genético clásico (sin reparación MCF),
-    registrando TTF (Time to Feasibility), factibilidad inicial y parada temprana por convergencia de Z.
+    Subclase de BaseGA adaptada para registrar TTF (Time to Feasibility),
+    evaluar factibilidad inicial y aplicar criterio de parada temprana por convergencia de Z.
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -89,7 +89,7 @@ class CustomGA(BaseGA):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Optimizador CB-CTT: Algoritmo Genético Clásico (GA).")
+    parser = argparse.ArgumentParser(description="Optimizador CB-CTT: Algoritmo Genético Híbrido (HGA) con Aprendizaje Lamarckiano.")
     parser.add_argument("--instancia", choices=["pequena", "mediana", "grande"], default=None,
                         help="Escala de la instancia a resolver (pequena, mediana, grande). Si no se define, se detecta por currículos.")
     parser.add_argument("--epoch", type=int, default=None, help="Número máximo de generaciones (épocas) por corrida.")
@@ -138,7 +138,7 @@ def main():
     if args.pm is not None:
         config_base['pm'] = args.pm
 
-    print(f"\n[INFO - GA Clásico] Escala: {escala_efectiva} | Generaciones: {config_base['epoch']} | Población: {config_base['pop_size']}")
+    print(f"\n[INFO - HGA] Escala: {escala_efectiva} | Generaciones: {config_base['epoch']} | Población: {config_base['pop_size']}")
 
     # 2. Pre-cómputo de dominios válidos
     valid_starts = precomputar_combinaciones_inicio(
@@ -158,21 +158,21 @@ def main():
     best_global_hcv = float('inf')
     best_global_z = float('inf')
 
-    print(f"[INFO - GA Clásico] Iniciando {n_corridas} corridas independientes...")
+    print(f"[INFO - HGA] Iniciando {n_corridas} corridas independientes del Algoritmo Genético Híbrido...")
     print("=" * 80)
 
     for run in range(n_corridas):
         seed = 42 + run
-        print(f"\n>>> [GA Clásico - CORRIDA {run + 1}/{n_corridas}] Semilla: {seed} ...")
+        print(f"\n>>> [HGA - CORRIDA {run + 1}/{n_corridas}] Semilla: {seed} ...")
 
-        problem = UCTPProblemBase(
+        problem = UCTPHybridProblem(
             E=E, R=R, T=T, D=D, T_d=T_d, P=P, S=S, K=K, E_k=E_k, E_p=E_p, E_s=E_s, Dur=Dur,
             EVENTO_SECCION=EVENTO_SECCION, SECCION_CURSO=SECCION_CURSO, Almuerzo=Almuerzo,
             valid_starts=valid_starts, restricciones_curriculares=restricciones_curriculares,
             bounds=bounds, ES_VIRTUAL=ES_VIRTUAL
         )
 
-        ga_model = CustomGA(
+        hga_model = CustomHGA(
             epoch=config_base['epoch'],
             pop_size=config_base['pop_size'],
             pc=config_base['pc'],
@@ -186,7 +186,7 @@ def main():
             term_dict["max_time"] = max_seconds
 
         start_run_time = time.process_time()
-        best_agent = ga_model.solve(problem, termination=term_dict, seed=seed)
+        best_agent = hga_model.solve(problem, termination=term_dict, seed=seed)
         cpu_time = time.process_time() - start_run_time
 
         run_solution = best_agent.solution
@@ -194,8 +194,8 @@ def main():
 
         hcv = run_metrics['violaciones_restricciones_duras']
         z = run_metrics['penalizacion_blanda']
-        ttf = ga_model.primer_tiempo_factible
-        init_feas = ga_model.tasa_factibilidad_inicial
+        ttf = hga_model.primer_tiempo_factible
+        init_feas = hga_model.tasa_factibilidad_inicial
 
         is_better = False
         if best_global_solution is None:
@@ -219,7 +219,7 @@ def main():
 
         print(f"    Resultado: HCV={hcv} | Z={z:.2f} | Factible={'SÍ' if hcv == 0 else 'NO'} | CPU={cpu_time:.2f}s | NFE={problem.evaluaciones_aptitud}")
         if hcv == 0 and ttf is not None:
-            print(f"    TTF: {ttf:.2f}s (Gen {ga_model.primera_gen_factible})")
+            print(f"    TTF: {ttf:.2f}s (Gen {hga_model.primera_gen_factible})")
 
         resultados_runs.append({
             "corrida": run + 1,
@@ -246,11 +246,11 @@ def main():
 
     # 4. Consolidación estadística
     df_results = pd.DataFrame(resultados_runs)
-    resultados_dir = "resultados_GA"
+    resultados_dir = "resultados_HGA"
     os.makedirs(resultados_dir, exist_ok=True)
     csv_filepath = os.path.join(resultados_dir, f"resultados_{escala_efectiva}.csv")
     df_results.to_csv(csv_filepath, index=False)
-    print(f"\n[ÉXITO] Resultados individuales GA persistidos en '{csv_filepath}'.")
+    print(f"\n[ÉXITO] Resultados individuales HGA persistidos en '{csv_filepath}'.")
 
     total_runs = len(df_results)
     factibles_df = df_results[df_results['factible'] == True]
@@ -278,7 +278,7 @@ def main():
     evals_promedio = float(df_results['evaluaciones_aptitud'].mean())
 
     resumen = {
-        "metodo": "GA",
+        "metodo": "HGA",
         "escala": escala_efectiva,
         "total_corridas": int(total_runs),
         "tasa_factibilidad_final": float(tasa_factibilidad),
@@ -292,19 +292,19 @@ def main():
         "promedio_z": promedio_z,
         "mediana_z": mediana_z,
         "desviacion_z": desviacion_z,
-        "entorno": obtener_metadatos_entorno("mealpy.evolutionary_based.GA.BaseGA (Classical)", "3.0.x")
+        "entorno": obtener_metadatos_entorno("mealpy.evolutionary_based.GA.BaseGA (Hybrid Lamarckian)", "3.0.x")
     }
 
     resumen_filepath = os.path.join(resultados_dir, f"resumen_{escala_efectiva}.json")
     with open(resumen_filepath, 'w', encoding='utf-8') as f:
         json.dump(resumen, f, indent=2, ensure_ascii=False)
-    print(f"[ÉXITO] Resumen estadístico consolidado GA guardado en '{resumen_filepath}'.\n")
+    print(f"[ÉXITO] Resumen estadístico consolidado HGA guardado en '{resumen_filepath}'.\n")
 
     # 5. Exportación del mejor horario encontrado
     if best_global_solution is not None:
-        print("[INFO - GA Clásico] Exportando horario de la mejor corrida...")
+        print("[INFO - HGA] Exportando horario de la mejor corrida...")
         x_best = reconstruir_x_desde_ga(best_global_solution, valid_starts, E, Dur)
-        out_path = f"horarios_{escala_efectiva}/GA"
+        out_path = f"horarios_{escala_efectiva}/HGA"
         exportar_horarios(
             x=x_best, K=K, E_k=E_k, T_d=T_d, D=D,
             EVENTO_SECCION=EVENTO_SECCION, SECCION_CURSO=SECCION_CURSO, E_p=E_p,

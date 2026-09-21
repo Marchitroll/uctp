@@ -1,9 +1,21 @@
 {
+  "metodo": "MIP",
   "escala": "pequena",
-  "Z": 0.0,
+  "Z": 102457.0,
   "HCV": 0,
-  "CPU_time": 239.8125,
+  "CPU_time": 213.25,
   "nodes_explored": 0,
-  "gap_pct": 0.0,
-  "status": "OPTIMAL"
+  "lower_bound": 5.000000000000116,
+  "gap_pct": 99.9951199039596,
+  "status": "FEASIBLE",
+  "entorno": {
+    "sistema_operativo": "Windows 11",
+    "procesador": "Intel64 Family 6 Model 151 Stepping 2, GenuineIntel",
+    "ram_gb": 15.83,
+    "version_python": "3.13.15",
+    "version_mip": "2.0.0",
+    "version_mealpy": "3.0.2",
+    "libreria_optimizacion": "python-mip (HiGHS)",
+    "version_optimizacion": "2.0.0"
+  }
 }

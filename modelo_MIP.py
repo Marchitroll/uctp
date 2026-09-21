@@ -113,6 +113,9 @@ v_espaciado = {
     for i in range(len(D) - 1)
 }
 P_espaciado = model.add_var(name="P_espaciado", var_type=CONTINUOUS, lb=0)
+P_jueves = model.add_var(name="P_jueves", var_type=INTEGER, lb=0)
+P_sabado = model.add_var(name="P_sabado", var_type=INTEGER, lb=0)
+P_huecos = model.add_var(name="P_huecos", var_type=CONTINUOUS, lb=0)
 
 print("[INFO] Inicialización completa: conjuntos, parámetros y variables.")
 print(f"       E={len(E)} eventos | R={len(R)} salones | T={len(T)} franjas | P={len(P)} profesores")
@@ -273,11 +276,74 @@ model += P_almuerzo == xsum(
     if Almuerzo[t] == 1
 ), "Calculo_Penalizacion_Almuerzo"
 
+# 3. Penalización días de baja preferencia institucional
+d_sab = "Sabado"
+model += P_jueves == xsum(
+    x[e, r, t]
+    for (e, r, t) in x.keys()
+    if t in T_d[d_jue]
+), "Calculo_Penalizacion_Jueves"
+
+model += P_sabado == xsum(
+    x[e, r, t]
+    for (e, r, t) in x.keys()
+    if t in T_d[d_sab]
+), "Calculo_Penalizacion_Sabado"
+
+# 4. Penalización por horarios no compactos para profesores (huecos/ventanas docentes excluyendo almuerzo)
+gap_vars = []
+for p in P:
+    for d in D:
+        slots_d = T_d[d]
+        if not slots_d:
+            continue
+        
+        # Variables de propagación temporal para el docente p en el día d
+        f_p = {}
+        l_p = {}
+        for idx_t, t in enumerate(slots_d):
+            f_p[t] = model.add_var(name=f"f_{p}_{t}", var_type=CONTINUOUS, lb=0, ub=1)
+            l_p[t] = model.add_var(name=f"l_{p}_{t}", var_type=CONTINUOUS, lb=0, ub=1)
+            
+            # Variable agregada de dictado del profesor p en la franja t
+            u_pt = xsum(x[e, r, t] for e in E_p[p] for r in R if (e, r, t) in x)
+            
+            # f_p[t] >= u_pt y f_p[t] >= f_p[prev_t]
+            model += f_p[t] >= u_pt, f"F_ge_U_{p}_{t}"
+            if idx_t > 0:
+                prev_t = slots_d[idx_t - 1]
+                model += f_p[t] >= f_p[prev_t], f"F_prop_{p}_{t}"
+                
+            # l_p[t] >= u_pt y l_p[prev_t] >= l_p[t]
+            model += l_p[t] >= u_pt, f"L_ge_U_{p}_{t}"
+            if idx_t > 0:
+                prev_t = slots_d[idx_t - 1]
+                model += l_p[prev_t] >= l_p[t], f"L_prop_{p}_{prev_t}"
+                
+        for t in slots_d:
+            if Almuerzo[t] == 0:
+                u_pt = xsum(x[e, r, t] for e in E_p[p] for r in R if (e, r, t) in x)
+                g_pt = model.add_var(name=f"gap_{p}_{t}", var_type=CONTINUOUS, lb=0)
+                # gap >= f + l - 1 - u
+                model += g_pt >= f_p[t] + l_p[t] - 1 - u_pt, f"GapDef_{p}_{t}"
+                gap_vars.append(g_pt)
+
+model += P_huecos == xsum(gap_vars), "Calculo_Penalizacion_Huecos"
+
 # Pesos de penalización constantes de la función objetivo
 W_A = 1
 W_E = 10
+W_JUE = 1
+W_SAB = 3
+W_G = 2
 
-model.objective = minimize(W_A * P_almuerzo + W_E * P_espaciado)
+model.objective = minimize(
+    W_A * P_almuerzo + 
+    W_E * P_espaciado + 
+    W_JUE * P_jueves + 
+    W_SAB * P_sabado + 
+    W_G * P_huecos
+)
 
 if __name__ == '__main__':
 
@@ -313,8 +379,12 @@ if __name__ == '__main__':
         imprimir_metricas(status, cpu_time, model, nodes_explored=nodes_explored)
         print(" [DETALLE DE RESTRICCIONES BLANDAS]")
         print(" " + "-"*50)
-        print(f"   - Almuerzo (franjas de clase) : {P_almuerzo.x:.0f}")
-        print(f"   - Espaciado (infracciones)     : {P_espaciado.x:.0f}")
+        print(f"   - Almuerzo (franjas de clase) : {P_almuerzo.x:.0f} (peso {W_A})")
+        print(f"   - Espaciado (infracciones)     : {P_espaciado.x:.0f} (peso {W_E})")
+        print(f"   - Jueves (franjas virtuales)  : {P_jueves.x:.0f} (peso {W_JUE})")
+        print(f"   - Sábado (franjas fin de sem) : {P_sabado.x:.0f} (peso {W_SAB})")
+        print(f"   - Huecos docentes (ventanas)  : {P_huecos.x:.0f} (peso {W_G})")
+        print(f"   => Costo Total Ponderado (Z)   : {model.objective_value:.2f}")
         print(" " + "-"*50 + "\n")
         if len(K) == 1:
             out_path = "horarios_pequena/MIP"

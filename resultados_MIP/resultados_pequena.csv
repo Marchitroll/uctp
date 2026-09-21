@@ -1,2 +1,2 @@
-escala,Z,HCV,CPU_time,nodes_explored,gap_pct,status
-pequena,0.0,0,239.8125,0,0.0,OPTIMAL
+metodo,escala,Z,HCV,CPU_time,nodes_explored,lower_bound,gap_pct,status
+MIP,pequena,102457.0,0,213.25,0,5.000000000000116,99.9951199039596,FEASIBLE

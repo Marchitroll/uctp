@@ -197,20 +197,9 @@ cython_debug/
 #   Learn more at https://abstra.io/docs
 .abstra/
 
-# Visual Studio Code
-#   Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
-#   that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
-#   and can be added to the global gitignore or merged into this file. However, if you prefer, 
-
-# UCTP generated data
-dataset/
-# horarios_pequena/
-horarios_mediana/
-horarios_grande/
-#   you could uncomment the following to ignore the entire vscode folder
-# .vscode/
-# Temporary file for partial code execution
-tempCodeRunnerFile.py
+# Visual Studio Code & JetBrains
+.vscode/
+.idea/
 
 # Ruff stuff:
 .ruff_cache/
@@ -226,6 +215,26 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# ============================================================================
+# Reglas Específicas del Proyecto UCTP
+# ============================================================================
+# Datos generados por generador_dataset.py
+dataset/
 
-# Archivos generados por el solver de programación lineal
+# Mallas horarias generadas dinámicamente por los optimizadores
+horarios_*/
+
+# Archivos de modelos y soluciones de solvers matemáticos (MIP, Gurobi, CBC, etc.)
 *.lp
+*.mps
+*.sol
+*.ilp
+
+# Archivos temporales de ejecución
+tempCodeRunnerFile.py
+
+# Sistema Operativo Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+

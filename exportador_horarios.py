@@ -47,6 +47,32 @@ def imprimir_metricas(status, cpu_time, model, nodes_explored=0):
     print("="*60 + "\n")
 
 
+def obtener_metadatos_entorno(libreria_opt=None, version_opt=None):
+    """
+    Retorna un diccionario estructurado con las especificaciones del entorno de ejecución
+    para garantizar la trazabilidad y reproducibilidad según Rohaizad et al. (2026).
+    """
+    try:
+        import mealpy
+        mealpy_ver = getattr(mealpy, "__version__", "3.0.x")
+    except Exception:
+        mealpy_ver = "N/A"
+
+    meta = {
+        "sistema_operativo": f"{platform.system()} {platform.release()}",
+        "procesador": platform.processor(),
+        "ram_gb": round(psutil.virtual_memory().total / (1024.0 ** 3), 2),
+        "version_python": platform.python_version(),
+        "version_mip": getattr(mip, "__version__", "2.0.0"),
+        "version_mealpy": mealpy_ver
+    }
+    if libreria_opt:
+        meta["libreria_optimizacion"] = libreria_opt
+    if version_opt:
+        meta["version_optimizacion"] = version_opt
+    return meta
+
+
 def exportar_metricas_mip(status, cpu_time, nodes_explored, model, K, output_dir=None):
     """
     Exporta las métricas de la corrida MIP a un archivo CSV consolidado bajo la carpeta 'resultados_MIP/'.
@@ -68,19 +94,25 @@ def exportar_metricas_mip(status, cpu_time, nodes_explored, model, K, output_dir
     status_str = status.name if hasattr(status, 'name') else str(status)
 
     row = {
+        "metodo": "MIP",
         "escala": escala,
         "Z": bestcost,
         "HCV": 0 if (status_str in ["OPTIMAL", "FEASIBLE"] and model.num_solutions > 0) else 1,
         "CPU_time": cpu_time,
         "nodes_explored": nodes_explored,
+        "lower_bound": lowerbound,
         "gap_pct": gap_pct,
-        "status": status_str
+        "status": status_str,
+        "entorno": obtener_metadatos_entorno("python-mip (HiGHS)", getattr(mip, "__version__", "2.0.0"))
     }
 
     resultados_dir = "resultados_MIP"
     os.makedirs(resultados_dir, exist_ok=True)
     csv_filepath = os.path.join(resultados_dir, f"resultados_{escala}.csv")
-    df = pd.DataFrame([row])
+    
+    # Para CSV excluimos el diccionario anidado para mantener formato plano
+    row_csv = {k: v for k, v in row.items() if k != "entorno"}
+    df = pd.DataFrame([row_csv])
     df.to_csv(csv_filepath, index=False)
     print(f"[ÉXITO] Métricas MIP persistidas en '{csv_filepath}'.")
 

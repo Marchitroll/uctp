@@ -1,24 +1,27 @@
 # Planificación Horaria Universitaria (UCTP) - Ecosistema de Optimización
 
-Este repositorio contiene la infraestructura de optimización matemática y heurística para resolver el problema de planificación de horarios universitarios (University Course Timetabling Problem - UCTP) bajo restricciones académicas e institucionales complejas.
+Este repositorio contiene la infraestructura de optimización matemática y metaheurística para resolver el problema de planificación de horarios universitarios (University Course Timetabling Problem - UCTP) bajo restricciones académicas, curriculares e institucionales complejas.
 
-La solución del problema se aborda mediante dos metodologías:
-1. **Programación Lineal Entera Mixta (MIP)** utilizando el solucionador de código abierto HiGHS (v1.13.1) mediante la API de `python-mip`.
-2. **Algoritmo Genético (GA)** con decodificador heurístico basado en prioridad de saturación (**Most Constrained First**) y reparación de colisiones.
+La solución del problema se aborda mediante cinco metodologías comparables bajo un marco unificado de evaluación:
+1. **Programación Lineal Entera Mixta (MIP)**: Modelo exacto implementado en `modelo_MIP.py` utilizando el solucionador de código abierto HiGHS (v1.13.1) a través de `python-mip` y `highsbox`.
+2. **Algoritmo Genético Híbrido (HGA)**: Metaheurística memética en `modelo_HGA.py` con reducción de dominio (`valid_starts`), operador constructivo *Most Constrained First* (MCF), reparación constructiva de colisiones y aprendizaje lamarckiano.
+3. **Algoritmo Genético Clásico (GA)**: Metaheurística poblacional canónica en `modelo_GA.py` basada en cruzamiento uniforme, mutación y selección por torneo sobre variables discretas sin reparación heurística.
+4. **Búsqueda Tabú (TS)**: Metaheurística de trayectoria en `modelo_TS.py` con generación de vecindarios discretos sobre inicios factibles, memoria tabú de estados recientes y criterio de aspiración.
+5. **Recocido Simulado (SA)**: Metaheurística de trayectoria estocástica en `modelo_SA.py` con perturbación discreta y criterio de aceptación de Metropolis con enfriamiento progresivo.
 
 ---
 
 ## 1. Portal de Documentación
 
-Toda la documentación conceptual, matemática y experimental del proyecto se encuentra centralizada y estructurada en español dentro de la carpeta `docs/`. A continuación se presenta el índice de acceso:
+Toda la documentación conceptual, matemática y experimental del proyecto se encuentra centralizada y estructurada en español dentro de la carpeta `docs/`:
 
 * **[objetivos.md](docs/objetivos.md)**: Definición formal del objetivo general y los objetivos específicos de la investigación.
-* **[modelo_matematico.md](docs/modelo_matematico.md)**: Especificación teórica del modelo matemático de optimización, incluyendo definiciones de conjuntos, variables de decisión, parámetros y la formulación formal de todas las restricciones duras y blandas.
-* **[analisis_complejidad.md](docs/analisis_complejidad.md)**: Estimación teórica y auditoría real del tamaño del espacio de búsqueda (variables, restricciones y dominios factibles) para los escenarios Pequeño, Mediano y Grande.
+* **[modelo_matematico.md](docs/modelo_matematico.md)**: Especificación teórica del modelo matemático de optimización, formulación de las 5 restricciones duras, 4 restricciones blandas (Almuerzo, Espaciado, Jueves/Sábado y Huecos docentes) y función objetivo $\min Z$.
 * **[franjas_horarias.md](docs/franjas_horarias.md)**: Estructuración semanal de las 86 franjas horarias académicas, mapeo de periodos de almuerzo y políticas de operatividad presencial vs. virtual.
-* **[pseudocodigo_ga.md](docs/pseudocodigo_ga.md)**: Descripción lógica detallada del Algoritmo Genético, su bucle evolutivo y el operador de reparación heurística.
-* **[resultados_experimentales.md](docs/resultados_experimentales.md)**: Reporte consolidado de resultados en las tres escalas, desglosando tiempos de CPU, penalizaciones blandas e indicadores de factibilidad.
-* **[comparacion_metodos.md](docs/comparacion_metodos.md)**: Tabla unificada de rendimientos y cálculo del indicador de Desviación Relativa (DR %) entre ambos métodos.
+* **[pseudocodigo_ga.md](docs/pseudocodigo_ga.md)**: Descripción lógica detallada del Algoritmo Genético Híbrido, bucle evolutivo y heurística constructiva MCF.
+* **[resultados_experimentales.md](docs/resultados_experimentales.md)**: Reporte consolidado de resultados en las tres escalas.
+* **[comparacion_metodos.md](docs/comparacion_metodos.md)**: Tabla consolidada de benchmark multi-método con cálculo de $RPD$, $SR$, $DF$, $TTF$, $NFE$, tiempos CPU y auditoría del entorno de cómputo.
+* **[metricas_evaluacion.md](docs/metricas_evaluacion.md)**: Marco formal de evaluación estructurado en tres dimensiones (Viabilidad Operativa, Calidad de Optimización y Eficiencia Computacional) con base en la literatura (*Abdipoor et al. 2025; Rohaizad et al. 2026; Bashab et al. 2023*).
 
 ---
 
@@ -36,7 +39,7 @@ conda activate uctp
 ```
 
 ### Instalar Dependencias
-Instale el conjunto de librerías y componentes requeridos a través del archivo `requirements.txt`:
+Instale el conjunto de librerías requeridas a través del archivo `requirements.txt`:
 ```bash
 pip install -r requirements.txt
 ```
@@ -44,83 +47,64 @@ pip install -r requirements.txt
 
 ---
 
-## 3. Guía de Uso del Ecosistema de Programas
+## 3. Guía de Uso de los Métodos
 
 ### 3.1 Generación del Conjunto de Datos
 Para instanciar los archivos CSV del esquema relacional en base a los parámetros institucionales, ejecute el generador especificando la escala deseada (`pequena`, `mediana` o `grande`):
 ```bash
 python generador_dataset.py --instancia [pequena|mediana|grande]
-# O mediante su atajo:
-python generador_dataset.py -i [pequena|mediana|grande]
 ```
-*Nota: Si se omite el argumento de escala, el programa instanciará por defecto la escala `pequena`.*
 
-### 3.2 Resolución Mediante Programación Entera Mixta (MIP)
-Para resolver el modelo matemático exacto utilizando el solucionador HiGHS, puede parametrizar el límite de tiempo máximo en horas o minutos (el valor por defecto es de 2.0 horas):
+### 3.2 Programación Lineal Entera Mixta (MIP)
 ```bash
-# Limitar tiempo en horas
-python modelo_MIP.py --horas [HORAS]
-
-# Limitar tiempo en minutos
-python modelo_MIP.py --minutos [MINUTOS]
+# Ejecutar con límite en minutos (por defecto: 120 min)
+python modelo_MIP.py --minutos 30
 ```
 
-### 3.3 Resolución Mediante Algoritmo Genético (GA)
-Para resolver empleando el Algoritmo Genético, configure el número de corridas independientes deseadas para el análisis estadístico (las métricas se exportan en `resultados_GA/`):
+### 3.3 Algoritmo Genético Híbrido (HGA)
 ```bash
-python modelo_GA.py --corridas [NÚMERO_DE_CORRIDAS]
+# Ejecución multi-corrida (20 corridas por defecto)
+python modelo_HGA.py --corridas 20 --minutos 5
 ```
 
-#### Parámetros Adicionales del Algoritmo Genético:
-* **Límite de Tiempo Máximo**:
-  ```bash
-  python modelo_GA.py --horas [HORAS]
-  # O alternativamente:
-  python modelo_GA.py --minutos [MINUTOS]
-  ```
-* **Generaciones y Población**:
-  ```bash
-  python modelo_GA.py --epoch [EPOCHS] --pop-size [POPSIZE]
-  ```
-* **Forzar Escala de la Instancia**:
-  ```bash
-  python modelo_GA.py --instancia [pequena|mediana|grande]
-  # O mediante su atajo:
-  python modelo_GA.py -i [pequena|mediana|grande]
-  ```
+### 3.4 Algoritmo Genético Clásico (GA)
+```bash
+python modelo_GA.py --corridas 20 --minutos 5
+```
+
+### 3.5 Búsqueda Tabú (TS)
+```bash
+python modelo_TS.py --corridas 20 --minutos 5
+```
+
+### 3.6 Recocido Simulado (SA)
+```bash
+python modelo_SA.py --corridas 20 --minutos 5
+```
+
+### 3.7 Reporte Comparativo Consolidado
+Para procesar las salidas JSON de todos los métodos, calcular el $RPD$ robusto y actualizar `docs/comparacion_metodos.md`:
+```bash
+python reporte_desviacion.py
+```
 
 ---
 
 ## 4. Flujo de Ejecución por Escala
 
-Para ejecutar de manera ordenada un análisis completo sobre cualquiera de los escenarios, aplique la siguiente secuencia de comandos:
+Para ejecutar de manera ordenada un benchmark completo sobre cualquiera de los escenarios:
 
-### Escenario Pequeño
 ```bash
-# 1. Generar la base de datos de escala pequeña
+# 1. Generar datos de la instancia (ej. pequeña)
 python generador_dataset.py --instancia pequena
 
-# 2. Resolver con el método MIP y con el Algoritmo Genético (20 corridas)
+# 2. Ejecutar los 5 modelos
 python modelo_MIP.py
+python modelo_HGA.py --corridas 20
 python modelo_GA.py --corridas 20
-```
+python modelo_TS.py --corridas 20
+python modelo_SA.py --corridas 20
 
-### Escenario Mediano
-```bash
-# 1. Generar la base de datos de escala mediana
-python generador_dataset.py --instancia mediana
-
-# 2. Resolver con el método MIP y con el Algoritmo Genético (20 corridas)
-python modelo_MIP.py
-python modelo_GA.py --corridas 20
-```
-
-### Escenario Grande
-```bash
-# 1. Generar la base de datos de escala grande
-python generador_dataset.py --instancia grande
-
-# 2. Resolver con el método MIP y con el Algoritmo Genético (20 corridas)
-python modelo_MIP.py
-python modelo_GA.py --corridas 20
+# 3. Consolidar métricas y generar reporte comparativo
+python reporte_desviacion.py
 ```
