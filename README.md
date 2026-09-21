@@ -11,6 +11,19 @@ La solución del problema se aborda mediante cinco metodologías comparables baj
 
 ---
 
+## Propuesta de Valor: Modelado Temporal y Granularidad de *Timeslots*
+
+Una de las principales propuestas de valor y factores diferenciales de este ecosistema frente a la literatura académica tradicional de UCTP/CB-CTT radica en el **diseño y modelado de su estructura temporal (*Timeslots*)**:
+
+* **Granularidad Fina de 1 Hora (86 franjas semanales):** Mientras que gran parte de los modelos publicados simplifican el problema a macro-bloques de 2 turnos diarios (mañana/tarde, e.g., *Ozkan et al., 2025*) o 5 bloques fijos de dos horas (e.g., *Zhu et al., 2026*), este sistema modela la operación universitaria real con **15 franjas horarias diarias de lunes a viernes (07:00–22:00) y 11 franjas los sábados (07:00–18:00)**, conformando un horizonte de 86 franjas discretas.
+* **Duración Heterogénea de Eventos (1, 2 y 3 horas):** Los cursos no se reducen a eventos atómicos de duración fija. El modelo gestiona clases con duraciones variables mediante restricciones estrictas de **continuidad y no fragmentación** dentro del mismo día y aula, junto con **control de desbordamiento de jornada**.
+* **Políticas Institucionales Integradas al Espacio Temporal:**
+  * **Franja de Almuerzo Protegida (13:00–14:00):** Resguardo formal del horario de refrigerio comunitario y exoneración de penalizaciones por ventanas ociosas durante este intervalo.
+  * **Jornada de Virtualidad Institucional (Jueves Remoto):** Conmutación temporal automática donde el campus físico cierra y la oferta académica opera en entorno virtual sin colisión espacial.
+  * **Compacidad Laboral Docente:** Penalización de ventanas u horas muertas improductivas entre la primera y la última clase diaria de cada profesor.
+
+---
+
 ## 1. Portal de Documentación
 
 Toda la documentación conceptual, matemática y experimental del proyecto se encuentra centralizada y estructurada en español dentro de la carpeta `docs/`:

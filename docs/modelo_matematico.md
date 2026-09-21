@@ -1,219 +1,125 @@
 # Formulación Matemática
 
-**Autor:** Marcelo Angeles
+**Autor:** Marcelo Angeles  
+**Referencia de Formato:** Estándar de notación y modelado por subconjuntos indexados (*Computational Management Science*, Ozkan et al., 2025; *European Journal of Operational Research*, Daskalaki et al., 2004).
 
-## Definiciones
+---
 
-* **Curso:** Representa la asignatura general o programa de estudio. Actúa como agrupador lógico de los eventos que pertenecen a una misma materia, lo que permite al modelo imponer reglas de espaciado (días de descanso) entre las sesiones de un mismo curso. Se asume que cada curso ya se encuentra dividido en una o más secciones.
-* **Sección:** Corresponde a un grupo específico de estudiantes matriculados en un curso. Constituye la unidad académica que determina los parámetros físicos del problema, tales como la cantidad de alumnos inscritos y los requerimientos de infraestructura del salón.
-* **Evento:** Representa la unidad mínima de programación generada por una sección. Cada evento posee una duración preestablecida (medida en franjas horarias consecutivas) y un profesor previamente asignado. Un evento se convierte en una "clase" programada únicamente cuando el modelo le asigna coordenadas definitivas de espacio (salón) y tiempo (franja horaria).
-* **Salón:** Corresponde al recurso de espacio donde se imparte un evento. Puede tratarse de un espacio físico, sujeto a límites de capacidad y exclusividad de uso, o de un espacio virtual, cuya capacidad es ilimitada y cuya operación se restringe al día de cierre del campus. La naturaleza del salón (físico o virtual) determina los días en los que se encuentra operativo.
-* **Franja horaria:** Equivale a cada uno de los períodos de tiempo indivisibles definidos por la institución. Todas las franjas poseen la misma duración y se asignan de forma secuencial a lo largo de cada día de la semana.
-* **Profesor:** Corresponde al docente responsable de dictar un evento. Cada profesor cuenta con una matriz de disponibilidad horaria que establece las franjas en las cuales puede ser programado.
-* **Currículo:** Representa un grupo de cursos (ruta sugerida o bloque de malla curricular) que un estudiante ideal debería cursar de manera simultánea en un mismo ciclo. El modelo utiliza los currículos para garantizar que, dentro de cada ruta, exista al menos una sección de cada curso que no entre en conflicto horario con los demás cursos de esa misma ruta.
-* **Instanciación dispersa:** Estrategia de construcción del modelo en la cual las variables de decisión y sus restricciones asociadas se crean únicamente para las combinaciones que resultan factibles según los datos de entrada, en lugar de considerar todas las combinaciones posibles. Esta estrategia reduce significativamente el tamaño del problema.
+## 1. Definición de Notación
 
-## Definición de conjuntos
+La **Tabla 1** reúne la totalidad de conjuntos primarios, subconjuntos indexados precalculados, parámetros y variables de decisión que conforman el modelo de Programación Lineal Entera Mixta (MIP).
 
-A continuación se presenta la colección de conjuntos que definen el espacio del problema de programación de horarios:
+### Tabla 1: Definición de Notación del Modelo
 
-* **Conjunto global de eventos** $E$: Agrupa todas las unidades mínimas de programación generadas por las secciones.
-* **Conjunto global de salones** $R$: Comprende todos los espacios disponibles para impartir eventos.
-* **Subconjunto de salones virtuales** $R_{\text{virtual}} \subseteq R$: Contiene los salones que operan exclusivamente de manera remota.
-* **Conjunto global de franjas horarias** $T$: Reúne todos los bloques de tiempo indivisibles en los cuales la institución programa sus actividades.
-* **Conjunto secuencial de días** $D$: Tupla ordenada que agrupa las franjas horarias según el día de la semana al que pertenecen: $D = (d_1, d_2, \dots, d_{|D|})$.
-* **Día de cierre físico** $d_{\text{jue}}$: Elemento distinguido de $D$ que identifica el día en el cual el campus no opera de manera presencial. Las franjas horarias correspondientes a este día se denotan como $T_{d_{\text{jue}}}$.
-* **Conjunto de currículos** $K$: Representa las rutas sugeridas o bloques de matrícula que agrupan cursos afines.
-* **Conjunto de secciones** $S$: Contiene las unidades operativas de estudiantes matriculados en un curso específico.
-* **Conjunto de profesores activos** $P$: Incluye al personal docente vinculado al dictado de los eventos en $E$. Se obtiene directamente a partir de los datos de los eventos.
-* **Conjunto de características** $F$: Reúne todos los atributos de infraestructura relevantes para la asignación (por ejemplo: "mesa", "pc", "deep_learning").
+| Categoría | Notación | Descripción Formal |
+| :--- | :--- | :--- |
+| **Conjuntos Primarios** | $E$ | Conjunto universal de eventos académicos. |
+| | $R$ | Conjunto universal de salones ($R_{\text{fis}}$: aulas físicas; $R_{\text{virt}}$: salones virtuales). |
+| | $T$ | Conjunto de franjas horarias semanales discretas ($T = \{1, 2, \dots, 86\}$). |
+| | $D$ | Secuencia ordenada de días hábiles ($D = \{d_1, d_2, \dots, d_6\}$, lunes a sábado). |
+| | $T_d$ | Conjunto de franjas horarias pertenecientes a la jornada $d \in D$. |
+| | $T_{\text{jue}}$ | Franjas del día jueves (campus presencial cerrado / modalidad 100% remota). |
+| | $T_{\text{sab}}$ | Franjas del día sábado (fin de semana institucional). |
+| | $T_{\text{alm}}$ | Franjas del horario institucional de almuerzo (13:00 a 14:00 horas). |
+| | $T_{\text{reg}}$ | Franjas lectivas regulares fuera del almuerzo ($T_{\text{reg}} = T \setminus T_{\text{alm}}$). |
+| | $K$ | Conjunto de currículos o mallas de estudio sugeridas. |
+| | $S$ | Conjunto de secciones académicas de estudiantes. |
+| | $P$ | Conjunto de profesores activos. |
+| | $C$ | Conjunto de cursos o asignaturas. |
+| **Subconjuntos Indexados** | $E_p, E_s, E_c, E_k$ | Subconjunto de eventos correspondientes al docente $p$, sección $s$, curso $c$ o currículo $k$. |
+| | $E_{k,c}$ | Subconjunto de eventos del curso $c$ que integran el currículo $k$. |
+| | $S_{k,c}$ | Secciones que dictan el curso $c$ en el currículo $k$. |
+| | $R_e, R_s$ | Salones compatibles con el evento $e$ o sección $s$ (aforo $CAP_r \ge Alumno_s$ y equipamiento). |
+| | $T_p$ | Franjas horarias en las que el profesor $p$ tiene disponibilidad laboral declarada. |
+| | $T_e$ | Franjas operativas del evento $e$ ($T_{\text{jue}}$ si $r \in R_{\text{virt}}$, o $T \setminus T_{\text{jue}}$ si $r \in R_{\text{fis}}$). |
+| | $T_{e,p}$ | Franjas factibles para el evento $e$ con el docente $p$ ($T_{e,p} = T_e \cap T_p$). |
+| | $T_e^{\text{ini}}$ | Franjas de inicio admisibles para el evento $e$ sin desbordar el término de la jornada diaria. |
+| | $H_{e,t}$ | Franjas de inicio $\tau \in T_e^{\text{ini}}$ que cubren activamente la franja $t$ ($\tau \le t < \tau + Dur_e$). |
+| **Parámetros** | $Dur_e$ | Duración del evento $e$, cuantificada en franjas horarias consecutivas ($Dur_e \ge 1$). |
+| | $\vert S_{k,c} \vert$ | Número de secciones disponibles del curso $c$ dentro del currículo $k$. |
+| | $W_A, W_E, W_G$ | Ponderaciones: Almuerzo ($W_A=1$), Espaciado ($W_E=10$), Huecos docentes ($W_G=2$). |
+| | $W_{\text{jue}}, W_{\text{sab}}$ | Ponderaciones: Jueves virtual ($W_{\text{jue}}=1$) y Sábado institucional ($W_{\text{sab}}=3$). |
+| **Variables de Decisión** | $x_{e,r,t} \in \{0, 1\}$ | Vale 1 si el evento $e$ se imparte en el salón $r$ durante la franja $t$; 0 en caso contrario. |
+| | $y_{e,r,t} \in \{0, 1\}$ | Vale 1 si el evento $e$ arranca su bloque en el salón $r$ en la franja $t$; 0 en caso contrario. |
+| | $w_{s,r} \in \{0, 1\}$ | Vale 1 si la sección $s$ utiliza el aula física $r$ al menos una vez en la semana; 0 en caso contrario. |
+| | $u_{p,t} \in \{0, 1\}$ | Variable indicadora; vale 1 si el profesor $p$ dicta clase en la franja $t$; 0 en caso contrario. |
+| | $gap_{p,t} \in [0, 1]$ | Variable continua; vale 1 si la franja regular $t$ representa una ventana u hora muerta ociosa. |
+| | $v_{c,i} \ge 0$ | Infracción de espaciado pedagógico del curso $c$ entre los días consecutivos $d_i$ y $d_{i+1}$. |
+| | $P_{\text{almuerzo}}, P_{\text{jueves}}, P_{\text{sabado}}$ | Variables enteras no negativas de conteo de penalizaciones blandas institucionales. |
+| | $P_{\text{espaciado}}, P_{\text{huecos}}$ | Variables no negativas de costo por falta de espaciado pedagógico y ventanas docentes. |
 
-### Agrupaciones relacionales
+---
 
-* **Conjunto de agrupaciones curso-sección** $C$: Conjunto de índices que identifican a cada curso dentro de una sección específica. Para cada grupo $c \in C$, se define el conjunto de eventos asociados como $E_c \subseteq E$, lo cual permite aplicar las reglas de espaciado temporal entre las sesiones del mismo curso.
-* **Relación currículo-evento** $\{E_k\}_{k \in K}$: Familia de subconjuntos de $E$ que componen la ruta curricular $k \in K$.
-* **Relación sección-evento** $\{E_s\}_{s \in S}$: Familia de subconjuntos de $E$ que pertenecen a la sección $s \in S$.
-* **Relación profesor-evento** $\{E_p\}_{p \in P}$: Familia de subconjuntos de $E$ dictados por el profesor $p \in P$.
-* **Franjas por día** $\{T_d\}_{d \in D}$: Familia de subconjuntos de $T$ correspondientes al día $d \in D$.
+## 2. Restricciones Duras (*Hard Constraints*)
 
-### Reducción de dominio (dominios factibles)
+### 2.1. Gestión de Recursos Docentes
 
-Con el propósito de mantener el modelo eficiente en términos de memoria y tiempo de resolución, las variables de decisión no se crean para todas las combinaciones posibles de eventos, salones y franjas. En su lugar, se definen previamente los siguientes subconjuntos de combinaciones válidas, con base en la capacidad de los salones ($CAP_r$), la cantidad de alumnos ($Alumno_s$), la infraestructura disponible ($Tiene_{r,f}$) y requerida ($Req_{s,f}$), las restricciones del día de cierre y la disponibilidad del profesor ($Disp_{p,t}$):
+La restricción (1) garantiza que un docente no dicte simultáneamente más de una clase en una misma franja horaria dentro de su disponibilidad:
+$$\sum_{e \in E_p} \sum_{r \in R_e} x_{e,r,t} \le 1 \quad \forall p \in P, \; \forall t \in T_p \tag{1}$$
 
-* **Combinaciones válidas de sección-salón ($Valid\_SR \subseteq S \times R$):**
-Contiene los pares factibles de sección $s$ y salón $r$, seleccionando únicamente aquellos salones cuya capacidad iguala o supera la cantidad de alumnos de la sección y que poseen todas las características de infraestructura requeridas:
+La restricción (2) limita a un máximo de 8 franjas horarias lectivas la jornada diaria asignada a cada profesor:
+$$\sum_{e \in E_p} \sum_{r \in R_e} \sum_{t \in T_d \cap T_p} x_{e,r,t} \le 8 \quad \forall p \in P, \; \forall d \in D \tag{2}$$
 
-$$Valid\_SR = \{(s, r) \in S \times R \mid CAP_r \geq Alumno_s \land \forall f \in F\; (Req_{s,f} \leq Tiene_{r,f})\}$$
+### 2.2. Cobertura Temporal y Continuidad de Bloques
 
-* **Combinaciones válidas de evento-salón-franja ($Valid\_ERT \subseteq E \times R \times T$):**
-Contiene las combinaciones de evento $e$, salón $r$ y franja $t$ que resultan factibles tanto temporal como operativamente. Se construye a partir de $Valid\_SR$ e incorpora adicionalmente la restricción del día de cierre y la disponibilidad horaria del profesor asignado al evento:
+La restricción (3) asegura la cobertura total de los eventos conforme a su duración obligatoria:
+$$\sum_{r \in R_e} \sum_{t \in T_{e,p(e)}} x_{e,r,t} = Dur_e \quad \forall e \in E \tag{3}$$
 
-$$Valid\_ERT = \{(e, r, t) \in E \times R \times T \mid \exists s \in S : (s, r) \in Valid\_SR \land e \in E_s \land t \in T_r \land Disp_{p(e),\, t} = 1\}$$
+La restricción (4) exige que cada evento posea exactamente un único punto de inicio semanal:
+$$\sum_{r \in R_e} \sum_{t \in T_e^{\text{ini}}} y_{e,r,t} = 1 \quad \forall e \in E \tag{4}$$
 
-Donde $p(e)$ denota al profesor asignado al evento $e$, y el conjunto de franjas operativas $T_r$ depende de la naturaleza del salón:
+La restricción (5) propaga la ocupación secuencial de las franjas horarias contiguas a partir del instante de inicio:
+$$x_{e,r,t} = \sum_{\tau \in H_{e,t}} y_{e,r,\tau} \quad \forall e \in E, \; \forall r \in R_e, \; \forall t \in T_{e,p(e)} \tag{5}$$
 
-$$T_r = \begin{cases} T_{d_{\text{jue}}} & \text{si } r \in R_{\text{virtual}} \\ T \setminus T_{d_{\text{jue}}} & \text{si } r \notin R_{\text{virtual}} \end{cases}$$
+### 2.3. Infraestructura y Estabilidad Espacial
 
-### Subconjuntos derivados de la reducción
+La restricción (6) garantiza la exclusividad de las aulas físicas presenciales en cualquier franja horaria hábil:
+$$\sum_{e \in E} x_{e,r,t} \le 1 \quad \forall r \in R_{\text{fis}}, \; \forall t \in T \setminus T_{\text{jue}} \tag{6}$$
 
-A partir de $Valid\_ERT$, se derivan los siguientes conjuntos auxiliares que permiten acotar el dominio de las restricciones de la Sección 9:
+Las restricciones (7) y (8) vinculan el uso de aulas físicas y restringen la asignación semanal de cada sección a un máximo de dos salones distintos:
+$$\sum_{t \in T_{e,p(e)}} x_{e,r,t} \le Dur_e \cdot w_{s,r} \quad \forall s \in S, \; \forall e \in E_s, \; \forall r \in R_s \tag{7}$$
 
-* **Franjas factibles por evento** $T^{\text{fact}}_e$: Conjunto de franjas horarias en las que el evento $e$ puede ser programado en al menos un salón:
+$$\sum_{r \in R_s} w_{s,r} \le 2 \quad \forall s \in S \tag{8}$$
 
-$$T^{\text{fact}}_e = \{t \in T \mid \exists r \in R : (e, r, t) \in Valid\_ERT\}$$
+### 2.4. Oferta Curricular y Matrícula Estudiantil
 
-* **Cursos del currículo** $C_k$: Conjunto de cursos distintos cuyos eventos participan en el currículo $k$:
+La restricción (9) garantiza que, para cada currículo o bloque de matrícula sugerido, exista al menos una sección de cada asignatura completamente libre de solapamientos horarios con el resto de cursos de la misma ruta académica:
+$$\sum_{e \in E_{k,c}} \sum_{r \in R_e} x_{e,r,t} + \sum_{r' \in R_{e'}} x_{e',r',t} \le |S_{k,c}| \quad \forall k \in K, \; \forall c \in C_k \mid |S_{k,c}| > 1, \; \forall e' \in E_k \setminus E_{k,c}, \; \forall t \in T \tag{9}$$
 
-$$C_k = \{c \mid \exists e \in E_k : SECCION\_CURSO(EVENTO\_SECCION(e)) = c\}$$
+---
 
-* **Eventos del curso en el currículo** $E_{k,c}$: Subconjunto de eventos del currículo $k$ que pertenecen al curso $c$:
+## 3. Restricciones Blandas (*Soft Constraints*)
 
-$$E_{k,c} = \{e \in E_k \mid SECCION\_CURSO(EVENTO\_SECCION(e)) = c\}$$
+### 3.1. Respeto al Horario de Almuerzo
 
-* **Secciones del curso en el currículo** $S_{k,c}$: Conjunto de secciones distintas que ofrecen el curso $c$ dentro del currículo $k$:
+La ecuación (10) contabiliza la cantidad de franjas horarias de clase asignadas durante el intervalo de almuerzo:
+$$P_{\text{almuerzo}} = \sum_{e \in E} \sum_{r \in R_e} \sum_{t \in T_{\text{alm}}} x_{e,r,t} \tag{10}$$
 
-$$S_{k,c} = \{EVENTO\_SECCION(e) \mid e \in E_{k,c}\}$$
+### 3.2. Espaciado Pedagógico de Cursos
 
-## Parámetros
+Las ecuaciones (11) y (12) penalizan la programación de sesiones de clase pertenecientes a un mismo curso en días consecutivos ($d_i$ y $d_{i+1}$):
+$$\sum_{e \in E_c} \sum_{r \in R_e} \sum_{t \in T_{d_i}} y_{e,r,t} + \sum_{e \in E_c} \sum_{r \in R_e} \sum_{t \in T_{d_{i+1}}} y_{e,r,t} \le 1 + v_{c, i} \quad \forall c \in C, \; \forall i \in \{1, \dots, |D|-1\} \tag{11}$$
 
-Se definen los siguientes parámetros del modelo:
+$$P_{\text{espaciado}} = \sum_{c \in C} \sum_{i=1}^{|D|-1} v_{c, i} \tag{12}$$
 
-* **Capacidad del salón** $CAP_r$: Número máximo de estudiantes que el salón $r \in R$ puede albergar simultáneamente.
-* **Cantidad de alumnos** $Alumno_s$: Número de estudiantes matriculados en la sección $s \in S$.
-* **Requerimiento de la sección** $Req_{s,f}$: Parámetro binario que vale 1 si la sección $s \in S$ requiere la característica de infraestructura $f \in F$, y 0 en caso contrario.
-* **Característica del salón** $Tiene_{r,f}$: Parámetro binario que vale 1 si el salón $r \in R$ posee la característica $f \in F$, y 0 en caso contrario.
-* **Disponibilidad del profesor** $Disp_{p,t}$: Parámetro binario que vale 1 si el profesor $p \in P$ se encuentra disponible para dictar clase en la franja horaria $t \in T$, y 0 en caso contrario.
-* **Almuerzo** $Almuerzo_t$: Parámetro binario que vale 1 si la franja horaria $t \in T$ corresponde al período de almuerzo, y 0 en caso contrario.
-* **Duración del evento** $Dur_e$: Número entero que indica cuántas franjas horarias consecutivas ocupa el evento $e \in E$.
-* **Peso de penalización por almuerzo** $W_A$: Escalar abstracto que pondera la importancia de las clases programadas durante el período de almuerzo en la función objetivo ($W_A = 1$).
-* **Peso de penalización por espaciado** $W_E$: Escalar abstracto que pondera la importancia de las infracciones por sesiones dictadas en días consecutivos en la función objetivo ($W_E = 10$).
-* **Peso de penalización por clases en jueves** $W_{\text{jue}}$: Ponderación de franjas dictadas el día de cierre presencial ($W_{\text{jue}} = 1$).
-* **Peso de penalización por clases en sábado** $W_{\text{sab}}$: Ponderación de franjas dictadas en fin de semana ($W_{\text{sab}} = 3$).
-* **Peso de penalización por huecos docentes** $W_G$: Ponderación por cada hora inactiva entre la primera y última clase diaria del docente, excluyendo almuerzo ($W_G = 2$).
+### 3.3. Preferencia Temporal Institucional (Jueves y Sábado)
 
-## Variables de decisión
+Las ecuaciones (13) y (14) cuantifican las franjas horarias asignadas en días con políticas de desincentivo operativo:
+$$P_{\text{jueves}} = \sum_{e \in E} \sum_{r \in R_e} \sum_{t \in T_{\text{jue}}} x_{e,r,t} \tag{13}$$
 
-Las variables de decisión se crean exclusivamente sobre las combinaciones de los dominios factibles:
+$$P_{\text{sabado}} = \sum_{e \in E} \sum_{r \in R_e} \sum_{t \in T_{\text{sab}}} x_{e,r,t} \tag{14}$$
 
-* **Asignación evento-salón-franja** $x_{e,r,t}$: Variable binaria que vale 1 si el evento $e$ se programa en el salón $r$ durante la franja $t$, y 0 en caso contrario.
-* **Inicio del evento** $y_{e,r,t}$: Variable binaria que vale 1 si el evento $e$ comienza su bloque de franjas consecutivas en el salón $r$ durante la franja $t$, y 0 en caso contrario.
-* **Uso de salón por sección** $w_{s,r}$: Variable binaria auxiliar que vale 1 si la sección $s$ utiliza el salón $r$ en al menos una franja durante la semana, y 0 en caso contrario.
-* **Penalización por clases en almuerzo** $P_{\text{almuerzo}}$: Variable entera no negativa que acumula el total de franjas de clase programadas durante el período de almuerzo.
-* **Infracción de espaciado por curso y día** $v_{\text{espaciado}, c, i}$: Variable entera no negativa que vale 1 (o más) si el curso $c$ se programa en días consecutivos $i$ e $i+1$, y 0 en caso contrario.
-* **Penalización total por espaciado** $P_{\text{espaciado}}$: Variable entera no negativa que acumula el total de infracciones de espaciado temporal de sesiones.
-* **Penalización por clases en jueves** $P_{\text{jueves}}$: Variable entera no negativa que acumula las franjas de clase impartidas los días jueves.
-* **Penalización por clases en sábado** $P_{\text{sabado}}$: Variable entera no negativa que acumula las franjas de clase impartidas los días sábados.
-* **Hueco docente por profesor y franja** $gap_{p,t}$: Variable continua en $[0, 1]$ que indica si la franja $t$ constituye una ventana ociosa para el docente $p$.
-* **Penalización total por huecos docentes** $P_{\text{huecos}}$: Variable no negativa que suma las ventanas ociosas de todos los profesores a lo largo de la semana.
+### 3.4. Compacidad de la Jornada Docente (Ventanas / Huecos)
 
-### Dominio de las variables
+Sea $u_{p,t} = \sum_{e \in E_p} \sum_{r \in R_e} x_{e,r,t}$ la variable indicadora de dictado del docente $p$. Las restricciones (15) y (16) formulan, mediante el esquema canónico de tripletas temporales, la penalización por franjas ociosas intercaladas entre la primera y la última clase del día:
+$$gap_{p,t} \ge u_{p,t_1} + u_{p,t_2} - 1 - u_{p,t} \quad \forall p \in P, \; \forall d \in D, \; \forall t_1, t, t_2 \in T_d \cap T_{\text{reg}} \text{ con } t_1 < t < t_2 \tag{15}$$
 
-$$ x_{e,r,t} \in \{0,1\} \quad \forall (e,r,t) \in Valid\_ERT $$
+$$P_{\text{huecos}} = \sum_{p \in P} \sum_{t \in T_{\text{reg}}} gap_{p,t} \tag{16}$$
 
-$$ y_{e,r,t} \in \{0,1\} \quad \forall (e,r,t) \in Valid\_ERT $$
+---
 
-$$ w_{s,r} \in \{0,1\} \quad \forall (s,r) \in Valid\_SR $$
+## 4. Función Objetivo Consolidada
 
-$$ v_{\text{espaciado}, c, i} \ge 0 \quad \forall c \in C,\; \forall i \in \{1, \dots, |D|-1\} $$
+La función objetivo (17) minimiza el costo total ponderado de las penalizaciones blandas, condicionada a la estricta factibilidad de las restricciones duras (1) a (9):
 
-$$ P_{\text{almuerzo}}, P_{\text{jueves}}, P_{\text{sabado}} \in \mathbb{Z}^{+} \cup \{0\} $$
-
-$$ P_{\text{espaciado}}, P_{\text{huecos}} \ge 0 $$
-
-> **Nota:** En todas las sumatorias que se presentan a continuación, si una combinación evaluada no pertenece al conjunto de combinaciones válidas correspondiente, la variable asociada no existe y se considera con valor 0. Esto evita la formulación de restricciones sobre variables inexistentes.
-
-## Restricciones duras
-
-### 1. Disponibilidad y no colisión del profesor
-
-Garantiza que cada profesor no sea programado en más de una clase por franja horaria y que únicamente se le asignen franjas dentro de su disponibilidad declarada.
-
-$$ \sum_{\substack{e \in E_p, r \in R \\ (e,r,t) \in Valid\_ERT}} x_{e,r,t} \leq Disp_{p,t} \quad \forall p \in P,\; \forall t \in T $$
-
-### 2. Carga diaria máxima del profesor
-
-Limita la cantidad total de franjas de clase que un profesor puede impartir en un mismo día a un máximo de 8.
-
-$$ \sum_{\substack{e \in E_p, r \in R \\ t \in T_d \\ (e,r,t) \in Valid\_ERT}} x_{e,r,t} \leq 8 \quad \forall p \in P,\; \forall d \in D $$
-
-### 3. Cobertura total de eventos
-
-Obliga a que cada evento sea programado en exactamente el número de franjas que indica su duración.
-
-$$ \sum_{\substack{r \in R, t \in T \\ (e,r,t) \in Valid\_ERT}} x_{e,r,t} = Dur_e \quad \forall e \in E $$
-
-### 4. Estabilidad de salones
-
-Restringe el número de salones distintos que una sección puede utilizar a lo largo de la semana, limitándolo a un máximo de dos. La primera desigualdad vincula cada evento de la sección con la variable de uso del salón, y la segunda impone el límite global.
-
-$$ \sum_{\substack{t \in T \\ (e,r,t) \in Valid\_ERT}} x_{e,r,t} \leq Dur_e \cdot w_{s,r} \quad \forall (s,r) \in Valid\_SR,\; \forall e \in E_s $$
-
-$$ \sum_{\substack{r \in R \\ (s,r) \in Valid\_SR}} w_{s,r} \leq 2 \quad \forall s \in S $$
-
-### 5. No colisión de salones físicos
-
-Establece que cada salón físico (no virtual) puede albergar como máximo un evento en cualquier franja horaria.
-
-$$ \sum_{\substack{e \in E \\ (e,r,t) \in Valid\_ERT}} x_{e,r,t} \leq 1 \quad \forall r \in R \setminus R_{\text{virtual}},\; \forall t \in T $$
-
-### 6. Continuidad y no fragmentación
-
-Impide que un evento cuya duración abarca varias franjas sea fragmentado en bloques separados. Para ello, se exige que cada evento posea exactamente un punto de inicio, y se vincula el estado de ocupación de cada franja con los posibles instantes de arranque dentro del mismo día.
-
-$$ \sum_{\substack{r \in R, t \in T \\ (e,r,t) \in Valid\_ERT}} y_{e,r,t} = 1 \quad \forall e \in E $$
-
-$$ x_{e,r,t} = \sum_{\substack{\tau \in T_d \mid (e,r,\tau) \in Valid\_ERT \\ t - Dur_e + 1 \leq \tau \leq t}} y_{e,r,\tau} \quad \forall d \in D,\; \forall (e,r,t) \in Valid\_ERT \mid t \in T_d $$
-
-### 7. Control de desbordamiento diario
-
-Prohíbe que un evento inicie en una franja tan tardía que su duración lo lleve más allá de la última franja del día.
-
-$$ y_{e,r,t} = 0 \quad \forall d \in D,\; \forall (e,r,t) \in Valid\_ERT \mid t \in T_d \land t > \max(T_d) - Dur_e + 1 $$
-
-### 8. Oferta global de secciones sin conflicto
-
-Garantiza que para cada currículo $k \in K$ y cada curso $c \in C_k$ que posea más de una sección ($|S_{k,c}| > 1$), la suma total de franjas ocupadas simultáneamente por todas las secciones de dicho curso más las franjas de cualquier otro evento del mismo currículo no exceda la cantidad de secciones disponibles. De esta manera, se asegura que en cada franja horaria al menos una sección del curso permanezca libre de conflicto con cada evento externo de la malla curricular.
-
-$$ \sum_{\substack{e \in E_{k,c},\; r \in R \\ (e,r,t) \in Valid\_ERT}} x_{e,r,t} + \sum_{\substack{r' \in R \\ (e',r',t) \in Valid\_ERT}} x_{e',r',t} \leq |S_{k,c}| \quad \forall k \in K,\; \forall c \in C_k \mid |S_{k,c}| > 1,\; \forall e' \in E_k \setminus E_{k,c},\; \forall t \in T $$
-
-## Restricciones blandas
-
-### 1. Penalización por clases en almuerzo
-
-Contabiliza el total de franjas de clase programadas durante el período de almuerzo.
-
-$$ P_{\text{almuerzo}} = \sum_{(e,r,t) \in Valid\_ERT} \left(x_{e,r,t} \cdot Almuerzo_t\right) $$
-
-### 2. Penalización por espaciado de sesiones
-
-Contabiliza las infracciones a la regla de espaciado (sesiones dictadas en días consecutivos). Permite la holgura controlada a través de la variable $v_{\text{espaciado}, c, i}$ y la acumula en $P_{\text{espaciado}}$:
-
-$$ \sum_{\substack{e \in E_c, r \in R, t \in T_{d_i} \\ (e,r,t) \in Valid\_ERT}} y_{e,r,t} + \sum_{\substack{e \in E_c, r \in R, t \in T_{d_{i+1}} \\ (e,r,t) \in Valid\_ERT}} y_{e,r,t} \leq 1 + v_{\text{espaciado}, c, i} \quad \forall c \in C,\; \forall i \in \{1, \dots, |D|-1\} $$
-
-$$ P_{\text{espaciado}} = \sum_{c \in C} \sum_{i=1}^{|D|-1} v_{\text{espaciado}, c, i} $$
-
-### 3. Penalización por clases en días de baja preferencia (Jueves y Sábado)
-
-Contabiliza las franjas horarias de clase impartidas en los días institucionalmente menos preferidos:
-
-$$ P_{\text{jueves}} = \sum_{\substack{(e,r,t) \in Valid\_ERT \\ t \in T_{d_{\text{jue}}}}} x_{e,r,t} $$
-
-$$ P_{\text{sabado}} = \sum_{\substack{(e,r,t) \in Valid\_ERT \\ t \in T_{d_{\text{sab}}}}} x_{e,r,t} $$
-
-### 4. Penalización por horarios no compactos para los profesores (Huecos/Ventanas)
-
-Para cada docente $p \in P$ y día $d \in D$, se penalizan las franjas horarias ociosas $gap_{p,t}$ situadas entre la primera y la última clase del día, **excluyendo** el período de almuerzo ($Almuerzo_t = 0$). Sea $u_{p,t} = \sum_{\substack{e \in E_p, r \in R \\ (e,r,t) \in Valid\_ERT}} x_{e,r,t}$ el indicador de dictado del profesor $p$ en la franja $t$, y sean $f_{p,t}, l_{p,t} \in [0, 1]$ variables auxiliares de propagación temporal (inicio antes de $t$ y fin después de $t$):
-
-$$ f_{p,t} \ge u_{p,t}, \quad f_{p,t} \ge f_{p,t-1} \quad \forall t \in T_d $$
-
-$$ l_{p,t} \ge u_{p,t}, \quad l_{p,t} \ge l_{p,t+1} \quad \forall t \in T_d $$
-
-$$ gap_{p,t} \ge f_{p,t} + l_{p,t} - 1 - u_{p,t} \quad \forall t \in T_d \mid Almuerzo_t = 0 $$
-
-$$ P_{\text{huecos}} = \sum_{p \in P} \sum_{t \in T \mid Almuerzo_t = 0} gap_{p,t} $$
-
-## Función objetivo
-
-El propósito del modelo consiste en encontrar un horario que cumpla con todas las restricciones operativas duras y, al mismo tiempo, minimice de manera conjunta las cinco penalizaciones blandas ponderadas:
-
-$$ \min Z = W_A \cdot P_{\text{almuerzo}} + W_E \cdot P_{\text{espaciado}} + W_{\text{jue}} \cdot P_{\text{jueves}} + W_{\text{sab}} \cdot P_{\text{sabado}} + W_G \cdot P_{\text{huecos}} $$
+$$\min Z = W_A \cdot P_{\text{almuerzo}} + W_E \cdot P_{\text{espaciado}} + W_{\text{jue}} \cdot P_{\text{jueves}} + W_{\text{sab}} \cdot P_{\text{sabado}} + W_G \cdot P_{\text{huecos}} \tag{17}$$
