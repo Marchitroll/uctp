@@ -28,7 +28,7 @@ Mide el grado de satisfacción de las preferencias institucionales y la minimiza
 
 * **Valor de la Función Objetivo ($Z$):**  
   Cuantificación directa de la penalización ponderada por concepto de restricciones blandas institucionales:
-  $$\min Z = 1 \cdot P_{\text{almuerzo}} + 10 \cdot P_{\text{espaciado}} + 1 \cdot P_{\text{jueves}} + 3 \cdot P_{\text{sabado}} + 2 \cdot P_{\text{huecos}}$$
+  $$\min Z = 1 \cdot P_{\text{almuerzo}} + 10 \cdot P_{\text{espaciado}} + 1 \cdot P_{\text{jueves}} + 3 \cdot P_{\text{sabado}} + 2 \cdot P_{\text{ventanas}}$$
   Dada la naturaleza estocástica de las metaheurísticas, se ejecutan 20 corridas independientes por algoritmo e instancia, reportando:
   * **Mejor Valor $Z$:** El menor costo alcanzado.
   * **Valor Promedio de $Z$:** Rendimiento esperado del método.

@@ -34,7 +34,7 @@ La **Tabla 1** define los conjuntos, parámetros y variables de decisión del mo
 | | $H_{e,t}$ | Inicios $\tau \in T_e^{\text{ini}}$ que cubren la franja $t$ ($\tau \le t < \tau + Dur_e$). |
 | **Parámetros** | $Dur_e$ | Duración del evento $e$ en franjas horarias consecutivas ($Dur_e \ge 1$). |
 | | $\vert S_{k,c} \vert$ | Número de secciones del curso $c$ en el currículo $k$. |
-| | $W_A, W_E, W_G$ | Pesos: Almuerzo ($W_A=1$), Espaciado ($W_E=10$), Huecos ($W_G=2$). |
+| | $W_A, W_E, W_V$ | Pesos: Almuerzo ($W_A=1$), Espaciado ($W_E=10$), Ventanas ociosas ($W_V=2$). |
 | | $W_{\text{jue}}, W_{\text{sab}}$ | Pesos: Jueves ($W_{\text{jue}}=1$), Sábado ($W_{\text{sab}}=3$). |
 | **Variables** | $x_{e,r,t} \in \{0, 1\}$ | 1 si el evento $e$ se imparte en el salón $r$ durante la franja $t$; 0 en caso contrario. |
 | | $y_{e,r,t} \in \{0, 1\}$ | 1 si el evento $e$ inicia su bloque en el salón $r$ en la franja $t$; 0 en caso contrario. |
@@ -43,7 +43,7 @@ La **Tabla 1** define los conjuntos, parámetros y variables de decisión del mo
 | | $gap_{p,t} \in [0, 1]$ | 1 si la franja $t$ es una ventana ociosa del docente $p$; 0 en caso contrario. |
 | | $v_{c,i} \ge 0$ | Infracción de espaciado del curso $c$ entre los días $d_i$ y $d_{i+1}$. |
 | | $P_{\text{almuerzo}}, P_{\text{jueves}}, P_{\text{sabado}}$ | Penalizaciones por uso de franjas de almuerzo, jueves y sábado. |
-| | $P_{\text{espaciado}}, P_{\text{huecos}}$ | Penalizaciones por falta de espaciado y ventanas docentes. |
+| | $P_{\text{espaciado}}, P_{\text{ventanas}}$ | Penalizaciones por falta de espaciado y ventanas ociosas docentes. |
 
 ---
 
@@ -103,16 +103,16 @@ $$P_{\text{jueves}} = \sum_{e \in E} \sum_{r \in R_e} \sum_{t \in T_{\text{jue}}
 
 $$P_{\text{sabado}} = \sum_{e \in E} \sum_{r \in R_e} \sum_{t \in T_{\text{sab}}} x_{e,r,t} \tag{14}$$
 
-### 3.4. Compacidad Docente (Ventanas / Huecos)
+### 3.4. Compacidad Docente (Ventanas Ociosas)
 
 Sea $u_{p,t} = \sum_{e \in E_p} \sum_{r \in R_e} x_{e,r,t}$ la indicadora de dictado del docente $p$:
 
 $$gap_{p,t} \ge u_{p,t_1} + u_{p,t_2} - 1 - u_{p,t} \quad \forall p \in P, \; \forall d \in D, \; \forall t_1, t, t_2 \in T_d \cap T_{\text{reg}} \text{ con } t_1 < t < t_2 \tag{15}$$
 
-$$P_{\text{huecos}} = \sum_{p \in P} \sum_{t \in T_{\text{reg}}} gap_{p,t} \tag{16}$$
+$$P_{\text{ventanas}} = \sum_{p \in P} \sum_{t \in T_{\text{reg}}} gap_{p,t} \tag{16}$$
 
 ---
 
 ## 4. Función Objetivo
 
-$$\min Z = W_A \cdot P_{\text{almuerzo}} + W_E \cdot P_{\text{espaciado}} + W_{\text{jue}} \cdot P_{\text{jueves}} + W_{\text{sab}} \cdot P_{\text{sabado}} + W_G \cdot P_{\text{huecos}} \tag{17}$$
+$$\min Z = W_A \cdot P_{\text{almuerzo}} + W_E \cdot P_{\text{espaciado}} + W_{\text{jue}} \cdot P_{\text{jueves}} + W_{\text{sab}} \cdot P_{\text{sabado}} + W_V \cdot P_{\text{ventanas}} \tag{17}$$

@@ -49,7 +49,7 @@ Algoritmo Optimización_UCTP_AlgoritmoGenéticoHíbrido (HGA)
                 Hijo2.Genes <- AplicarReparaciónHeurística_MCF(Hijo2.Genes)
 
                 // d. Evaluación de Función de Aptitud Unificada
-                // Z = 1*P_almuerzo + 10*P_espaciado + 1*P_jueves + 3*P_sabado + 2*P_huecos
+                // Z = 1*P_almuerzo + 10*P_espaciado + 1*P_jueves + 3*P_sabado + 2*P_ventanas
                 // Fitness = (1000 * HCV) + (1 * Z)
                 Hijo1.Fitness <- CalcularAptitud(Hijo1.Genes)
                 Hijo2.Fitness <- CalcularAptitud(Hijo2.Genes)

@@ -53,7 +53,7 @@ Para garantizar reproducibilidad científica conforme a *Rohaizad et al. (2026)*
 1. **$SR$ (Success Rate / Tasa de Éxito %)**: Porcentaje de corridas independientes que convergieron a un horario estrictamente factible ($HCV = 0$).
 2. **$DF$ (Distance to Feasibility)**: Número de violaciones a restricciones duras ($HCV$). Para soluciones factibles, $DF = 0$.
 3. **$Z$ (Función Objetivo Blanda)**: Suma ponderada de penalizaciones:
-   $$\min Z = 1 \cdot P_{\text{almuerzo}} + 10 \cdot P_{\text{espaciado}} + 1 \cdot P_{\text{jueves}} + 3 \cdot P_{\text{sabado}} + 2 \cdot P_{\text{huecos}}$$
+   $$\min Z = 1 \cdot P_{\text{almuerzo}} + 10 \cdot P_{\text{espaciado}} + 1 \cdot P_{\text{jueves}} + 3 \cdot P_{\text{sabado}} + 2 \cdot P_{\text{ventanas}}$$
 4. **$RPD$ (Relative Percentage Deviation)**: Desviación respecto al óptimo MIP ($Z_{\text{ref}}$):
    - Si $Z_{\text{ref}} > 0$: $RPD = \frac{Z_{\text{alg}} - Z_{\text{ref}}}{Z_{\text{ref}}} \times 100$
    - Si $Z_{\text{ref}} = 0$: $RPD = \frac{Z_{\text{alg}} - Z_{\text{ref}}}{Z_{\text{ref}} + 1} \times 100$ con reporte explícito de $\Delta Z = Z_{\text{alg}} - Z_{\text{ref}}$.

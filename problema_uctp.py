@@ -12,7 +12,7 @@ class UCTPProblemBase(Problem):
     """
     def __init__(self, E, R, T, D, T_d, P, S, K, E_k, E_p, E_s, Dur, EVENTO_SECCION, SECCION_CURSO, 
                  Almuerzo, valid_starts, restricciones_curriculares, bounds, ES_VIRTUAL, 
-                 W_A=1, W_E=10, W_JUE=1, W_SAB=3, W_G=2, **kwargs):
+                 W_A=1, W_E=10, W_JUE=1, W_SAB=3, W_V=2, W_G=None, **kwargs):
         self.E = E
         self.R = R
         self.T = T
@@ -35,7 +35,8 @@ class UCTPProblemBase(Problem):
         self.W_E = W_E
         self.W_JUE = W_JUE
         self.W_SAB = W_SAB
-        self.W_G = W_G
+        self.W_V = W_V if W_G is None else W_G
+        self.W_G = self.W_V  # Alias de compatibilidad backward
         
         self.num_events = len(E)
         self.num_rooms = len(R)
@@ -211,7 +212,7 @@ class UCTPProblemBase(Problem):
         penalizacion_jueves = int(np.sum(event_slot * self.jueves_slots_mask))
         penalizacion_sabado = int(np.sum(event_slot * self.sabado_slots_mask))
 
-        penalizacion_huecos = 0
+        penalizacion_ventanas = 0
         for p_idx in range(self.num_teachers):
             for d_idx in range(self.num_days):
                 day_slots = self.day_slots_indices[d_idx]
@@ -224,14 +225,14 @@ class UCTPProblemBase(Problem):
                         if prof_day[step] == 0:
                             slot_global_idx = day_slots[step]
                             if self.lunch_slots_mask[slot_global_idx] == 0:
-                                penalizacion_huecos += 1
+                                penalizacion_ventanas += 1
 
         total_blanda = (
             self.W_A * penalizacion_almuerzo + 
             self.W_E * penalizacion_espaciado + 
             self.W_JUE * penalizacion_jueves + 
             self.W_SAB * penalizacion_sabado + 
-            self.W_G * penalizacion_huecos
+            self.W_V * penalizacion_ventanas
         )
         
         return {
@@ -241,7 +242,8 @@ class UCTPProblemBase(Problem):
             'penalizacion_espaciado': penalizacion_espaciado,
             'penalizacion_jueves': penalizacion_jueves,
             'penalizacion_sabado': penalizacion_sabado,
-            'penalizacion_huecos': penalizacion_huecos,
+            'penalizacion_ventanas': penalizacion_ventanas,
+            'penalizacion_huecos': penalizacion_ventanas,  # Clave alias para compatibilidad
             'colision_profesor': viol_colision_profesor,
             'carga_maxima_profesor': viol_carga_maxima_profesor,
             'estabilidad_salones': viol_estabilidad_salones,

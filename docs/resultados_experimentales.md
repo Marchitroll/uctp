@@ -8,7 +8,7 @@ Este documento presenta los resultados de la evaluación experimental y el anál
 
 El problema de planificación horaria se evalúa sobre la función objetivo consolidada con cuatro restricciones blandas (cinco componentes ponderados):
 
-$$\min Z = 1 \cdot P_{\text{almuerzo}} + 10 \cdot P_{\text{espaciado}} + 1 \cdot P_{\text{jueves}} + 3 \cdot P_{\text{sabado}} + 2 \cdot P_{\text{huecos}}$$
+$$\min Z = 1 \cdot P_{\text{almuerzo}} + 10 \cdot P_{\text{espaciado}} + 1 \cdot P_{\text{jueves}} + 3 \cdot P_{\text{sabado}} + 2 \cdot P_{\text{ventanas}}$$
 
 Bajo este marco, se contrastan cinco enfoques algorítmicos:
 1. **Programación Lineal Entera Mixta (MIP)**: Enfoque exacto con el solver HiGHS v1.13.1.
@@ -35,7 +35,7 @@ La escala pequeña representa el caso base institucional ($|E|=33$ eventos, $|R|
 
 ### Desglose de Penalizaciones Blandas en la Mejor Solución (Escala Pequeña)
 
-| Método | $P_{\text{almuerzo}}$ ($W=1$) | $P_{\text{espaciado}}$ ($W=10$) | $P_{\text{jueves}}$ ($W=1$) | $P_{\text{sabado}}$ ($W=3$) | $P_{\text{huecos}}$ ($W=2$) | **Costo Total $Z$** |
+| Método | $P_{\text{almuerzo}}$ ($W=1$) | $P_{\text{espaciado}}$ ($W=10$) | $P_{\text{jueves}}$ ($W=1$) | $P_{\text{sabado}}$ ($W=3$) | $P_{\text{ventanas}}$ ($W=2$) | **Costo Total $Z$** |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **MIP (HiGHS)** | 6 | 10,242 | 10 | 7 | 0 | **102,457.0** |
 | **HGA** | 6 | 1 | 3 | 2 | 0 | **25.0** |

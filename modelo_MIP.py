@@ -115,7 +115,7 @@ v_espaciado = {
 P_espaciado = model.add_var(name="P_espaciado", var_type=CONTINUOUS, lb=0)
 P_jueves = model.add_var(name="P_jueves", var_type=INTEGER, lb=0)
 P_sabado = model.add_var(name="P_sabado", var_type=INTEGER, lb=0)
-P_huecos = model.add_var(name="P_huecos", var_type=CONTINUOUS, lb=0)
+P_ventanas = model.add_var(name="P_ventanas", var_type=CONTINUOUS, lb=0)
 
 print("[INFO] Inicialización completa: conjuntos, parámetros y variables.")
 print(f"       E={len(E)} eventos | R={len(R)} salones | T={len(T)} franjas | P={len(P)} profesores")
@@ -328,21 +328,21 @@ for p in P:
                 model += g_pt >= f_p[t] + l_p[t] - 1 - u_pt, f"GapDef_{p}_{t}"
                 gap_vars.append(g_pt)
 
-model += P_huecos == xsum(gap_vars), "Calculo_Penalizacion_Huecos"
+model += P_ventanas == xsum(gap_vars), "Calculo_Penalizacion_Ventanas"
 
 # Pesos de penalización constantes de la función objetivo
 W_A = 1
 W_E = 10
 W_JUE = 1
 W_SAB = 3
-W_G = 2
+W_V = 2
 
 model.objective = minimize(
     W_A * P_almuerzo + 
     W_E * P_espaciado + 
     W_JUE * P_jueves + 
     W_SAB * P_sabado + 
-    W_G * P_huecos
+    W_V * P_ventanas
 )
 
 if __name__ == '__main__':
@@ -383,7 +383,7 @@ if __name__ == '__main__':
         print(f"   - Espaciado (infracciones)     : {P_espaciado.x:.0f} (peso {W_E})")
         print(f"   - Jueves (franjas virtuales)  : {P_jueves.x:.0f} (peso {W_JUE})")
         print(f"   - Sábado (franjas fin de sem) : {P_sabado.x:.0f} (peso {W_SAB})")
-        print(f"   - Huecos docentes (ventanas)  : {P_huecos.x:.0f} (peso {W_G})")
+        print(f"   - Ventanas docentes (ociosas) : {P_ventanas.x:.0f} (peso {W_V})")
         print(f"   => Costo Total Ponderado (Z)   : {model.objective_value:.2f}")
         print(" " + "-"*50 + "\n")
         if len(K) == 1:
