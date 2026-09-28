@@ -209,63 +209,104 @@ def generate_secciones(cursos, secciones_rango, alumnos_rango):
 # ============================================================================
 
 AREAS_CURSOS = {
-    # Matemáticas (MATEMATICAS)
-    'Calculo_II': 'MATEMATICAS',
-    'Calculo_III': 'MATEMATICAS',
-    'Estadistica_Prob': 'MATEMATICAS',
-    'Estadistica_Aplicada': 'MATEMATICAS',
-    'Estr_Discretas': 'MATEMATICAS',
-    'Analisis_Algoritmos': 'MATEMATICAS',
+    # Ciencias Básicas (CIENCIAS_BASICAS)
+    'Calculo_II': 'CIENCIAS_BASICAS',
+    'Calculo_III': 'CIENCIAS_BASICAS',
+    'Fisica_Sistemas': 'CIENCIAS_BASICAS',
+    'Estadistica_Prob': 'CIENCIAS_BASICAS',
+    'Estadistica_Aplicada': 'CIENCIAS_BASICAS',
+    'Estr_Discretas': 'CIENCIAS_BASICAS',
+    'Analisis_Algoritmos': 'CIENCIAS_BASICAS',
 
-    # Física (FISICA)
-    'Fisica_Sistemas': 'FISICA',
+    # Gestión y Proyectos (GESTION_PROYECTOS)
+    'Sist_Organizacionales': 'GESTION_PROYECTOS',
+    'Costeo_Operaciones': 'GESTION_PROYECTOS',
+    'Competencias_Gerenciales': 'GESTION_PROYECTOS',
+    'IO_I': 'GESTION_PROYECTOS',
+    'Gestion_Financiera': 'GESTION_PROYECTOS',
+    'Gestion_Operaciones': 'GESTION_PROYECTOS',
+    'Propuesta_Investigacion': 'GESTION_PROYECTOS',
+    'Auditoria_Control': 'GESTION_PROYECTOS',
+    'Seminario_I': 'GESTION_PROYECTOS',
+    'Plan_Estrategico': 'GESTION_PROYECTOS',
+    'Gestion_Proyectos': 'GESTION_PROYECTOS',
+    'Seminario_II': 'GESTION_PROYECTOS',
+    'Gestion_Servicios_Dig': 'GESTION_PROYECTOS',
+    'Analitica_Negocios': 'GESTION_PROYECTOS',
+    'Innovacion_Digital': 'GESTION_PROYECTOS',
+    'Seg_Salud_Ocup': 'GESTION_PROYECTOS',
 
-    # Gestión y Finanzas (GESTION)
-    'Sist_Organizacionales': 'GESTION',
-    'Costeo_Operaciones': 'GESTION',
-    'Competencias_Gerenciales': 'GESTION',
-    'Ing_Procesos_Negocio': 'GESTION',
-    'Gestion_Financiera': 'GESTION',
-    'Gestion_Operaciones': 'GESTION',
-    'Propuesta_Investigacion': 'GESTION',
-    'Auditoria_Control': 'GESTION',
-    'Seminario_I': 'GESTION',
-    'Plan_Estrategico': 'GESTION',
-    'Gestion_Proyectos': 'GESTION',
-    'Seminario_II': 'GESTION',
-    'Gestion_Servicios_Dig': 'GESTION',
-    'Ing_Conocimiento': 'GESTION',
-    'Analitica_Negocios': 'GESTION',
-    'Innovacion_Digital': 'GESTION',
-    'Arq_TI': 'GESTION',
-    'Seg_Salud_Ocup': 'GESTION',
-    'Arq_Empresarial': 'GESTION',
+    # Ingeniería de Software (INGENIERIA_SOFTWARE)
+    'Intro_Programacion': 'INGENIERIA_SOFTWARE',
+    'POO': 'INGENIERIA_SOFTWARE',
+    'ED_I': 'INGENIERIA_SOFTWARE',
+    'ED_II': 'INGENIERIA_SOFTWARE',
+    'Prog_Web': 'INGENIERIA_SOFTWARE',
+    'Ing_Software_I': 'INGENIERIA_SOFTWARE',
+    'Ing_Software_II': 'INGENIERIA_SOFTWARE',
+    'Proy_Integrador': 'INGENIERIA_SOFTWARE',
+    'Paradigmas_Prog': 'INGENIERIA_SOFTWARE',
+    'Proy_Videojuegos': 'INGENIERIA_SOFTWARE',
+    'HCI': 'INGENIERIA_SOFTWARE',
+    'DevOps': 'INGENIERIA_SOFTWARE',
+    'Arq_Software': 'INGENIERIA_SOFTWARE',
+    'Prog_Movil': 'INGENIERIA_SOFTWARE',
+    'Proy_Desarrollo_SW': 'INGENIERIA_SOFTWARE',
+
+    # Sistemas de Información (SISTEMAS_INFORMACION)
+    'Mod_Integracion': 'SISTEMAS_INFORMACION',
+    'Mod_BD': 'SISTEMAS_INFORMACION',
+    'Ing_Procesos_Negocio': 'SISTEMAS_INFORMACION',
+    'Simulacion': 'SISTEMAS_INFORMACION',
+    'Sist_Intel_Empresarial': 'SISTEMAS_INFORMACION',
+    'Sist_ERP': 'SISTEMAS_INFORMACION',
+    'Gestion_BD': 'SISTEMAS_INFORMACION',
+    'Ing_Conocimiento': 'SISTEMAS_INFORMACION',
+    'Arq_TI': 'SISTEMAS_INFORMACION',
+    'Analitica_BigData': 'SISTEMAS_INFORMACION',
+    'Arq_Empresarial': 'SISTEMAS_INFORMACION',
+
+    # Tecnologías de la Información (TECNOLOGIAS_INFORMACION)
+    'IA_Aplicada': 'TECNOLOGIAS_INFORMACION',
+    'Arq_Computadoras': 'TECNOLOGIAS_INFORMACION',
+    'Sist_Operativos': 'TECNOLOGIAS_INFORMACION',
+    'Redes': 'TECNOLOGIAS_INFORMACION',
+    'Machine_Learning': 'TECNOLOGIAS_INFORMACION',
+    'Ciberseguridad': 'TECNOLOGIAS_INFORMACION',
+    'Seg_Sistemas': 'TECNOLOGIAS_INFORMACION',
+    'IoT': 'TECNOLOGIAS_INFORMACION',
+    'Sist_Distribuidos': 'TECNOLOGIAS_INFORMACION',
+    'Cloud': 'TECNOLOGIAS_INFORMACION',
+    'Redes_Avanzadas': 'TECNOLOGIAS_INFORMACION',
+    'Deep_Learning': 'TECNOLOGIAS_INFORMACION',
+    'Topicos_Ciberseg': 'TECNOLOGIAS_INFORMACION',
 }
 
 # Compatibilidad de áreas que un profesor de cierta especialidad puede dictar
 COMPATIBILIDAD = {
-    'CS': ['CS'],
-    'MATEMATICAS': ['MATEMATICAS', 'CS'],
-    'FISICA': ['FISICA', 'MATEMATICAS'],
-    'GESTION': ['GESTION']
+    'INGENIERIA_SOFTWARE': ['INGENIERIA_SOFTWARE', 'SISTEMAS_INFORMACION'],
+    'SISTEMAS_INFORMACION': ['SISTEMAS_INFORMACION', 'INGENIERIA_SOFTWARE'],
+    'TECNOLOGIAS_INFORMACION': ['TECNOLOGIAS_INFORMACION', 'INGENIERIA_SOFTWARE'],
+    'CIENCIAS_BASICAS': ['CIENCIAS_BASICAS', 'INGENIERIA_SOFTWARE'],
+    'GESTION_PROYECTOS': ['GESTION_PROYECTOS', 'SISTEMAS_INFORMACION'],
 }
 
 
 def generate_profesores(num_profesores):
     """Genera el conjunto inicial de profesores registrados en el sistema con su especialidad académica."""
-    especialidades = ['CS', 'MATEMATICAS', 'FISICA', 'GESTION']
-    pesos = [0.45, 0.25, 0.10, 0.20]
+    especialidades = [
+        'INGENIERIA_SOFTWARE',
+        'SISTEMAS_INFORMACION',
+        'TECNOLOGIAS_INFORMACION',
+        'CIENCIAS_BASICAS',
+        'GESTION_PROYECTOS'
+    ]
+    pesos = [0.25, 0.20, 0.20, 0.15, 0.20]
     profesores = []
     for i in range(num_profesores):
         # Asegurar representación mínima para escalas pequeñas
-        if i == 0:
-            esp = 'CS'
-        elif i == 1:
-            esp = 'MATEMATICAS'
-        elif i == 2:
-            esp = 'FISICA'
-        elif i == 3:
-            esp = 'GESTION'
+        if i < len(especialidades):
+            esp = especialidades[i]
         else:
             esp = random.choices(especialidades, weights=pesos, k=1)[0]
             
@@ -301,12 +342,12 @@ def generate_eventos(secciones, profesores, eventos_rango, duraciones):
         total_horas_seccion = sum(duraciones_seccion)
         
         id_curso = seccion['id_curso']
-        area = AREAS_CURSOS.get(id_curso, 'CS')
+        area = AREAS_CURSOS.get(id_curso, 'INGENIERIA_SOFTWARE')
         
         # Filtrar profesores cuya especialidad es compatible con el área del curso
         compatible_profs = [
             p for p in profesores 
-            if area in COMPATIBILIDAD.get(p['especialidad'], ['CS'])
+            if area in COMPATIBILIDAD.get(p['especialidad'], ['INGENIERIA_SOFTWARE'])
         ]
         if not compatible_profs:
             compatible_profs = profesores

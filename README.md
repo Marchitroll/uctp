@@ -29,7 +29,8 @@ Una de las principales propuestas de valor y factores diferenciales de este ecos
 Toda la documentación conceptual, matemática y experimental del proyecto se encuentra centralizada y estructurada en español dentro de la carpeta `docs/`:
 
 * **[objetivos.md](docs/objetivos.md)**: Definición formal del objetivo general y los objetivos específicos de la investigación.
-* **[modelo_matematico.md](docs/modelo_matematico.md)**: Especificación teórica del modelo matemático de optimización, formulación de las 5 restricciones duras, 4 restricciones blandas (Almuerzo, Espaciado, Jueves/Sábado y Huecos docentes) y función objetivo $\min Z$.
+* **[modelo_matematico.md](docs/modelo_matematico.md)**: Especificación teórica del modelo matemático de optimización, formulación de las 5 restricciones duras, 4 restricciones blandas (Almuerzo, Espaciado, Jueves/Sábado y Ventanas ociosas docentes) y función objetivo $\min Z$.
+* **[origen_datos.md](docs/origen_datos.md)**: Origen de los datos curriculares, parámetros institucionales y lógica de generación de instancias.
 * **[franjas_horarias.md](docs/franjas_horarias.md)**: Estructuración semanal de las 86 franjas horarias académicas, mapeo de periodos de almuerzo y políticas de operatividad presencial vs. virtual.
 * **[pseudocodigo_ga.md](docs/pseudocodigo_ga.md)**: Descripción lógica detallada del Algoritmo Genético Híbrido, bucle evolutivo y heurística constructiva MCF.
 * **[resultados_experimentales.md](docs/resultados_experimentales.md)**: Reporte consolidado de resultados en las tres escalas.
