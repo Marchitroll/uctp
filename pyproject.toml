@@ -1,0 +1,18 @@
+[project]
+name = "uctp"
+version = "0.1.0"
+description = "Ecosistema de optimización para el problema de planificación de horarios universitarios (UCTP / CB-CTT)"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "numpy>=2.0.0",
+    "pandas>=2.2.0",
+    "psutil>=6.0.0",
+    "mip>=1.15.0",
+    "highsbox>=1.0.0",
+    "mealpy>=3.0.0",
+    "openpyxl>=3.1.0",
+]
+
+[tool.uv]
+package = false

@@ -21,7 +21,7 @@ La **Tabla 1** define los conjuntos, parámetros y variables de decisión del mo
 | | $T_{\text{jue}}$ | Franjas del jueves (campus físico cerrado, modalidad 100% virtual). |
 | | $T_{\text{sab}}$ | Franjas del sábado. |
 | | $T_{\text{alm}}$ | Franjas del horario institucional de almuerzo (13:00–14:00). |
-| | $T_{\text{reg}}$ | Franjas lectivas regulares ($T_{\text{reg}} = T \setminus T_{\text{alm}}$). |
+| | $T_{\text{reg}}$ | Horas hábiles de la jornada docente sin refrigerio ($T_{\text{reg}} = T \setminus T_{\text{alm}}$). |
 | | $K, S, P, C$ | Currículos ($K$), secciones ($S$), profesores ($P$) y cursos ($C$). |
 | **Subconjuntos** | $E_p, E_s, E_c, E_k$ | Eventos del docente $p$, sección $s$, curso $c$ o currículo $k$. |
 | | $E_{k,c}$ | Eventos del curso $c$ dentro del currículo $k$. |
@@ -39,7 +39,7 @@ La **Tabla 1** define los conjuntos, parámetros y variables de decisión del mo
 | **Variables** | $x_{e,r,t} \in \{0, 1\}$ | 1 si el evento $e$ se imparte en el salón $r$ durante la franja $t$; 0 en caso contrario. |
 | | $y_{e,r,t} \in \{0, 1\}$ | 1 si el evento $e$ inicia su bloque en el salón $r$ en la franja $t$; 0 en caso contrario. |
 | | $w_{s,r} \in \{0, 1\}$ | 1 si la sección $s$ utiliza el aula $r$ al menos una vez en la semana; 0 en caso contrario. |
-| | $u_{p,t} \in \{0, 1\}$ | 1 si el profesor $p$ dicta clase en la franja $t$; 0 en caso contrario. |
+| | $u_{p,t} \in \{0, 1\}$ | 1 si el profesor $p$ tiene actividad lectiva en la franja $t$; 0 en caso contrario. |
 | | $gap_{p,t} \in [0, 1]$ | 1 si la franja $t$ es una ventana ociosa del docente $p$; 0 en caso contrario. |
 | | $v_{c,i} \ge 0$ | Infracción de espaciado del curso $c$ entre los días $d_i$ y $d_{i+1}$. |
 | | $P_{\text{almuerzo}}, P_{\text{jueves}}, P_{\text{sabado}}$ | Penalizaciones por uso de franjas de almuerzo, jueves y sábado. |
@@ -105,7 +105,7 @@ $$P_{\text{sabado}} = \sum_{e \in E} \sum_{r \in R_e} \sum_{t \in T_{\text{sab}}
 
 ### 3.4. Compacidad Docente (Ventanas Ociosas)
 
-Sea $u_{p,t} = \sum_{e \in E_p} \sum_{r \in R_e} x_{e,r,t}$ la indicadora de dictado del docente $p$:
+Sea $u_{p,t} = \sum_{e \in E_p} \sum_{r \in R_e} x_{e,r,t}$ la variable de actividad lectiva del docente $p$ en la franja $t$:
 
 $$gap_{p,t} \ge u_{p,t_1} + u_{p,t_2} - 1 - u_{p,t} \quad \forall p \in P, \; \forall d \in D, \; \forall t_1, t, t_2 \in T_d \cap T_{\text{reg}} \text{ con } t_1 < t < t_2 \tag{15}$$
 

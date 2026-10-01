@@ -1,12 +1,12 @@
 {
   "metodo": "MIP",
   "escala": "pequena",
-  "Z": 102457.0,
+  "Z": 139259.0,
   "HCV": 0,
-  "CPU_time": 213.25,
+  "CPU_time": 155.75,
   "nodes_explored": 0,
-  "lower_bound": 5.000000000000116,
-  "gap_pct": 99.9951199039596,
+  "lower_bound": 25.99999999999988,
+  "gap_pct": 99.98132975247555,
   "status": "FEASIBLE",
   "entorno": {
     "sistema_operativo": "Windows 11",

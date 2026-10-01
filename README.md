@@ -39,67 +39,73 @@ Toda la documentación conceptual, matemática y experimental del proyecto se en
 
 ---
 
-## 2. Instalación y Configuración del Entorno
+## 2. Instalación y Configuración del Entorno con UV
 
-Para asegurar la correcta ejecución del entorno de desarrollo y la reproducibilidad de las pruebas experimentales en sistemas Anaconda:
+El proyecto utiliza **[Astral UV](https://docs.astral.sh/uv/)** para la gestión moderna, ultrarrápida y determinista del entorno y las dependencias.
 
-### Crear y Activar el Entorno Virtual Conda
+### 2.1 Requisitos Previos
+Tener instalado `uv` en el sistema:
 ```bash
-# Crear el entorno Conda con Python 3.13
-conda create -n uctp python=3.13 -y
-
-# Activar el entorno
-conda activate uctp
+# En Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-### Instalar Dependencias
-Instale el conjunto de librerías requeridas a través del archivo `requirements.txt`:
+### 2.2 Sincronización Automática del Proyecto
+UV gestiona automáticamente la descarga de Python 3.13, la creación del entorno virtual `.venv` y la instalación de dependencias bloqueadas:
 ```bash
-pip install -r requirements.txt
+# Sincroniza el entorno a partir de pyproject.toml y uv.lock
+uv sync
 ```
-*Nota: Para habilitar el solucionador HiGHS en Windows mediante `python-mip`, el paquete `highsbox` se incorpora automáticamente en la instalación.*
+
+*(Opcional / Legacy)* Si se prefiere el flujo clásico de `requirements.txt`:
+```bash
+uv venv --python 3.13
+uv pip install -r requirements.txt
+```
 
 ---
 
 ## 3. Guía de Uso de los Métodos
 
+Con UV, los scripts se ejecutan directamente mediante `uv run` sin necesidad de activar manualmente el entorno en cada terminal:
+
 ### 3.1 Generación del Conjunto de Datos
 Para instanciar los archivos CSV del esquema relacional en base a los parámetros institucionales, ejecute el generador especificando la escala deseada (`pequena`, `mediana` o `grande`):
 ```bash
-python generador_dataset.py --instancia [pequena|mediana|grande]
+uv run python generador_dataset.py --instancia [pequena|mediana|grande]
 ```
 
 ### 3.2 Programación Lineal Entera Mixta (MIP)
 ```bash
 # Ejecutar con límite en minutos (por defecto: 120 min)
-python modelo_MIP.py --minutos 30
+uv run python modelo_MIP.py --minutos 30
 ```
 
 ### 3.3 Algoritmo Genético Híbrido (HGA)
 ```bash
 # Ejecución multi-corrida (20 corridas por defecto)
-python modelo_HGA.py --corridas 20 --minutos 5
+uv run python modelo_HGA.py --corridas 20 --minutos 5
 ```
 
 ### 3.4 Algoritmo Genético Clásico (GA)
 ```bash
-python modelo_GA.py --corridas 20 --minutos 5
+uv run python modelo_GA.py --corridas 20 --minutos 5
 ```
 
 ### 3.5 Búsqueda Tabú (TS)
 ```bash
-python modelo_TS.py --corridas 20 --minutos 5
+uv run python modelo_TS.py --corridas 20 --minutos 5
 ```
 
 ### 3.6 Recocido Simulado (SA)
 ```bash
-python modelo_SA.py --corridas 20 --minutos 5
+uv run python modelo_SA.py --corridas 20 --minutos 5
 ```
 
 ### 3.7 Reporte Comparativo Consolidado
 Para procesar las salidas JSON de todos los métodos, calcular el $RPD$ robusto y actualizar `docs/comparacion_metodos.md`:
 ```bash
-python reporte_desviacion.py
+uv run python reporte_desviacion.py
 ```
 
 ---
@@ -110,15 +116,15 @@ Para ejecutar de manera ordenada un benchmark completo sobre cualquiera de los e
 
 ```bash
 # 1. Generar datos de la instancia (ej. pequeña)
-python generador_dataset.py --instancia pequena
+uv run python generador_dataset.py --instancia pequena
 
 # 2. Ejecutar los 5 modelos
-python modelo_MIP.py
-python modelo_HGA.py --corridas 20
-python modelo_GA.py --corridas 20
-python modelo_TS.py --corridas 20
-python modelo_SA.py --corridas 20
+uv run python modelo_MIP.py
+uv run python modelo_HGA.py --corridas 20
+uv run python modelo_GA.py --corridas 20
+uv run python modelo_TS.py --corridas 20
+uv run python modelo_SA.py --corridas 20
 
 # 3. Consolidar métricas y generar reporte comparativo
-python reporte_desviacion.py
+uv run python reporte_desviacion.py
 ```
