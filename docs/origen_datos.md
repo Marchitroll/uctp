@@ -1,5 +1,7 @@
 # Origen y Generación del Dataset
 
+**Fecha de última actualización:** 5 de octubre de 2026
+
 Documenta el origen de los datos y las reglas del script `generador_dataset.py` para construir las instancias del problema UCTP.
 
 ---

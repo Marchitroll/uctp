@@ -1,5 +1,7 @@
 # Objetivos del Proyecto
 
+**Fecha de última actualización:** 5 de octubre de 2026
+
 ## Objetivo General
 
 Diseñar e implementar un ecosistema de optimización para la resolución del problema de programación de horarios universitarios (CB-CTT) bajo las restricciones operativas y normativas de una universidad peruana, contrastando el desempeño de un Algoritmo Genético Híbrido frente a la formulación exacta (MIP) y metaheurísticas canónicas.

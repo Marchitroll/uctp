@@ -1,5 +1,7 @@
 # Matriz de Franjas Horarias (UCTP)
 
+**Fecha de última actualización:** 5 de octubre de 2026
+
 Esta guía detalla cómo se organizan y codifican las 86 franjas horarias semanales del problema UCTP. 
 
 En el modelo de optimización, el tiempo se representa mediante números enteros continuos del 1 al 86 (IDs globales). Esta matriz detalla cómo se mapea cada ID global a un día, hora local, periodo de almuerzo y restricción de infraestructura.

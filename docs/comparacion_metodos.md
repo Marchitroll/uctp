@@ -1,4 +1,7 @@
 # Comparación Consolidada de Métodos CB-CTT
+
+**Fecha de última actualización:** 5 de octubre de 2026
+
 Este reporte consolida el rendimiento del modelo exacto (**MIP**) y las 4 metaheurísticas implementadas (**HGA**, **GA**, **TS**, **SA**) para la asignación de horarios en la Universidad.
 Se evalúan las métricas formales de la literatura (*Abdipoor et al. 2025; Rohaizad et al. 2026; Bashab et al. 2023*): Distancia a la Factibilidad ($DF$), Tasa de Éxito ($SR$), Penalización Blanda ($Z$), Desviación Relativa Porcentual ($RPD$), Tiempo a la Factibilidad ($TTF$), Tiempo CPU y Evaluaciones de Aptitud ($NFE$) / Nodos B&B.
 
@@ -9,11 +12,11 @@ Se evalúan las métricas formales de la literatura (*Abdipoor et al. 2025; Roha
 
 | Método | Tasa Éxito (SR %) | DF (Mejor / Prom) | $Z$ Mejor | $Z$ Promedio ± Std | RPD (%) | CPU (s) | TTF (s) | Esfuerzo (NFE / Nodos) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| MIP (HiGHS) | 100.0% | 0 / 0.0 | **102457.0** | 102457.00 ± 0.00 | 0.00% (Ref) | 213.25 | 213.25 | 0 nodos |
+| MIP (HiGHS) | 100.0% | 0 / 0.0 | **139259.0** | 139259.00 ± 0.00 | 0.00% (Ref) | 155.75 | 155.75 | 0 nodos |
 | HGA (Algoritmo Genético Híbrido (MCF Memético)) | 100.0% | 0 / 0.0 | **25.0** | 25.00 ± 0.00 | -99.98% | 9.59 | 0.20 | 5,000 evals |
-| GA (Algoritmo Genético Clásico) | 100.0% | 0 / 0.0 | **91.0** | 91.00 ± 0.00 | -99.91% | 2.14 | 0.86 | 4,200 evals |
-| TS (Búsqueda Tabú (Discreta)) | 100.0% | 0 / 0.0 | **87.0** | 87.00 ± 0.00 | -99.92% | 3.34 | 1.34 | 5,622 evals |
-| SA (Recocido Simulado (Discreto)) | 100.0% | 0 / 0.0 | **48.0** | 48.00 ± 0.00 | -99.95% | 11.62 | 2.34 | 3,461 evals |
+| GA (Algoritmo Genético Clásico) | 100.0% | 0 / 0.0 | **91.0** | 91.00 ± 0.00 | -99.93% | 2.14 | 0.86 | 4,200 evals |
+| TS (Búsqueda Tabú (Discreta)) | 100.0% | 0 / 0.0 | **87.0** | 87.00 ± 0.00 | -99.94% | 3.34 | 1.34 | 5,622 evals |
+| SA (Recocido Simulado (Discreto)) | 100.0% | 0 / 0.0 | **48.0** | 48.00 ± 0.00 | -99.97% | 11.62 | 2.34 | 3,461 evals |
 
 ## Instancia Mediana
 

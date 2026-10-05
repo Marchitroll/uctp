@@ -1,7 +1,8 @@
 # Formulación Matemática
 
 **Autor:** Marcelo Angeles  
-**Referencia de Formato:** Estándar de notación por subconjuntos indexados (*Computational Management Science*, Ozkan et al., 2025; *European Journal of Operational Research*, Daskalaki et al., 2004).
+**Referencia de Formato:** Estándar de notación por subconjuntos indexados (*Computational Management Science*, Ozkan et al., 2025; *European Journal of Operational Research*, Daskalaki et al., 2004).  
+**Fecha de última actualización:** 5 de octubre de 2026
 
 ---
 

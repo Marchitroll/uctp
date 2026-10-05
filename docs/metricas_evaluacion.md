@@ -1,5 +1,7 @@
 # Marco de Métricas y Criterios de Evaluación
 
+**Fecha de última actualización:** 5 de octubre de 2026
+
 Este documento formaliza el conjunto de indicadores y criterios metodológicos utilizados para evaluar el desempeño, la calidad y la eficiencia de los algoritmos de optimización para el problema CB-CTT en el marco de la investigación.
 
 Siguiendo las directrices y estándares metodológicos de la literatura especializada en optimización de horarios universitarios (*Abdipoor, Yaakob, et al., 2025; Bashab et al., 2023*), el análisis se estructura en **tres dimensiones fundamentales**:
@@ -29,7 +31,7 @@ Mide el grado de satisfacción de las preferencias institucionales y la minimiza
 * **Valor de la Función Objetivo ($Z$):**  
   Cuantificación directa de la penalización ponderada por concepto de restricciones blandas institucionales:
   $$\min Z = 1 \cdot P_{\text{almuerzo}} + 10 \cdot P_{\text{espaciado}} + 1 \cdot P_{\text{jueves}} + 3 \cdot P_{\text{sabado}} + 2 \cdot P_{\text{ventanas}}$$
-  Dada la naturaleza estocástica de las metaheurísticas, se ejecutan 20 corridas independientes por algoritmo e instancia, reportando:
+  Dada la naturaleza estocástica de las metaheurísticas, se ejecutan 30 corridas independientes por algoritmo e instancia, reportando:
   * **Mejor Valor $Z$:** El menor costo alcanzado.
   * **Valor Promedio de $Z$:** Rendimiento esperado del método.
   * **Desviación Estándar ($\sigma$):** Medida de la estabilidad y consistencia estocástica (*Abdipoor, Yaakob, et al., 2025*).
