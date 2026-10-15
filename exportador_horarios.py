@@ -1,325 +1,297 @@
-"""
-exportador_horarios.py
-Módulo encargado exclusivamente de la exportación de los resultados de la optimización.
-Genera archivos CSV desagregados por currículo y por camino de matrícula, evitando
-la sobreescritura que ocurre al proyectar todos los eventos en una única matriz plana.
-"""
+"""Módulo para la exportación de resultados y grillas de horarios del UCTP.
 
-import os
+Genera archivos CSV desagregados por currículo y por camino de matrícula,
+así como vistas de carga horaria por profesor y trazabilidad del entorno.
+"""
 import itertools
-import pandas as pd
-import platform
-import psutil
-import mip
 import json
+import os
+import pandas as pd
+
+from uctp_utils import (
+    construir_evento_profesor,
+    construir_franja_a_dia,
+    detectar_escala,
+    exportar_matriz_horario_csv,
+    obtener_metadatos_entorno,
+)
 
 
 def imprimir_metricas(status, cpu_time, model, nodes_explored=0):
-    """
-    Imprime las métricas de trazabilidad del entorno de ejecución y los indicadores
-    de desempeño alcanzados por el solucionador durante el proceso de optimización.
-    """
-    bestcost = model.objective_value
-    lowerbound = model.objective_bound
+    """Imprime métricas de trazabilidad y desempeño del modelo MIP."""
+    bestcost = model.objective_value if model.num_solutions > 0 else float("nan")
+    lowerbound = model.objective_bound if hasattr(model, "objective_bound") else float("nan")
     epsilon = 1e-10
+    gap_pct = (
+        ((bestcost - lowerbound) / (abs(bestcost) + epsilon)) * 100
+        if model.num_solutions > 0
+        else float("nan")
+    )
 
-    # Calcula la brecha de optimalidad (MIP Gap) previniendo posibles divisiones por cero
-    gap_pct = ((bestcost - lowerbound) / (abs(bestcost) + epsilon)) * 100
-
-    print("\n" + "="*60)
+    env = obtener_metadatos_entorno()
+    print("\n" + "=" * 60)
     print(" [TRAZABILIDAD DEL ENTORNO]")
-    print("="*60)
-    print(f" Sistema Operativo : {platform.system()} {platform.release()}")
-    print(f" Procesador        : {platform.processor()}")
-    print(f" RAM Disponible    : {round(psutil.virtual_memory().total / (1024.0 **3), 2)} GB")
-    print(f" Versión Python    : {platform.python_version()}")
-    print(f" Versión Python-MIP: {mip.__version__}")
+    print("=" * 60)
+    print(f" Sistema Operativo : {env['sistema_operativo']}")
+    print(f" Procesador        : {env['procesador']}")
+    print(f" RAM Disponible    : {env['ram_gb']} GB")
+    print(f" Versión Python    : {env['version_python']}")
+    print(f" Versión Python-MIP: {env['version_mip']}")
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(" [MÉTRICAS DE EVALUACIÓN]")
-    print("="*60)
+    print("=" * 60)
     print(f" Estado Final (Status)      : {status.name if hasattr(status, 'name') else status}")
     print(f" Tiempo de Procesamiento CPU: {cpu_time:.2f} segundos")
-    print(f" Nodos B&B Explorados      : {nodes_explored}")
+    print(f" Nodos B&B Explorados       : {nodes_explored}")
     print(f" Valor Función Objetivo (Z) : {bestcost}")
     print(f" Límite Inferior (LB)       : {lowerbound}")
     print(f" Brecha de Optimalidad (Gap): {gap_pct:.4f} %")
-    print("="*60 + "\n")
-
-
-def obtener_metadatos_entorno(libreria_opt=None, version_opt=None):
-    """
-    Retorna un diccionario estructurado con las especificaciones del entorno de ejecución
-    para garantizar la trazabilidad y reproducibilidad según Rohaizad et al. (2026).
-    """
-    try:
-        import mealpy
-        mealpy_ver = getattr(mealpy, "__version__", "3.0.x")
-    except Exception:
-        mealpy_ver = "N/A"
-
-    meta = {
-        "sistema_operativo": f"{platform.system()} {platform.release()}",
-        "procesador": platform.processor(),
-        "ram_gb": round(psutil.virtual_memory().total / (1024.0 ** 3), 2),
-        "version_python": platform.python_version(),
-        "version_mip": getattr(mip, "__version__", "2.0.0"),
-        "version_mealpy": mealpy_ver
-    }
-    if libreria_opt:
-        meta["libreria_optimizacion"] = libreria_opt
-    if version_opt:
-        meta["version_optimizacion"] = version_opt
-    return meta
+    print("=" * 60 + "\n")
 
 
 def exportar_metricas_mip(status, cpu_time, nodes_explored, model, K, output_dir=None):
-    """
-    Exporta las métricas de la corrida MIP a un archivo CSV consolidado bajo la carpeta 'resultados_MIP/'.
-    """
+    """Exporta las métricas de la corrida MIP a CSV y JSON bajo 'resultados_MIP/'."""
     if output_dir is None:
-        if len(K) == 1:
-            escala = "pequena"
-        elif len(K) in [4, 5]:
-            escala = "mediana"
-        else:
-            escala = "grande"
+        escala = detectar_escala(K)
     else:
         escala = output_dir
 
-    bestcost = model.objective_value if model.num_solutions > 0 else float('nan')
-    lowerbound = model.objective_bound if hasattr(model, 'objective_bound') else float('nan')
+    bestcost = model.objective_value if model.num_solutions > 0 else float("nan")
+    lowerbound = model.objective_bound if hasattr(model, "objective_bound") else float("nan")
     epsilon = 1e-10
-    gap_pct = ((bestcost - lowerbound) / (abs(bestcost) + epsilon)) * 100 if model.num_solutions > 0 else float('nan')
-    status_str = status.name if hasattr(status, 'name') else str(status)
-
-    row = {
+    gap_pct = (
+        ((bestcost - lowerbound) / (abs(bestcost) + epsilon)) * 100
+        if model.num_solutions > 0
+        else float("nan")
+    )
+    status_str = status.name if hasattr(status, "name") else str(status)
+    factible = (status_str in ["OPTIMAL", "FEASIBLE"] and model.num_solutions > 0)
+    
+    # Registro para CSV (formato de corrida individual compatible con metaheurísticas)
+    row_csv = {
         "metodo": "MIP",
         "escala": escala,
         "Z": bestcost,
-        "HCV": 0 if (status_str in ["OPTIMAL", "FEASIBLE"] and model.num_solutions > 0) else 1,
-        "CPU_time": cpu_time,
-        "nodes_explored": nodes_explored,
-        "lower_bound": lowerbound,
-        "gap_pct": gap_pct,
-        "status": status_str,
-        "entorno": obtener_metadatos_entorno("python-mip (HiGHS)", getattr(mip, "__version__", "2.0.0"))
+        "HCV": 0 if factible else 1,
+        "tiempo_cpu": round(cpu_time, 4),
+        "factible": factible,
+        "nodos_explorados": nodes_explored,
+        "limite_inferior": lowerbound,
+        "brecha_pct": gap_pct,
+        "estado": status_str,
+    }
+
+    # Registro para JSON resumen (esquema consolidado estándar idéntico a metaheurísticas)
+    resumen_json = {
+        "metodo": "MIP",
+        "escala": escala,
+        "mejor_z": bestcost,
+        "peor_z": bestcost,
+        "promedio_z": bestcost,
+        "desviacion_z": 0.0,
+        "mejor_df": 0 if factible else 1,
+        "promedio_df": 0.0 if factible else 1.0,
+        "tasa_factibilidad_final": 100.0 if factible else 0.0,
+        "tiempo_cpu_promedio": round(cpu_time, 4),
+        "TTF_promedio": round(cpu_time, 4) if factible else None,
+        "evaluaciones_aptitud_promedio": 0,
+        "nodos_explorados_promedio": nodes_explored,
+        "limite_inferior": lowerbound,
+        "brecha_pct": gap_pct,
+        "estado": status_str,
+        "entorno": obtener_metadatos_entorno("python-mip (HiGHS)"),
     }
 
     resultados_dir = "resultados_MIP"
     os.makedirs(resultados_dir, exist_ok=True)
     csv_filepath = os.path.join(resultados_dir, f"resultados_{escala}.csv")
-    
-    # Para CSV excluimos el diccionario anidado para mantener formato plano
-    row_csv = {k: v for k, v in row.items() if k != "entorno"}
+
     df = pd.DataFrame([row_csv])
     df.to_csv(csv_filepath, index=False)
     print(f"[ÉXITO] Métricas MIP persistidas en '{csv_filepath}'.")
 
-    # Persistir también en JSON para homogeneidad y fácil comparación
     resumen_filepath = os.path.join(resultados_dir, f"resumen_{escala}.json")
-    with open(resumen_filepath, 'w', encoding='utf-8') as f:
-        json.dump(row, f, indent=2, ensure_ascii=False)
+    with open(resumen_filepath, "w", encoding="utf-8") as f:
+        json.dump(resumen_json, f, indent=2, ensure_ascii=False)
     print(f"[ÉXITO] Resumen MIP guardado en '{resumen_filepath}'.")
 
 
+def exportar_horarios(
+    x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, E_p=None, output_dir=None, max_trayectos=20
+):
+    """Genera archivos CSV de horario desagregados por currículo y por camino de matrícula.
 
-def exportar_horarios(x, K, E_k, T_d, D, EVENTO_SECCION, SECCION_CURSO, E_p=None, output_dir=None):
-    """
-    Genera archivos CSV de horario desagregados por currículo y por camino de matrícula.
-    Para cada currículo, se construyen todas las combinaciones factibles de secciones
-    (una por curso) y se proyecta cada combinación en su propia matriz bidimensional.
-
-    Parámetros:
-        x               : Diccionario de variables de decisión {(e, r, t): var}.
-        K               : Lista de identificadores de currículos.
-        E_k             : Diccionario {k: [eventos]} que asocia cada currículo con sus eventos.
-        T_d             : Diccionario {dia: [franjas]} que asocia cada día con sus franjas horarias.
-        D               : Lista ordenada de días de la semana académica.
-        EVENTO_SECCION  : Diccionario {evento: sección} para resolver la sección de cada evento.
-        SECCION_CURSO   : Diccionario {sección: curso} para resolver el curso de cada sección.
-        E_p             : Diccionario {profesor: [eventos]} que asocia cada profesor con sus eventos.
-        output_dir      : Directorio raíz para almacenar los archivos CSV generados (detectado dinámicamente si es None).
+    Parámetros
+    ----------
+    x : dict
+        Diccionario de asignaciones {(e, r, t): var_o_valor}.
+    K : list
+        Identificadores de currículos.
+    E_k : dict
+        Eventos por currículo {k: [eventos]}.
+    T_d : dict
+        Franjas por día {dia: [franjas]}.
+    D : list
+        Días de la semana.
+    EVENTO_SECCION : dict
+        Evento -> Sección.
+    SECCION_CURSO : dict
+        Sección -> Curso.
+    E_p : dict, optional
+        Eventos por profesor {p: [eventos]}.
+    output_dir : str, optional
+        Directorio destino. Si es None, se deduce de detectar_escala(K).
+    max_trayectos : int
+        Límite de caminos por currículo para evitar explosión combinatorial.
     """
     if output_dir is None or output_dir == "horarios_por_camino":
-        if len(K) == 1:
-            output_dir = "horarios_pequena"
-        elif len(K) in [4, 5]:
-            output_dir = "horarios_mediana"
-        else:
-            output_dir = "horarios_grande"
+        escala = detectar_escala(K)
+        output_dir = f"horarios_{escala}"
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # Determina las etiquetas de los intervalos horarios basándose en el día con mayor cantidad de franjas
     max_slots = max(len(slots) for slots in T_d.values())
     horas_labels = [f"{7+i}:00 - {8+i}:00" for i in range(max_slots)]
 
-    # Mapeo de evento a profesor e inicialización del horario docente
-    evento_profesor = {}
+    evento_profesor = construir_evento_profesor(E_p) if E_p is not None else {}
+    franja_a_dia = construir_franja_a_dia(T_d)
     mapeo_profesor_horario = {}
+
+    def esta_activo(val):
+        return getattr(val, "x", val) >= 0.99
+
+    # Recolectar asignaciones activas para profesores
     if E_p is not None:
-        for prof, evs in E_p.items():
-            for ev in evs:
-                evento_profesor[ev] = prof
-                
-        # Recolectar asignaciones activas para generar horarios de profesores
         for (e, r, t), var in x.items():
-            if var.x >= 0.99:
-                profesor = evento_profesor.get(e, None)
+            if esta_activo(var):
+                profesor = evento_profesor.get(e)
                 if profesor:
                     seccion = EVENTO_SECCION[e]
                     curso = SECCION_CURSO[seccion]
-                    dia_actual = next(d for d, slots in T_d.items() if t in slots)
-                    slot_local = T_d[dia_actual].index(t)
-                    
-                    if profesor not in mapeo_profesor_horario:
-                        mapeo_profesor_horario[profesor] = []
-                    mapeo_profesor_horario[profesor].append({
-                        'dia': dia_actual,
-                        'slot': slot_local,
-                        'info': f"{curso} ({seccion}) [{r}]"
-                    })
+                    dia_actual = franja_a_dia.get(t)
+                    if dia_actual and dia_actual in T_d:
+                        slot_local = T_d[dia_actual].index(t)
+                        if profesor not in mapeo_profesor_horario:
+                            mapeo_profesor_horario[profesor] = []
+                        mapeo_profesor_horario[profesor].append(
+                            {"dia": dia_actual, "slot": slot_local, "info": f"{curso} ({seccion}) [{r}]"}
+                        )
 
+    # Recolectar asignaciones por currículo
     for k in K:
-        # Identifica las secciones y eventos del currículo que fueron activados por el resolutor
         secciones_activas_por_curso = {}
         mapeo_eventos_seccion = {}
 
         for (e, r, t), var in x.items():
-            if var.x >= 0.99 and e in E_k[k]:
+            if esta_activo(var) and e in E_k[k]:
                 seccion = EVENTO_SECCION[e]
                 curso = SECCION_CURSO[seccion]
+                dia_actual = franja_a_dia.get(t)
+                if dia_actual and dia_actual in T_d:
+                    slot_local = T_d[dia_actual].index(t)
 
-                dia_actual = next(d for d, slots in T_d.items() if t in slots)
-                slot_local = T_d[dia_actual].index(t)
+                    if curso not in secciones_activas_por_curso:
+                        secciones_activas_por_curso[curso] = set()
+                    secciones_activas_por_curso[curso].add(seccion)
 
-                if curso not in secciones_activas_por_curso:
-                    secciones_activas_por_curso[curso] = set()
-                secciones_activas_por_curso[curso].add(seccion)
+                    if seccion not in mapeo_eventos_seccion:
+                        mapeo_eventos_seccion[seccion] = []
 
-                if seccion not in mapeo_eventos_seccion:
-                    mapeo_eventos_seccion[seccion] = []
-
-                profesor = evento_profesor.get(e, "") if E_p is not None else ""
-                prof_suffix = f" - {profesor}" if profesor else ""
-
-                # Almacena la coordenada física de la clase asignada por el resolutor
-                mapeo_eventos_seccion[seccion].append({
-                    'dia': dia_actual,
-                    'slot': slot_local,
-                    'info': f"{curso} ({seccion}){prof_suffix} [{r}]"
-                })
+                    profesor = evento_profesor.get(e, "")
+                    prof_suffix = f" - {profesor}" if profesor else ""
+                    mapeo_eventos_seccion[seccion].append(
+                        {
+                            "dia": dia_actual,
+                            "slot": slot_local,
+                            "info": f"{curso} ({seccion}){prof_suffix} [{r}]",
+                        }
+                    )
 
         if not secciones_activas_por_curso:
             continue
 
-        # Construye los caminos mediante el producto cartesiano de las secciones por curso
         lista_cursos = list(secciones_activas_por_curso.keys())
         bloques_secciones = [list(secciones_activas_por_curso[c]) for c in lista_cursos]
 
-        # Genera todas las combinaciones posibles tomando exactamente una sección de cada curso
-        # Limitamos a un máximo de 100 caminos para evitar explosión de archivos
         iterator = itertools.product(*bloques_secciones)
         caminos_matricula = []
         for idx, camino in enumerate(iterator):
-            if idx >= 100:
-                print(f"[ADVERTENCIA] Ciclo {k}: Se detectaron más de 100 caminos de matrícula. Se limita la exportación a los primeros 100 para evitar explosión de archivos.")
+            if idx >= max_trayectos:
+                print(
+                    f"[AVISO] Ciclo {k}: Se detectaron más de {max_trayectos} caminos. "
+                    f"Se limita la exportación a los primeros {max_trayectos} para evitar proliferación de archivos."
+                )
                 break
             caminos_matricula.append(camino)
 
-        # Crea la subcarpeta correspondiente al ciclo académico
         ciclo_dir = os.path.join(output_dir, f"ciclo_{k}")
         os.makedirs(ciclo_dir, exist_ok=True)
 
-        # Proyecta cada camino independiente en su propia matriz bidimensional
         for idx, camino in enumerate(caminos_matricula, start=1):
-            schedule_matrix = pd.DataFrame("---", index=horas_labels, columns=D)
-
+            clases_camino = []
             for seccion in camino:
-                for clase in mapeo_eventos_seccion[seccion]:
-                    dia = clase['dia']
-                    slot = clase['slot']
-                    info_str = clase['info']
-
-                    celda_actual = schedule_matrix.at[horas_labels[slot], dia]
-                    if celda_actual == "---":
-                        schedule_matrix.at[horas_labels[slot], dia] = info_str
-                    else:
-                        # Concatena eventos si coinciden en la misma celda horaria
-                        schedule_matrix.at[horas_labels[slot], dia] = f"{celda_actual} | {info_str}"
+                clases_camino.extend(mapeo_eventos_seccion.get(seccion, []))
 
             file_path = os.path.join(ciclo_dir, f"camino_{idx}.csv")
-            schedule_matrix.to_csv(file_path)
+            exportar_matriz_horario_csv(clases_camino, horas_labels, D, file_path)
 
-        print(f"[INFO] Ciclo {k}: Generados {len(caminos_matricula)} caminos independientes en '{ciclo_dir.replace(os.sep, '/')}/'.")
+        print(
+            f"[INFO] Ciclo {k}: Generados {len(caminos_matricula)} caminos independientes en '{ciclo_dir.replace(os.sep, '/')}/'."
+        )
 
-    # Exportación de los horarios individuales de cada profesor
+    # Exportación de horarios docentes
     if E_p is not None and mapeo_profesor_horario:
         prof_dir = os.path.join(output_dir, "profesores")
         os.makedirs(prof_dir, exist_ok=True)
         for prof, clases in mapeo_profesor_horario.items():
-            prof_matrix = pd.DataFrame("---", index=horas_labels, columns=D)
-            for clase in clases:
-                dia = clase['dia']
-                slot = clase['slot']
-                info_str = clase['info']
-
-                celda_actual = prof_matrix.at[horas_labels[slot], dia]
-                if celda_actual == "---":
-                    prof_matrix.at[horas_labels[slot], dia] = info_str
-                else:
-                    prof_matrix.at[horas_labels[slot], dia] = f"{celda_actual} | {info_str}"
-
             prof_file_path = os.path.join(prof_dir, f"{prof}.csv")
-            prof_matrix.to_csv(prof_file_path)
-        print(f"[INFO] Exportados {len(mapeo_profesor_horario)} horarios de profesores en '{prof_dir.replace(os.sep, '/')}/'.")
+            exportar_matriz_horario_csv(clases, horas_labels, D, prof_file_path)
+        print(
+            f"[INFO] Exportados {len(mapeo_profesor_horario)} horarios de profesores en '{prof_dir.replace(os.sep, '/')}/'."
+        )
 
-    print(f"\n[ÉXITO] Exportación desagregada completada. Revisar el directorio '{output_dir.replace(os.sep, '/')}/'.")
+    print(
+        f"\n[ÉXITO] Exportación desagregada completada. Revisar el directorio '{output_dir.replace(os.sep, '/')}/'."
+    )
 
 
-def imprimir_metricas_ga(cpu_time, best_fitness, hard_violations, soft_penalty, epoch, pop_size, crossover, selection):
-    """
-    Imprime las métricas de trazabilidad del entorno de ejecución y los indicadores
-    de desempeño alcanzados por el Algoritmo Genético (GA) durante el proceso de optimización.
-    """
-    print("\n" + "="*60)
-    print(" [TRAZABILIDAD DEL ENTORNO]")
-    print("="*60)
-    print(f" Sistema Operativo : {platform.system()} {platform.release()}")
-    print(f" Procesador        : {platform.processor()}")
-    print(f" RAM Disponible    : {round(psutil.virtual_memory().total / (1024.0 **3), 2)} GB")
-    print(f" Versión Python    : {platform.python_version()}")
-    print(f" Versión MEALPY    : 3.0.3")
+def imprimir_metricas_metaheuristica(
+    metodo, epoch, pop_size, crossover, selection, cpu_time, best_fitness, hard_violations, soft_penalty
+):
+    """Imprime métricas consolidadas de ejecución de una metaheurística."""
+    env = obtener_metadatos_entorno()
+    print("\n" + "=" * 60)
+    print(f" [TRAZABILIDAD DEL ENTORNO - {metodo}]")
+    print("=" * 60)
+    print(f" Sistema Operativo       : {env['sistema_operativo']}")
+    print(f" Procesador              : {env['procesador']}")
+    print(f" RAM Disponible          : {env['ram_gb']} GB")
+    print(f" Versión Python          : {env['version_python']}")
+    print(f" Versión MEALPY          : {env['version_mealpy']}")
 
-    print("\n" + "="*60)
-    print(" [MÉTRICAS GA]")
-    print("="*60)
+    print("\n" + "=" * 60)
+    print(f" [MÉTRICAS DE RENDIMIENTO - {metodo}]")
+    print("=" * 60)
     print(f" Generaciones (Epochs)   : {epoch}")
     print(f" Tamaño Población (Pop)  : {pop_size}")
     print(f" Crossover / Selección   : {crossover} / {selection}")
-    print(f" Tiempo de Procesamiento CPU: {cpu_time:.2f} segundos")
+    print(f" Tiempo de Procesamiento : {cpu_time:.2f} segundos")
     print(f" Aptitud (Fitness) Total : {best_fitness:.4f}")
     print(f" Violaciones Duras (HCV) : {hard_violations}")
-    print(f" Penalización Blanda (Z) : {soft_penalty} (comparable con Z del MIP)")
+    print(f" Penalización Blanda (Z) : {soft_penalty}")
     print(f" Factible (HCV == 0)     : {'SI' if hard_violations == 0 else 'NO'}")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
 
-class DummyVar:
-    def __init__(self, value):
-        self.x = value
+imprimir_metricas_ga = imprimir_metricas_metaheuristica
 
 
-def reconstruir_x_desde_ga(solution, valid_starts, E, Dur):
-    """
-    Convierte la solución del Algoritmo Genético (donde cada gen es el índice en valid_starts[idx])
-    en un diccionario x compatible con exportar_horarios.
-    """
-    x_ga = {}
+def reconstruir_x_desde_vector(solution, valid_starts, E, Dur):
+    """Convierte el vector de decisión discreto en un diccionario de variables {(e, r, t): 1.0}."""
+    x_vec = {}
     for idx, e in enumerate(E):
         r, t_start = valid_starts[idx][int(solution[idx])]
         for offset in range(Dur[e]):
-            x_ga[(e, r, t_start + offset)] = DummyVar(1.0)
-    return x_ga
-
+            x_vec[(e, r, t_start + offset)] = 1.0
+    return x_vec

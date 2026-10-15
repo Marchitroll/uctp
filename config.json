@@ -10,5 +10,12 @@
     "Jueves": 15,
     "Viernes": 15,
     "Sabado": 11
+  },
+  "pesos_penalizacion": {
+    "W_A": 1,
+    "W_E": 10,
+    "W_JUE": 1,
+    "W_SAB": 3,
+    "W_V": 2
   }
 }

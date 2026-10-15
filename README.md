@@ -57,12 +57,6 @@ UV gestiona automáticamente la descarga de Python 3.13, la creación del entorn
 uv sync
 ```
 
-*(Opcional / Legacy)* Si se prefiere el flujo clásico de `requirements.txt`:
-```bash
-uv venv --python 3.13
-uv pip install -r requirements.txt
-```
-
 ---
 
 ## 3. Guía de Uso de los Métodos
@@ -77,14 +71,16 @@ uv run python generador_dataset.py --instancia [pequena|mediana|grande]
 
 ### 3.2 Programación Lineal Entera Mixta (MIP)
 ```bash
-# Ejecutar con límite en minutos (por defecto: 120 min)
+# Ejecutar con límite en minutos (por defecto: 120 min) o en horas
 uv run python modelo_MIP.py --minutos 30
+# Opciones adicionales: --dir_datos [ruta], --etiqueta [tag]
 ```
 
 ### 3.3 Algoritmo Genético Híbrido (HGA)
 ```bash
-# Ejecución multi-corrida (20 corridas por defecto)
+# Ejecución multi-corrida (20 corridas por defecto) con límite de tiempo por corrida
 uv run python modelo_HGA.py --corridas 20 --minutos 5
+# Opciones adicionales: --epocas 1000, --tam_poblacion 50, --paciencia 20
 ```
 
 ### 3.4 Algoritmo Genético Clásico (GA)
@@ -108,23 +104,44 @@ Para procesar las salidas JSON de todos los métodos, calcular el $RPD$ robusto 
 uv run python reporte_desviacion.py
 ```
 
+### 3.8 Análisis de Ocupación de Salones
+Para calcular y auditar la tasa de ocupación de aulas físicas y virtuales para los 5 métodos (resumen comparativo y detalle desagregado por salón):
+```bash
+uv run python calcular_uso_salones.py
+```
+
 ---
 
-## 4. Flujo de Ejecución por Escala
+## 4. Flujo Automatizado de Benchmark
 
-Para ejecutar de manera ordenada un benchmark completo sobre cualquiera de los escenarios:
+### 4.1 Benchmark Integral de Instancia Pequeña
+Se proporciona el orquestador `ejecutar_benchmark_pequena.py` para ejecutar de forma secuencial y automatizada los cinco métodos bajo condiciones experimentales idénticas:
+
+```bash
+# Ejecución completa del benchmark (20 corridas por metaheurística, 30 min para MIP)
+uv run python ejecutar_benchmark_pequena.py
+
+# Verificación rápida (smoke test con 1 corrida corta por método)
+uv run python ejecutar_benchmark_pequena.py --smoke_test
+```
+
+### 4.2 Flujo de Ejecución Manual por Escala
+Para ejecutar paso a paso el benchmark sobre cualquier escenario:
 
 ```bash
 # 1. Generar datos de la instancia (ej. pequeña)
 uv run python generador_dataset.py --instancia pequena
 
-# 2. Ejecutar los 5 modelos
-uv run python modelo_MIP.py
-uv run python modelo_HGA.py --corridas 20
-uv run python modelo_GA.py --corridas 20
-uv run python modelo_TS.py --corridas 20
-uv run python modelo_SA.py --corridas 20
+# 2. Ejecutar el modelo exacto y las 4 metaheurísticas
+uv run python modelo_MIP.py --minutos 30
+uv run python modelo_HGA.py --corridas 20 --minutos 5
+uv run python modelo_GA.py --corridas 20 --minutos 5
+uv run python modelo_TS.py --corridas 20 --minutos 5
+uv run python modelo_SA.py --corridas 20 --minutos 5
 
 # 3. Consolidar métricas y generar reporte comparativo
 uv run python reporte_desviacion.py
+
+# 4. Auditar la ocupación de salones
+uv run python calcular_uso_salones.py
 ```

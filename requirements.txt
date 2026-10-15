@@ -1,7 +1,0 @@
-numpy
-pandas
-psutil
-mip
-highsbox
-mealpy
-openpyxl

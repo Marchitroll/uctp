@@ -1,7 +1,6 @@
-import os
+from datetime import datetime
 import json
-import math
-import pandas as pd
+import os
 
 
 def cargar_resumen(dir_metodo, escala):
@@ -17,7 +16,12 @@ def cargar_resumen(dir_metodo, escala):
 
 
 def calcular_desviacion():
-    escalas = ["pequena", "mediana", "grande"]
+    sub_pequena = [
+        s for s in ["pequena_s1", "pequena_s2", "pequena_s3"]
+        if os.path.exists(os.path.join("resultados_HGA", f"resumen_{s}.json"))
+    ]
+    escalas = sub_pequena + ["pequena", "mediana", "grande"]
+
     metodos_meta = [
         ("HGA", "resultados_HGA", "Algoritmo Genético Híbrido (MCF Memético)"),
         ("GA",  "resultados_GA",  "Algoritmo Genético Clásico"),
@@ -30,36 +34,48 @@ def calcular_desviacion():
     print("=" * 105)
 
     reporte_md_lineas = []
-    reporte_md_lineas.append("# Comparación Consolidada de Métodos CB-CTT\n")
+    reporte_md_lineas.append("# Comparación Consolidada de Métodos CB-CTT\n\n")
+    fecha_actual = datetime.now().strftime("%d/%m/%Y %H:%M")
+    reporte_md_lineas.append(f"**Fecha de última actualización:** {fecha_actual}\n\n")
     reporte_md_lineas.append("Este reporte consolida el rendimiento del modelo exacto (**MIP**) y las 4 metaheurísticas implementadas (**HGA**, **GA**, **TS**, **SA**) para la asignación de horarios en la Universidad.\n")
     reporte_md_lineas.append("Se evalúan las métricas formales de la literatura (*Abdipoor et al. 2025; Rohaizad et al. 2026; Bashab et al. 2023*): Distancia a la Factibilidad ($DF$), Tasa de Éxito ($SR$), Penalización Blanda ($Z$), Desviación Relativa Porcentual ($RPD$), Tiempo a la Factibilidad ($TTF$), Tiempo CPU y Evaluaciones de Aptitud ($NFE$) / Nodos B&B.\n\n")
 
     for escala in escalas:
         mip_data = cargar_resumen("resultados_MIP", escala)
-        z_ref = mip_data.get("Z") if mip_data else None
+        z_ref = None
+        if mip_data:
+            z_ref = mip_data.get("mejor_z")
 
         filas_escala = []
 
         # 1. Procesar MIP
         if mip_data:
-            mip_factible = (mip_data.get("HCV") == 0) or (mip_data.get("status") in ["OPTIMAL", "FEASIBLE"]) or (mip_data.get("factible") is True)
-            nodos = mip_data.get('nodes_explored', mip_data.get('nodos_explorados', 0))
-            nodos_str = f"{nodos:,} nodos" if nodos is not None else "N/A"
+            sr = mip_data.get("tasa_factibilidad_final", 0.0)
+            mip_factible = (sr > 0.0)
+            nodos = mip_data.get("nodos_explorados_promedio", 0)
+            nodos_str = f"{int(nodos):,} nodos" if nodos is not None else "N/A"
+            cpu_val = mip_data.get("tiempo_cpu_promedio")
+            ttf_val = mip_data.get("TTF_promedio")
+            z_m = z_ref
+            z_p = mip_data.get("promedio_z", z_ref)
+            z_s = mip_data.get("desviacion_z", 0.0)
+            df_m = mip_data.get("mejor_df", 0 if mip_factible else "N/A")
+            df_p = mip_data.get("promedio_df", 0.0 if mip_factible else "N/A")
+
             filas_escala.append({
                 "metodo": "MIP (HiGHS)",
                 "tipo": "Exacto",
-                "sr": 100.0 if mip_factible else 0.0,
-                "df_mejor": 0 if mip_factible else "N/A",
-                "df_prom": 0.0 if mip_factible else "N/A",
-                "z_mejor": mip_data.get("Z"),
-                "z_prom": mip_data.get("Z"),
-                "z_std": 0.0,
+                "sr": sr,
+                "df_mejor": df_m,
+                "df_prom": df_p,
+                "z_mejor": z_m,
+                "z_prom": z_p,
+                "z_std": z_s,
                 "rpd": 0.0,
                 "rpd_str": "0.00% (Ref)",
-                "ttf": mip_data.get("CPU_time"),
-                "cpu": mip_data.get("CPU_time"),
+                "ttf": ttf_val,
+                "cpu": cpu_val,
                 "nfe_nodos": nodos_str,
-                "entorno": mip_data.get("entorno")
             })
 
         # 2. Procesar Metaheurísticas
@@ -72,8 +88,8 @@ def calcular_desviacion():
                 sr = m_data.get("tasa_factibilidad_final", 0.0)
                 df_m = m_data.get("mejor_df", "N/A")
                 df_p = m_data.get("promedio_df", "N/A")
-                ttf = m_data.get("ttf_promedio")
-                cpu = m_data.get("cpu_promedio")
+                ttf = m_data.get("TTF_promedio")
+                cpu = m_data.get("tiempo_cpu_promedio")
                 nfe = m_data.get("evaluaciones_aptitud_promedio")
                 nfe_str = f"{int(nfe):,} evals" if nfe is not None else "N/A"
 
@@ -85,7 +101,6 @@ def calcular_desviacion():
                             rpd_val = 0.0
                             rpd_str = "0.00% (dZ=0)"
                         else:
-                            # Normalización con offset +1 para evitar indeterminación (Abdipoor et al. 2025)
                             rpd_val = ((z_m - z_ref) / (z_ref + 1.0)) * 100.0
                             rpd_str = f"+{rpd_val:.1f}% (dZ={z_m - z_ref:.0f})"
                     else:
@@ -106,7 +121,6 @@ def calcular_desviacion():
                     "ttf": ttf,
                     "cpu": cpu,
                     "nfe_nodos": nfe_str,
-                    "entorno": m_data.get("entorno")
                 })
 
         if not filas_escala:
@@ -125,12 +139,28 @@ def calcular_desviacion():
 
             print(f"{f['metodo'][:22]:<22} | {f['sr']:>6.1f}% | {df_str:<14} | {z_m_str:>10} | {z_p_str:<17} | {f['rpd_str']:<16} | {cpu_str:>9} | {ttf_str:>8} | {f['nfe_nodos']:<12}")
 
-        # Generar sección Markdown para esta escala
-        reporte_md_lineas.append(f"## Instancia {escala.capitalize()}\n\n")
-        if escala == "pequena":
-            reporte_md_lineas.append("> [!NOTE]\n> Evaluación formal completa de los 5 métodos (`MIP`, `HGA`, `GA`, `TS`, `SA`) incorporando las cuatro restricciones blandas institucionales y la reducción de dominio `valid_starts`.\n\n")
+        # Título y nota según escala
+        if escala == "pequena_s1":
+            titulo = "Instancia Pequeña - Variante 1 (Semilla 1: 23 eventos)"
+            nota = "> [!NOTE]\n> Evaluación formal completa de los 5 métodos (`MIP`, `HGA`, `GA`, `TS`, `SA`) en la primera variante de escala pequeña (23 eventos, semilla 1).\n\n"
+        elif escala == "pequena_s2":
+            titulo = "Instancia Pequeña - Variante 2 (Semilla 2: 18 eventos)"
+            nota = "> [!NOTE]\n> Evaluación formal completa de los 5 métodos (`MIP`, `HGA`, `GA`, `TS`, `SA`) en la segunda variante de escala pequeña (18 eventos, semilla 2).\n\n"
+        elif escala == "pequena_s3":
+            titulo = "Instancia Pequeña - Variante 3 (Semilla 3: 26 eventos)"
+            nota = "> [!NOTE]\n> Evaluación formal completa de los 5 métodos (`MIP`, `HGA`, `GA`, `TS`, `SA`) en la tercera variante de escala pequeña (26 eventos, semilla 3).\n\n"
+        elif escala == "pequena":
+            titulo = "Instancia Pequeña - Resumen Consolidado Agregado (Promedio 3 Variantes)"
+            nota = "> [!NOTE]\n> Rendimiento promedio global acumulado sobre las 3 instancias semi-sintéticas de escala pequeña (90 réplicas por metaheurística y 3 corridas de MIP).\n\n"
+        elif escala == "mediana":
+            titulo = "Instancia Mediana"
+            nota = "> [!NOTE]\n> Registro experimental preliminar correspondiente a la fase de calibración baseline (Fase 2 de escalabilidad).\n\n"
         else:
-            reporte_md_lineas.append("> [!NOTE]\n> Registro experimental preliminar correspondiente a la fase de calibración baseline.\n\n")
+            titulo = "Instancia Grande"
+            nota = "> [!NOTE]\n> Registro experimental preliminar correspondiente a la fase de calibración baseline (Fase 2 de escalabilidad).\n\n"
+
+        reporte_md_lineas.append(f"## {titulo}\n\n")
+        reporte_md_lineas.append(nota)
         reporte_md_lineas.append("| Método | Tasa Éxito (SR %) | DF (Mejor / Prom) | $Z$ Mejor | $Z$ Promedio ± Std | RPD (%) | CPU (s) | TTF (s) | Esfuerzo (NFE / Nodos) |\n")
         reporte_md_lineas.append("| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |\n")
 
@@ -151,9 +181,8 @@ def calcular_desviacion():
     reporte_md_lineas.append("## Especificaciones del Entorno Experimental\n\n")
     reporte_md_lineas.append("Para garantizar reproducibilidad científica conforme a *Rohaizad et al. (2026)* y *Bashab et al. (2023)*, se auditan las características de la plataforma de cómputo:\n\n")
 
-    # Tomar entorno de cualquier resumen disponible
     entorno_ref = None
-    for escala in escalas:
+    for escala in ["pequena_s1", "pequena", "mediana", "grande"]:
         for d in ["resultados_MIP", "resultados_HGA", "resultados_GA", "resultados_TS", "resultados_SA"]:
             dat = cargar_resumen(d, escala)
             if dat and "entorno" in dat and dat["entorno"]:

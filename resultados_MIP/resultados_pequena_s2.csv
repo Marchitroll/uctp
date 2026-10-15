@@ -1,0 +1,2 @@
+metodo,escala,Z,HCV,CPU_time,nodes_explored,lower_bound,gap_pct,status
+MIP,pequena_s2,2.999999999998072,0,501.875,0,2.999999999998072,0.0,OPTIMAL

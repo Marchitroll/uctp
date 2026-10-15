@@ -5,11 +5,13 @@ Las asignaturas obligatorias provienen del plan de estudios real (Nivel 03 al Ni
 Las asignaturas electivas se asignan a los niveles en los cuales resultan elegibles de acuerdo con la estructura de prerrequisitos establecida.
 """
 
+import argparse
 import csv
 import json
-import random
 import os
-import argparse
+import random
+
+from uctp_utils import cargar_config_institucional
 
 # ============================================================================
 # MALLA CURRICULAR OBLIGATORIA (Niveles del 03 al 10)
@@ -148,19 +150,10 @@ SEED = 50                          # Semilla para garantizar la reproducibilidad
 OUTPUT_DIR = 'dataset'             # Directorio de destino para el almacenamiento de los archivos CSV generados.
 
 # ============================================================================
-# CARGA DE CONFIGURACIÓN INSTITUCIONAL
-# ============================================================================
-
-def cargar_configuracion(filepath):
-    """Carga los parámetros institucionales desde un archivo JSON."""
-    with open(filepath, 'r', encoding='utf-8') as f:
-        return json.load(f)
-
-# ============================================================================
 # GENERACIÓN DE DATOS
 # ============================================================================
 
-def generate_cursos(malla, electivos):
+def generar_cursos(malla, electivos):
     """Extrae la totalidad de asignaturas únicas combinando los cursos obligatorios y electivos."""
     cursos = []
     vistos = set()
@@ -189,7 +182,7 @@ def generate_cursos(malla, electivos):
     return cursos
 
 
-def generate_secciones(cursos, secciones_rango, alumnos_rango):
+def generar_secciones(cursos, secciones_rango, alumnos_rango):
     """Genera las secciones académicas correspondientes a cada una de las asignaturas."""
     secciones = []
     letras = LETRAS_SECCIONES
@@ -292,7 +285,7 @@ COMPATIBILIDAD = {
 }
 
 
-def generate_profesores(num_profesores):
+def generar_profesores(num_profesores):
     """Genera el conjunto inicial de profesores registrados en el sistema con su especialidad académica."""
     especialidades = [
         'INGENIERIA_SOFTWARE',
@@ -318,7 +311,7 @@ def generate_profesores(num_profesores):
     return profesores
 
 
-def generate_eventos(secciones, profesores, eventos_rango, duraciones):
+def generar_eventos(secciones, profesores, eventos_rango, duraciones):
     """
     Genera los eventos de clase para cada sección académica.
     Se garantiza que se asigne el mismo docente a la totalidad de los eventos
@@ -399,7 +392,7 @@ def generate_eventos(secciones, profesores, eventos_rango, duraciones):
     return eventos, horas_prof
 
 
-def generate_curriculos(malla, electivos, secciones, eventos):
+def generar_curriculos(malla, electivos, secciones, eventos):
     """
     Genera la estructura de currículos (uno por nivel académico) y la relación puente entre currículos y eventos.
     Para cada nivel se incorporan los cursos obligatorios correspondientes y las asignaturas electivas elegibles.
@@ -457,7 +450,7 @@ def generate_curriculos(malla, electivos, secciones, eventos):
     return curriculos, bridge
 
 
-def generate_disponibilidad(profesores, config, horas_prof=None):
+def generar_disponibilidad(profesores, config, horas_prof=None):
     """
     Construye los bloques de disponibilidad horaria para el personal docente.
     Si el docente tiene alta carga lectiva, se incrementa su disponibilidad y
@@ -527,7 +520,7 @@ def generate_disponibilidad(profesores, config, horas_prof=None):
     return disponibilidad
 
 
-def generate_rooms(num_fisicos, num_con_pc, num_dl, cap_fisico, cap_virtual, caracteristicas_posibles):
+def generar_salones(num_fisicos, num_con_pc, num_dl, cap_fisico, cap_virtual, caracteristicas_posibles):
     """Genera el catálogo de salones, incluyendo la infraestructura física y virtual con sus respectivas características."""
     rooms = []
 
@@ -579,7 +572,7 @@ def generate_rooms(num_fisicos, num_con_pc, num_dl, cap_fisico, cap_virtual, car
 # ESCRITURA DE ARCHIVOS CSV
 # ============================================================================
 
-def write_csv(filepath, data, fieldnames):
+def escribir_csv(filepath, data, fieldnames):
     """Exporta una colección de registros estructurados en formato de diccionario hacia un archivo CSV."""
     with open(filepath, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -593,21 +586,33 @@ def write_csv(filepath, data, fieldnames):
 # ============================================================================
 
 if __name__ == '__main__':
-    random.seed(SEED)
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    
-    # 1. SELECCIÓN DE NIVELES CURRICULARES (Establece el tamaño del problema)
-    
     parser = argparse.ArgumentParser(description="Generador de datasets UCTP")
     parser.add_argument(
-        "--instancia", "-i",
+        "--instancia",
         type=str,
         choices=["pequena", "pequeña", "mediana", "grande"],
         default="pequena",
         help="Escala del escenario a generar (pequena, mediana, grande)"
     )
+    parser.add_argument(
+        "--semilla",
+        type=int,
+        default=SEED,
+        help="Semilla pseudoaleatoria para la generación de datos (default: 50)"
+    )
+    parser.add_argument(
+        "--dir_salida",
+        type=str,
+        default=OUTPUT_DIR,
+        help="Directorio de destino para los archivos CSV generados (default: 'dataset')"
+    )
     args = parser.parse_args()
 
+    random.seed(args.semilla)
+    output_dir = args.dir_salida
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 1. SELECCIÓN DE NIVELES CURRICULARES (Establece el tamaño del problema)
     instancia = args.instancia.lower()
     if instancia in ["pequena", "pequeña"]:
         niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:1]
@@ -629,34 +634,20 @@ if __name__ == '__main__':
     num_salones_instancia = SALONES_PEQ_INSTANCIA if len(niveles_objetivo) < 5 else NUM_SALONES_FISICOS
 
     config_path = os.path.join(os.path.dirname(__file__), 'config.json')
-    if not os.path.exists(config_path):
-        config = {
-            "dias": ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado"],
-            "dia_cierre": "Sabado",
-            "posicion_almuerzo": 6,
-            "dias_sin_almuerzo": ["Sabado"],
-            "franjas_por_dia": {
-                "Lunes": 14, "Martes": 14, "Miercoles": 14, "Jueves": 14, "Viernes": 14, "Sabado": 12
-            }
-        }
-        with open(config_path, 'w', encoding='utf-8') as f:
-            json.dump(config, f, indent=2)
-        print("[INFO] Recreado archivo 'config.json' por defecto en el directorio raiz.")
-    else:
-        config = cargar_configuracion(config_path)
+    config = cargar_config_institucional(config_path)
     print(f"[INFO] Generando instancia para niveles: {niveles_objetivo}")
 
     # Generación de registros a partir de los subconjuntos estructurados
-    cursos = generate_cursos(malla_reducida, electivos_reducidos)
-    secciones = generate_secciones(cursos, SECCIONES_POR_CURSO, ALUMNOS_POR_SECCION)
-    profesores = generate_profesores(num_profs_instancia)
-    eventos, horas_prof = generate_eventos(secciones, profesores, EVENTOS_POR_SECCION, DURACION_EVENTOS)
+    cursos = generar_cursos(malla_reducida, electivos_reducidos)
+    secciones = generar_secciones(cursos, SECCIONES_POR_CURSO, ALUMNOS_POR_SECCION)
+    profesores = generar_profesores(num_profs_instancia)
+    eventos, horas_prof = generar_eventos(secciones, profesores, EVENTOS_POR_SECCION, DURACION_EVENTOS)
     
     # Genera la estructura curricular y la relación puente curriculo-evento
-    curriculos, bridge = generate_curriculos(malla_reducida, electivos_reducidos, secciones, eventos)
+    curriculos, bridge = generar_curriculos(malla_reducida, electivos_reducidos, secciones, eventos)
     
-    disponibilidad = generate_disponibilidad(profesores, config, horas_prof)
-    rooms = generate_rooms(
+    disponibilidad = generar_disponibilidad(profesores, config, horas_prof)
+    rooms = generar_salones(
         num_salones_instancia, 
         int(num_salones_instancia * RATIO_SALONES_CON_PC), # Mantiene la proporción de computadoras personales.
         NUM_SALONES_DEEP_LEARNING, 
@@ -667,41 +658,40 @@ if __name__ == '__main__':
 
     # Escritura de archivos CSV resultantes
     print("\n[INFO] Escribiendo archivos CSV...")
-    write_csv(
-        os.path.join(OUTPUT_DIR, 'cursos.csv'), cursos,
+    escribir_csv(
+        os.path.join(output_dir, 'cursos.csv'), cursos,
         ['id_curso', 'nombre', 'requisitos']
     )
-    write_csv(
-        os.path.join(OUTPUT_DIR, 'secciones.csv'), secciones,
+    escribir_csv(
+        os.path.join(output_dir, 'secciones.csv'), secciones,
         ['id_seccion', 'id_curso', 'num_alumnos']
     )
-    write_csv(
-        os.path.join(OUTPUT_DIR, 'eventos.csv'), eventos,
+    escribir_csv(
+        os.path.join(output_dir, 'eventos.csv'), eventos,
         ['id_evento', 'id_seccion', 'id_profesor', 'duracion']
     )
-    write_csv(
-        os.path.join(OUTPUT_DIR, 'profesores.csv'), profesores,
+    escribir_csv(
+        os.path.join(output_dir, 'profesores.csv'), profesores,
         ['id_profesor', 'nombre', 'especialidad']
     )
-    write_csv(
-        os.path.join(OUTPUT_DIR, 'profesores_disponibilidad.csv'), disponibilidad,
+    escribir_csv(
+        os.path.join(output_dir, 'profesores_disponibilidad.csv'), disponibilidad,
         ['id_profesor', 'dia', 'franja_inicio', 'franja_fin']
     )
-    write_csv(
-        os.path.join(OUTPUT_DIR, 'salones.csv'), rooms,
+    escribir_csv(
+        os.path.join(output_dir, 'salones.csv'), rooms,
         ['id_salon', 'capacidad', 'es_virtual', 'caracteristicas']
     )
-    write_csv(
-        os.path.join(OUTPUT_DIR, 'curriculos.csv'), curriculos,
+    escribir_csv(
+        os.path.join(output_dir, 'curriculos.csv'), curriculos,
         ['id_curriculo', 'nombre']
     )
-    write_csv(
-        os.path.join(OUTPUT_DIR, 'curriculo_evento.csv'), bridge,
+    escribir_csv(
+        os.path.join(output_dir, 'curriculo_evento.csv'), bridge,
         ['id_curriculo', 'id_evento']
     )
 
     # Resumen cuantitativo del conjunto de datos
-    obligatorios = sum(len(v) for v in MALLA_OBLIGATORIA.values())
     print(f"\n[RESUMEN]")
     print(f"  Cursos:       {len(cursos)}")
     print(f"  Secciones:    {len(secciones)}")

@@ -1,2 +1,2 @@
-metodo,escala,Z,HCV,CPU_time,nodes_explored,lower_bound,gap_pct,status
-MIP,pequena,139259.0,0,155.75,0,25.99999999999988,99.98132975247555,FEASIBLE
+metodo,escala,Z,HCV,tiempo_cpu,factible,nodos_explorados,limite_inferior,brecha_pct,estado,instancia_tag,semilla_instancia
+MIP,pequena_s1,68338.0,0,42.8906,True,0,0.0,99.99999999999986,FEASIBLE,pequena_s1,1

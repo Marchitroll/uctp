@@ -1,0 +1,26 @@
+{
+  "metodo": "SA",
+  "escala": "pequena",
+  "total_corridas": 1,
+  "corridas_factibles": 0,
+  "tasa_factibilidad_final": 0.0,
+  "mejor_df": 4,
+  "promedio_df": 4.0,
+  "entorno": {
+    "sistema_operativo": "Windows 11",
+    "procesador": "Intel64 Family 6 Model 151 Stepping 2, GenuineIntel",
+    "ram_gb": 15.83,
+    "version_python": "3.13.15",
+    "version_mip": "2.0.0",
+    "version_mealpy": "3.0.2",
+    "libreria_optimizacion": "mealpy (SA)"
+  },
+  "mejor_z": null,
+  "promedio_z": null,
+  "mediana_z": null,
+  "peor_z": null,
+  "desviacion_z": null,
+  "TTF_promedio": null,
+  "tiempo_cpu_promedio": 0.06,
+  "evaluaciones_aptitud_promedio": 52
+}

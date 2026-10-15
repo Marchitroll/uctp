@@ -8,26 +8,24 @@ import csv
 import json
 import os
 
+from tipos_uctp import DatosUCTP
+from uctp_utils import cargar_config_institucional
+
 
 def cargar_configuracion(filepath):
     """
     Carga los parámetros institucionales desde un archivo JSON y deriva los conjuntos D, T, T_d, d_jue y Almuerzo.
     Soporta franjas heterogéneas, donde cada día puede tener un número diferente de franjas.
     """
-    with open(filepath, 'r', encoding='utf-8') as f:
-        cfg = json.load(f)
+    cfg = cargar_config_institucional(filepath)
 
     D = cfg['dias']
     d_jue = cfg['dia_cierre']
     pos_almuerzo = cfg['posicion_almuerzo']
     dias_sin_almuerzo = set(cfg.get('dias_sin_almuerzo', []))
 
-    # El parámetro franjas_por_dia puede ser un diccionario {dia: n} o un entero uniforme
-    fpd_raw = cfg['franjas_por_dia']
-    if isinstance(fpd_raw, dict):
-        fpd = fpd_raw          # Asocia a cada día su respectivo número de franjas
-    else:
-        fpd = {dia: fpd_raw for dia in D}   # Mantiene la compatibilidad con versiones anteriores
+    # Asocia a cada día su respectivo número de franjas
+    fpd = cfg['franjas_por_dia']
 
     # Construye el conjunto T_d acumulando las franjas de cada día secuencialmente
     T_d = {}
@@ -203,15 +201,12 @@ def cargar_datos_uctp(data_dir='dataset'):
     Tiene = {(r, f): 1 if f in CARACTERISTICAS[r] else 0 for r in R for f in F}
     Req = {(s, f): 1 if f in REQ_CURSO[SECCION_CURSO[s]] else 0 for s in S for f in F}
 
-    # Agrupa los eventos por sección para su posterior uso en restricciones de espaciado
-    Cursos_Agrupados = list(E_s.values())
-
-    return (
-        D, T, T_d, d_jue, Almuerzo,
-        R, CAP, ES_VIRTUAL, CARACTERISTICAS,
-        CURSOS, REQ_CURSO,
-        S, SECCION_CURSO, Alumno,
-        E, E_s, E_p, Dur, EVENTO_SECCION,
-        P, K, E_k, Disp,
-        F, Tiene, Req, Cursos_Agrupados
+    return DatosUCTP(
+        D=D, T=T, T_d=T_d, d_jue=d_jue, Almuerzo=Almuerzo,
+        R=R, CAP=CAP, ES_VIRTUAL=ES_VIRTUAL, CARACTERISTICAS=CARACTERISTICAS,
+        CURSOS=CURSOS, REQ_CURSO=REQ_CURSO,
+        S=S, SECCION_CURSO=SECCION_CURSO, Alumno=Alumno,
+        E=E, E_s=E_s, E_p=E_p, Dur=Dur, EVENTO_SECCION=EVENTO_SECCION,
+        P=P, K=K, E_k=E_k, Disp=Disp,
+        F=F, Tiene=Tiene, Req=Req
     )
