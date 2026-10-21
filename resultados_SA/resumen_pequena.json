@@ -1,16 +1,16 @@
 {
   "metodo": "SA",
   "escala": "pequena",
-  "total_instancias": 1,
-  "total_corridas": 1,
-  "tasa_factibilidad_final": 0.0,
-  "mejor_df": 4,
-  "promedio_df": 4.0,
-  "mejor_z": null,
-  "peor_z": null,
-  "promedio_z": null,
-  "desviacion_z": 0.0,
-  "tiempo_cpu_promedio": 0.06,
-  "TTF_promedio": null,
-  "evaluaciones_aptitud_promedio": 52
+  "total_instancias": 3,
+  "total_corridas": 90,
+  "tasa_factibilidad_final": 100.0,
+  "mejor_df": 0,
+  "promedio_df": 0.0,
+  "mejor_z": 1.0,
+  "peor_z": 75.0,
+  "promedio_z": 24.477777777777778,
+  "desviacion_z": 16.721262638321466,
+  "tiempo_cpu_promedio": 2.0,
+  "TTF_promedio": 0.31,
+  "evaluaciones_aptitud_promedio": 1263
 }

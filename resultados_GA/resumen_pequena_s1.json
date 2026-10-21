@@ -1,11 +1,11 @@
 {
   "metodo": "GA",
   "escala": "pequena",
-  "total_corridas": 1,
-  "corridas_factibles": 0,
-  "tasa_factibilidad_final": 0.0,
-  "mejor_df": 3,
-  "promedio_df": 3.0,
+  "total_corridas": 30,
+  "corridas_factibles": 30,
+  "tasa_factibilidad_final": 100.0,
+  "mejor_df": 0,
+  "promedio_df": 0.0,
   "entorno": {
     "sistema_operativo": "Windows 11",
     "procesador": "Intel64 Family 6 Model 151 Stepping 2, GenuineIntel",
@@ -15,12 +15,12 @@
     "version_mealpy": "3.0.2",
     "libreria_optimizacion": "mealpy (GA)"
   },
-  "mejor_z": null,
-  "promedio_z": null,
-  "mediana_z": null,
-  "peor_z": null,
-  "desviacion_z": null,
-  "TTF_promedio": null,
-  "tiempo_cpu_promedio": 0.16,
-  "evaluaciones_aptitud_promedio": 300
+  "mejor_z": 3.0,
+  "promedio_z": 16.2,
+  "mediana_z": 16.0,
+  "peor_z": 33.0,
+  "desviacion_z": 7.96,
+  "TTF_promedio": 0.2057,
+  "tiempo_cpu_promedio": 1.55,
+  "evaluaciones_aptitud_promedio": 3876
 }

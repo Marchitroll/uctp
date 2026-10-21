@@ -1,2 +1,4 @@
-metodo,escala,Z,HCV,tiempo_cpu,factible,nodos_explorados,limite_inferior,brecha_pct,estado,instancia_tag,semilla_instancia
-MIP,pequena_s1,68338.0,0,42.8906,True,0,0.0,99.99999999999986,FEASIBLE,pequena_s1,1
+metodo,escala,Z,HCV,tiempo_cpu,factible,nodos_explorados,limite_inferior,brecha_pct,estado,penalizacion_almuerzo,penalizacion_espaciado,penalizacion_jueves,penalizacion_sabado,penalizacion_ventanas,instancia_tag,semilla_instancia
+MIP,pequena_s1,0.0,0,202.7344,True,0,0.0,0.0,OPTIMAL,0,0,0,0,0,pequena_s1,1
+MIP,pequena_s2,0.0,0,73.5312,True,0,0.0,0.0,OPTIMAL,0,0,0,0,0,pequena_s2,2
+MIP,pequena_s3,0.0,0,204.0781,True,0,0.0,0.0,OPTIMAL,0,0,0,0,0,pequena_s3,3

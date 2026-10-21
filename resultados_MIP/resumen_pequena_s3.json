@@ -1,13 +1,20 @@
 {
   "metodo": "MIP",
   "escala": "pequena_s3",
-  "Z": 14.0,
-  "HCV": 0,
-  "CPU_time": 5780.203125,
-  "nodes_explored": 0,
-  "lower_bound": 14.0,
-  "gap_pct": 0.0,
-  "status": "OPTIMAL",
+  "mejor_z": 0.0,
+  "peor_z": 0.0,
+  "promedio_z": 0.0,
+  "desviacion_z": 0.0,
+  "mejor_df": 0,
+  "promedio_df": 0.0,
+  "tasa_factibilidad_final": 100.0,
+  "tiempo_cpu_promedio": 204.0781,
+  "TTF_promedio": 204.0781,
+  "evaluaciones_aptitud_promedio": 0,
+  "nodos_explorados_promedio": 0,
+  "limite_inferior": 0.0,
+  "brecha_pct": 0.0,
+  "estado": "OPTIMAL",
   "entorno": {
     "sistema_operativo": "Windows 11",
     "procesador": "Intel64 Family 6 Model 151 Stepping 2, GenuineIntel",
@@ -15,7 +22,11 @@
     "version_python": "3.13.15",
     "version_mip": "2.0.0",
     "version_mealpy": "3.0.2",
-    "libreria_optimizacion": "python-mip (HiGHS)",
-    "version_optimizacion": "2.0.0"
-  }
+    "libreria_optimizacion": "python-mip (HiGHS)"
+  },
+  "penalizacion_almuerzo": 0,
+  "penalizacion_espaciado": 0,
+  "penalizacion_jueves": 0,
+  "penalizacion_sabado": 0,
+  "penalizacion_ventanas": 0
 }

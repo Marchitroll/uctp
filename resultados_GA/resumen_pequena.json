@@ -1,16 +1,16 @@
 {
   "metodo": "GA",
   "escala": "pequena",
-  "total_instancias": 1,
-  "total_corridas": 1,
-  "tasa_factibilidad_final": 0.0,
-  "mejor_df": 3,
-  "promedio_df": 3.0,
-  "mejor_z": null,
-  "peor_z": null,
-  "promedio_z": null,
-  "desviacion_z": 0.0,
-  "tiempo_cpu_promedio": 0.16,
-  "TTF_promedio": null,
-  "evaluaciones_aptitud_promedio": 300
+  "total_instancias": 3,
+  "total_corridas": 90,
+  "tasa_factibilidad_final": 100.0,
+  "mejor_df": 0,
+  "promedio_df": 0.0,
+  "mejor_z": 2.0,
+  "peor_z": 110.0,
+  "promedio_z": 22.68888888888889,
+  "desviacion_z": 15.84946349671127,
+  "tiempo_cpu_promedio": 1.79,
+  "TTF_promedio": 0.25,
+  "evaluaciones_aptitud_promedio": 4137
 }

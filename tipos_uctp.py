@@ -4,41 +4,37 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class DatosUCTP:
-    """Contenedor inmutable con todos los datos de una instancia UCTP.
+    """Contenedor inmutable con los datos estructurados de una instancia UCTP."""
 
-    Reemplaza la tupla posicional que retornaba ``cargar_datos_uctp()``,
-    proporcionando acceso por nombre, autocompletado en IDE y tipado estático.
-    """
-    # --- Conjuntos principales (notación matemática estándar OR) ---
-    D: list[str]                          # Días de la semana
-    T: list[int]                          # Franjas horarias globales
-    T_d: dict[str, list[int]]             # Franjas por día
-    d_jue: str                            # Día de cierre institucional
-    Almuerzo: dict[str, int]              # Franja de almuerzo por día
+    dias: list[str]
+    franjas_horarias: list[int]
+    franjas_por_dia: dict[str, list[int]]
+    dia_cierre_remoto: str
+    almuerzo_por_dia: dict[str, int]
 
-    R: list[str]                          # Salones
-    CAP: dict[str, int]                   # Capacidad por salón
-    ES_VIRTUAL: dict[str, bool]           # Virtualidad por salón
-    CARACTERISTICAS: dict[str, list[str]] # Features por salón
+    salones: list[str]
+    capacidad_por_salon: dict[str, int]
+    es_virtual_por_salon: dict[str, bool]
+    caracteristicas_por_salon: dict[str, list[str]]
 
-    CURSOS: list[str]                     # Lista de cursos
-    REQ_CURSO: dict[str, list[str]]       # Requisitos por curso
+    cursos: list[str]
+    requisitos_por_curso: dict[str, list[str]]
 
-    S: list[str]                          # Secciones
-    SECCION_CURSO: dict[str, str]         # Sección → Curso
-    Alumno: dict[str, int]               # Alumnos inscritos por sección
+    secciones: list[str]
+    curso_por_seccion: dict[str, str]
+    alumnos_por_seccion: dict[str, int]
 
-    E: list[int]                          # Eventos
-    E_s: dict[str, list[int]]             # Eventos por sección
-    E_p: dict[str, list[int]]             # Eventos por profesor
-    Dur: dict[int, int]                   # Duración por evento (horas)
-    EVENTO_SECCION: dict[int, str]        # Evento → Sección
+    eventos: list[int]
+    eventos_por_seccion: dict[str, list[int]]
+    eventos_por_profesor: dict[str, list[int]]
+    duracion_por_evento: dict[int, int]
+    seccion_por_evento: dict[int, str]
 
-    P: list[str]                          # Profesores
-    K: list[str]                          # Currículos
-    E_k: dict[str, list[int]]             # Eventos por currículo
-    Disp: dict[str, list[int]]           # Disponibilidad horaria por profesor
+    profesores: list[str]
+    curriculos: list[str]
+    eventos_por_curriculo: dict[str, list[int]]
+    disponibilidad_por_profesor: dict[str, list[int]]
 
-    F: list[str]                          # Características de salones
-    Tiene: dict[tuple[str, str], int]     # (salon, feature) -> 0/1
-    Req: dict[tuple[str, str], int]       # (seccion, feature) -> 0/1
+    caracteristicas: list[str]
+    salon_tiene_caracteristica: dict[tuple[str, str], int]
+    seccion_requiere_caracteristica: dict[tuple[str, str], int]

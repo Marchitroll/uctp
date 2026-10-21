@@ -1,10 +1,8 @@
 # Matriz de Franjas Horarias (UCTP)
 
-**Fecha de última actualización:** 5 de octubre de 2026
+**Fecha de actualización:** 19 de octubre de 2026
 
-Esta guía detalla cómo se organizan y codifican las 86 franjas horarias semanales del problema UCTP. 
-
-En el modelo de optimización, el tiempo se representa mediante números enteros continuos del 1 al 86 (IDs globales). Esta matriz detalla cómo se mapea cada ID global a un día, hora local, periodo de almuerzo y restricción de infraestructura.
+Discretización de la semana académica en 86 franjas horarias de 1 hora (IDs globales 1 al 86).
 
 ---
 
@@ -30,20 +28,8 @@ En el modelo de optimización, el tiempo se representa mediante números enteros
 
 ---
 
-## Leyenda y Reglas Especiales de la Configuración
+## Reglas Operativas
 
-### 1. Franjas Totales por Día
-* **Lunes a Viernes:** Cuentan con 15 franjas diarias (de 07:00 a 22:00).
-* **Sábado:** Cuenta con 11 franjas diarias (de 07:00 a 18:00). Las celdas marcadas como *No Disponible* no forman parte del conjunto de variables del modelo.
-
-### 2. Periodos de Almuerzo (Penalizados con peso WA = 1)
-El almuerzo está fijado en la F6 (12:00 - 13:00) de cada día, pero con excepciones:
-* **Con Almuerzo (Penalizados):** Lunes (6), Martes (21), Miércoles (36) y Viernes (66). Si se programa una clase presencial en estas franjas, se acumula penalización en la función objetivo (Z).
-* **Sin Almuerzo (Libres de Penalización):** Jueves (51) y Sábado (81).
-  * El Sábado no se penaliza porque la jornada presencial es reducida.
-  * El Jueves no se penaliza porque es el día de cierre 100% virtual (alumnos y docentes están en sus hogares y no requieren franja de almuerzo institucional en el campus).
-
-### 3. Operatividad Física vs. Virtual (Regla dia_cierre = Jueves)
-El modelo segmenta las aulas de la siguiente manera:
-* **Salones Físicos:** Solo operan en los días físicos (Lunes, Martes, Miércoles, Viernes y Sábado). Tienen prohibido programar clases en Jueves.
-* **Salones Virtuales (Teams/Zoom):** Solo operan el Jueves (franjas 46 a 60). Tienen prohibido programar clases los demás días.
+1. **Jornadas:** Lunes a viernes 15 franjas (07:00–22:00); sábado 11 franjas (07:00–18:00).
+2. **Almuerzo ($W_A = 1$):** Franja 6 (12:00–13:00). Penalizado lunes (6), martes (21), miércoles (36) y viernes (66). Exento jueves (virtual) y sábados.
+3. **Modalidad:** Jueves es 100% virtual (`r_virtual`, franjas 46–60). Los salones físicos operan de lunes a sábado excepto jueves.

@@ -1,5 +1,6 @@
+"""Modelado y funciones de aptitud del problema UCTP para optimizadores Mealpy."""
 import numpy as np
-from mealpy import Problem, IntegerVar
+from mealpy import Problem
 
 from uctp_utils import (
     construir_evento_profesor,
@@ -8,113 +9,133 @@ from uctp_utils import (
 )
 
 
-class UCTPProblemBase(Problem):
-    """
-    Clase base del problema UCTP para metaheurísticas (GA clásico, Tabu Search, Simulated Annealing).
-    Opera sobre el espacio de búsqueda discretizado mediante la reducción de dominio (valid_starts).
-    Su método correct_solution realiza únicamente el redondeo y recorte al dominio factible de índices,
-    sin aplicar reparación heurística memética ni desplazamiento.
-    """
-    def __init__(self, E, R, T, D, T_d, P, S, K, E_k, E_p, E_s, Dur, EVENTO_SECCION, SECCION_CURSO, 
-                 Almuerzo, valid_starts, restricciones_curriculares, bounds, ES_VIRTUAL, 
-                 W_A=1, W_E=10, W_JUE=1, W_SAB=3, W_V=2, **kwargs):
-        self.E = E
-        self.R = R
-        self.T = T
-        self.D = D
-        self.T_d = T_d
-        self.P = P
-        self.S = S
-        self.K = K
-        self.E_k = E_k
-        self.E_p = E_p
-        self.E_s = E_s
-        self.Dur = Dur
-        self.EVENTO_SECCION = EVENTO_SECCION
-        self.SECCION_CURSO = SECCION_CURSO
-        self.Almuerzo = Almuerzo
-        self.valid_starts = valid_starts
+class ProblemaUCTPBase(Problem):
+    """Clase base del problema UCTP para metaheurísticas estándar."""
+
+    def __init__(
+        self,
+        eventos: list[int],
+        salones: list[str],
+        franjas_horarias: list[int],
+        dias: list[str],
+        franjas_por_dia: dict[str, list[int]],
+        profesores: list[str],
+        secciones: list[str],
+        curriculos: list[str],
+        eventos_por_curriculo: dict[str, list[int]],
+        eventos_por_profesor: dict[str, list[int]],
+        eventos_por_seccion: dict[str, list[int]],
+        duracion_por_evento: dict[int, int],
+        seccion_por_evento: dict[int, str],
+        curso_por_seccion: dict[str, str],
+        almuerzo_por_dia: dict[str, int],
+        inicios_validos: dict[int, list[tuple[str, int]]],
+        restricciones_curriculares: list[dict],
+        bounds,
+        es_virtual_por_salon: dict[str, bool],
+        peso_almuerzo: int = 1,
+        peso_espaciado: int = 10,
+        peso_jueves: int = 1,
+        peso_sabado: int = 3,
+        peso_ventanas: int = 2,
+        **kwargs,
+    ):
+        self.eventos = eventos
+        self.salones = salones
+        self.franjas_horarias = franjas_horarias
+        self.dias = dias
+        self.franjas_por_dia = franjas_por_dia
+        self.profesores = profesores
+        self.secciones = secciones
+        self.curriculos = curriculos
+        self.eventos_por_curriculo = eventos_por_curriculo
+        self.eventos_por_profesor = eventos_por_profesor
+        self.eventos_por_seccion = eventos_por_seccion
+        self.duracion_por_evento = duracion_por_evento
+        self.seccion_por_evento = seccion_por_evento
+        self.curso_por_seccion = curso_por_seccion
+        self.almuerzo_por_dia = almuerzo_por_dia
+        self.inicios_validos = inicios_validos
         self.restricciones_curriculares = restricciones_curriculares
-        self.ES_VIRTUAL = ES_VIRTUAL
-        
+        self.es_virtual_por_salon = es_virtual_por_salon
+
         cfg_pesos = cargar_config_institucional().get("pesos_penalizacion", {})
-        self.W_A = W_A if W_A is not None else cfg_pesos.get("W_A", 1)
-        self.W_E = W_E if W_E is not None else cfg_pesos.get("W_E", 10)
-        self.W_JUE = W_JUE if W_JUE is not None else cfg_pesos.get("W_JUE", 1)
-        self.W_SAB = W_SAB if W_SAB is not None else cfg_pesos.get("W_SAB", 3)
-        self.W_V = W_V if W_V is not None else cfg_pesos.get("W_V", 2)
-        
-        self.num_events = len(E)
-        self.num_rooms = len(R)
-        self.num_slots = len(T)
-        self.num_teachers = len(P)
-        self.num_sections = len(S)
-        self.num_days = len(D)
-        
-        # Mapeos rápidos a índices de matriz
-        self.r_to_idx = {r: i for i, r in enumerate(R)}
-        self.t_to_idx = {t: i for i, t in enumerate(T)}
-        self.p_to_idx = {p: i for i, p in enumerate(P)}
-        self.s_to_idx = {s: i for i, s in enumerate(S)}
-        
-        self.slot_to_day_idx = {}
-        for d_idx, d in enumerate(D):
-            for t in T_d[d]:
-                self.slot_to_day_idx[t] = d_idx
-                
-        self.day_slots_indices = {}
-        for d_idx, d in enumerate(D):
-            self.day_slots_indices[d_idx] = [self.t_to_idx[t] for t in T_d[d]]
-            
-        evento_a_prof = construir_evento_profesor(E_p)
-        self.event_p_idx = [self.p_to_idx[evento_a_prof[e]] for e in E]
-        self.event_dur = [Dur[e] for e in E]
-            
-        self.section_events = []
-        for s_idx, s in enumerate(S):
-            evs_in_s = E_s[s]
-            self.section_events.append([E.index(e) for e in evs_in_s])
-            
-        self.physical_room_indices = [
-            self.r_to_idx[r] for r in R if not ES_VIRTUAL[r]
+        self.peso_almuerzo = peso_almuerzo if peso_almuerzo is not None else cfg_pesos.get("W_A", 1)
+        self.peso_espaciado = peso_espaciado if peso_espaciado is not None else cfg_pesos.get("W_E", 10)
+        self.peso_jueves = peso_jueves if peso_jueves is not None else cfg_pesos.get("W_JUE", 1)
+        self.peso_sabado = peso_sabado if peso_sabado is not None else cfg_pesos.get("W_SAB", 3)
+        self.peso_ventanas = peso_ventanas if peso_ventanas is not None else cfg_pesos.get("W_V", 2)
+
+        self.cantidad_eventos = len(eventos)
+        self.cantidad_salones = len(salones)
+        self.cantidad_franjas = len(franjas_horarias)
+        self.cantidad_profesores = len(profesores)
+        self.cantidad_secciones = len(secciones)
+        self.cantidad_dias = len(dias)
+
+        self.indice_por_salon = {salon: i for i, salon in enumerate(salones)}
+        self.indice_por_franja = {franja: i for i, franja in enumerate(franjas_horarias)}
+        self.indice_por_profesor = {prof: i for i, prof in enumerate(profesores)}
+        self.indice_por_seccion = {seccion: i for i, seccion in enumerate(secciones)}
+
+        self.dia_por_franja_idx = {}
+        for d_idx, dia in enumerate(dias):
+            for franja in franjas_por_dia[dia]:
+                self.dia_por_franja_idx[franja] = d_idx
+
+        self.franjas_por_dia_indices = {}
+        for d_idx, dia in enumerate(dias):
+            self.franjas_por_dia_indices[d_idx] = [self.indice_por_franja[franja] for franja in franjas_por_dia[dia]]
+
+        evento_a_profesor = construir_evento_profesor(eventos_por_profesor)
+        self.indice_profesor_por_evento = [self.indice_por_profesor[evento_a_profesor[e]] for e in eventos]
+        self.duracion_eventos_lista = [duracion_por_evento[e] for e in eventos]
+
+        self.eventos_de_seccion = []
+        for seccion in secciones:
+            eventos_sec = eventos_por_seccion[seccion]
+            self.eventos_de_seccion.append([eventos.index(e) for e in eventos_sec])
+
+        self.indices_salones_fisicos = [
+            self.indice_por_salon[salon] for salon in salones if not es_virtual_por_salon[salon]
         ]
-        self.physical_room_indices_set = set(self.physical_room_indices)
-        
-        self.lunch_slots_mask = np.zeros(self.num_slots, dtype=np.int32)
-        self.jueves_slots_mask = np.zeros(self.num_slots, dtype=np.int32)
-        self.sabado_slots_mask = np.zeros(self.num_slots, dtype=np.int32)
-        
-        d_jue_set = set(T_d.get("Jueves", []))
-        d_sab_set = set(T_d.get("Sabado", []))
-        
-        for t_idx, t in enumerate(T):
-            self.lunch_slots_mask[t_idx] = Almuerzo[t]
-            if t in d_jue_set:
-                self.jueves_slots_mask[t_idx] = 1
-            if t in d_sab_set:
-                self.sabado_slots_mask[t_idx] = 1
-            
-        self.max_choices = np.array([len(valid_starts[idx]) - 1 for idx in range(self.num_events)], dtype=np.int32)
-        
-        self.valid_starts_r_idx = [
-            [self.r_to_idx[r] for r, t in valid_starts[idx]] 
-            for idx in range(self.num_events)
+        self.conjunto_indices_salones_fisicos = set(self.indices_salones_fisicos)
+
+        self.mascara_almuerzo = np.zeros(self.cantidad_franjas, dtype=np.int32)
+        self.mascara_jueves = np.zeros(self.cantidad_franjas, dtype=np.int32)
+        self.mascara_sabado = np.zeros(self.cantidad_franjas, dtype=np.int32)
+
+        jueves_franjas = set(franjas_por_dia.get("Jueves", []))
+        sabado_franjas = set(franjas_por_dia.get("Sabado", []))
+
+        for franja_idx, franja in enumerate(franjas_horarias):
+            self.mascara_almuerzo[franja_idx] = almuerzo_por_dia[franja]
+            if franja in jueves_franjas:
+                self.mascara_jueves[franja_idx] = 1
+            if franja in sabado_franjas:
+                self.mascara_sabado[franja_idx] = 1
+
+        self.max_opciones_evento = np.array(
+            [len(inicios_validos[idx]) - 1 for idx in range(self.cantidad_eventos)], dtype=np.int32
+        )
+
+        self.salones_validos_idx = [
+            [self.indice_por_salon[salon] for salon, franja in inicios_validos[idx]]
+            for idx in range(self.cantidad_eventos)
         ]
-        self.valid_starts_t = [
-            [t for r, t in valid_starts[idx]] 
-            for idx in range(self.num_events)
+        self.franjas_validas_inicio = [
+            [franja for salon, franja in inicios_validos[idx]] for idx in range(self.cantidad_eventos)
         ]
 
-        # Mapear cada evento a las restricciones curriculares en las que participa
-        self.event_curriculum_constraints = {idx: [] for idx in range(self.num_events)}
-        for constraint in self.restricciones_curriculares:
-            for idx in constraint['evs_c'] + constraint['evs_other']:
-                self.event_curriculum_constraints[idx].append(constraint)
+        self.restricciones_curriculares_por_evento = {idx: [] for idx in range(self.cantidad_eventos)}
+        for restriccion in self.restricciones_curriculares:
+            for idx in restriccion["evs_c"] + restriccion["evs_other"]:
+                self.restricciones_curriculares_por_evento[idx].append(restriccion)
 
-        self.t_min = min(T)
-        self.slot_to_day = [0] * (max(T) + 1)
-        for t, d_idx in self.slot_to_day_idx.items():
-            self.slot_to_day[t] = d_idx
+        self.franja_minima = min(franjas_horarias)
+        self.dia_por_franja_array = [0] * (max(franjas_horarias) + 1)
+        for franja, d_idx in self.dia_por_franja_idx.items():
+            self.dia_por_franja_array[franja] = d_idx
 
         self.evaluaciones_aptitud = 0
         self.generator = np.random.default_rng(kwargs.get("seed", None))
@@ -125,445 +146,495 @@ class UCTPProblemBase(Problem):
         self.generator = np.random.default_rng(seed)
 
     def obj_func(self, solution):
+        """Función objetivo exigida por el contrato Mealpy."""
         self.evaluaciones_aptitud += 1
-        metrics = self.evaluate_solution(solution)
-        return 1000.0 * metrics['violaciones_restricciones_duras'] + 1.0 * metrics['penalizacion_blanda']
+        metricas = self.evaluar_solucion(solution)
+        return 1000.0 * metricas["violaciones_restricciones_duras"] + 1.0 * metricas["penalizacion_blanda"]
 
     def correct_solution(self, solution):
-        """
-        Redondeo y truncamiento discreto simple sin reparación constructiva ni desplazamiento memético.
-        """
-        return np.clip(np.round(solution).astype(np.int32), 0, self.max_choices).astype(np.float64)
+        """Ajuste de límites exigido por el contrato Mealpy."""
+        return np.clip(np.round(solution).astype(np.int32), 0, self.max_opciones_evento).astype(np.float64)
 
-    def evaluate_solution(self, solution):
-        choices = np.clip(np.round(solution).astype(np.int32), 0, self.max_choices)
-        r_indices = np.empty(self.num_events, dtype=np.int32)
-        t_starts = np.empty(self.num_events, dtype=np.int32)
-        for idx in range(self.num_events):
-            c = choices[idx]
-            r_indices[idx] = self.valid_starts_r_idx[idx][c]
-            t_starts[idx] = self.valid_starts_t[idx][c]
-            
-        prof_slot = np.zeros((self.num_teachers, self.num_slots), dtype=np.int32)
-        room_slot = np.zeros((self.num_rooms, self.num_slots), dtype=np.int32)
-        event_slot = np.zeros((self.num_events, self.num_slots), dtype=np.int32)
-        
-        for idx in range(self.num_events):
-            p_idx = self.event_p_idx[idx]
-            r_idx = r_indices[idx]
-            dur = self.event_dur[idx]
-            t_start = t_starts[idx]
-            
+    def evaluar_solucion(self, solution):
+        """Evalúa restricciones duras y blandas de un vector de decisión."""
+        opciones = np.clip(np.round(solution).astype(np.int32), 0, self.max_opciones_evento)
+        indices_salones = np.empty(self.cantidad_eventos, dtype=np.int32)
+        franjas_inicio = np.empty(self.cantidad_eventos, dtype=np.int32)
+        for idx in range(self.cantidad_eventos):
+            opcion = opciones[idx]
+            indices_salones[idx] = self.salones_validos_idx[idx][opcion]
+            franjas_inicio[idx] = self.franjas_validas_inicio[idx][opcion]
+
+        matriz_profesor_franja = np.zeros((self.cantidad_profesores, self.cantidad_franjas), dtype=np.int32)
+        matriz_salon_franja = np.zeros((self.cantidad_salones, self.cantidad_franjas), dtype=np.int32)
+        matriz_evento_franja = np.zeros((self.cantidad_eventos, self.cantidad_franjas), dtype=np.int32)
+
+        for idx in range(self.cantidad_eventos):
+            p_idx = self.indice_profesor_por_evento[idx]
+            r_idx = indices_salones[idx]
+            dur = self.duracion_eventos_lista[idx]
+            f_inicio = franjas_inicio[idx]
+
             for offset in range(dur):
-                t_idx = self.t_to_idx[t_start + offset]
-                prof_slot[p_idx, t_idx] += 1
-                room_slot[r_idx, t_idx] += 1
-                event_slot[idx, t_idx] = 1
-                
-        viol_colision_profesor = int(np.sum(np.maximum(0, prof_slot - 1)))
-        
+                t_idx = self.indice_por_franja[f_inicio + offset]
+                matriz_profesor_franja[p_idx, t_idx] += 1
+                matriz_salon_franja[r_idx, t_idx] += 1
+                matriz_evento_franja[idx, t_idx] = 1
+
+        viol_colision_profesor = int(np.sum(np.maximum(0, matriz_profesor_franja - 1)))
+
         viol_carga_maxima_profesor = 0
-        for d_idx in range(self.num_days):
-            daily_hours = np.sum(prof_slot[:, self.day_slots_indices[d_idx]], axis=1)
-            viol_carga_maxima_profesor += int(np.sum(np.maximum(0, daily_hours - 8)))
-            
+        for d_idx in range(self.cantidad_dias):
+            horas_diarias = np.sum(matriz_profesor_franja[:, self.franjas_por_dia_indices[d_idx]], axis=1)
+            viol_carga_maxima_profesor += int(np.sum(np.maximum(0, horas_diarias - 8)))
+
         viol_estabilidad_salones = 0
-        for s_idx in range(self.num_sections):
-            ev_indices = self.section_events[s_idx]
-            unique_rooms = len(np.unique(r_indices[ev_indices]))
-            if unique_rooms > 2:
-                viol_estabilidad_salones += (unique_rooms - 2)
-                
-        viol_colision_salones_fisicos = int(np.sum(np.maximum(0, room_slot[self.physical_room_indices, :] - 1)))
-        
+        for s_idx in range(self.cantidad_secciones):
+            indices_evs = self.eventos_de_seccion[s_idx]
+            salones_distintos = len(np.unique(indices_salones[indices_evs]))
+            if salones_distintos > 2:
+                viol_estabilidad_salones += salones_distintos - 2
+
+        viol_colision_salones_fisicos = int(
+            np.sum(np.maximum(0, matriz_salon_franja[self.indices_salones_fisicos, :] - 1))
+        )
+
         viol_espaciado = 0
-        for s_idx in range(self.num_sections):
-            ev_indices = self.section_events[s_idx]
-            n_evs = len(ev_indices)
-            if n_evs <= 1:
+        for s_idx in range(self.cantidad_secciones):
+            indices_evs = self.eventos_de_seccion[s_idx]
+            cant_evs = len(indices_evs)
+            if cant_evs <= 1:
                 continue
-            for i in range(n_evs):
-                for j in range(i + 1, n_evs):
-                    d1 = self.slot_to_day_idx[t_starts[ev_indices[i]]]
-                    d2 = self.slot_to_day_idx[t_starts[ev_indices[j]]]
-                    if abs(d1 - d2) <= 1:
+            for i in range(cant_evs):
+                for j in range(i + 1, cant_evs):
+                    dia_1 = self.dia_por_franja_idx[franjas_inicio[indices_evs[i]]]
+                    dia_2 = self.dia_por_franja_idx[franjas_inicio[indices_evs[j]]]
+                    if abs(dia_1 - dia_2) <= 1:
                         viol_espaciado += 1
-                        
+
         viol_conflicto_curricular = 0
-        for constraint in self.restricciones_curriculares:
-            evs_c = constraint['evs_c']
-            num_secciones = constraint['num_secciones']
-            evs_other = constraint['evs_other']
-            
-            active_c = np.sum(event_slot[evs_c, :], axis=0)
-            full_slots = np.where(active_c == num_secciones)[0]
-            if len(full_slots) > 0:
-                viol_conflicto_curricular += int(np.sum(event_slot[evs_other][:, full_slots]))
-                
-        hcv = (viol_colision_profesor + 
-               viol_carga_maxima_profesor + 
-               viol_estabilidad_salones + 
-               viol_colision_salones_fisicos + 
-               viol_conflicto_curricular)
-               
-        penalizacion_almuerzo = int(np.sum(event_slot * self.lunch_slots_mask))
+        for restriccion in self.restricciones_curriculares:
+            evs_c = restriccion["evs_c"]
+            num_secciones = restriccion["num_secciones"]
+            evs_other = restriccion["evs_other"]
+
+            activas_c = np.sum(matriz_evento_franja[evs_c, :], axis=0)
+            franjas_llenas = np.where(activas_c == num_secciones)[0]
+            if len(franjas_llenas) > 0:
+                viol_conflicto_curricular += int(np.sum(matriz_evento_franja[evs_other][:, franjas_llenas]))
+
+        total_duras = (
+            viol_colision_profesor
+            + viol_carga_maxima_profesor
+            + viol_estabilidad_salones
+            + viol_colision_salones_fisicos
+            + viol_conflicto_curricular
+        )
+
+        penalizacion_almuerzo = int(np.sum(matriz_evento_franja * self.mascara_almuerzo))
         penalizacion_espaciado = viol_espaciado
-        penalizacion_jueves = int(np.sum(event_slot * self.jueves_slots_mask))
-        penalizacion_sabado = int(np.sum(event_slot * self.sabado_slots_mask))
+        penalizacion_jueves = int(np.sum(matriz_evento_franja * self.mascara_jueves))
+        penalizacion_sabado = int(np.sum(matriz_evento_franja * self.mascara_sabado))
 
         penalizacion_ventanas = 0
-        for p_idx in range(self.num_teachers):
-            for d_idx in range(self.num_days):
-                day_slots = self.day_slots_indices[d_idx]
-                prof_day = prof_slot[p_idx, day_slots]
-                active_indices = np.where(prof_day > 0)[0]
-                if len(active_indices) >= 2:
-                    first_idx = active_indices[0]
-                    last_idx = active_indices[-1]
-                    for step in range(first_idx + 1, last_idx):
-                        if prof_day[step] == 0:
-                            slot_global_idx = day_slots[step]
-                            if self.lunch_slots_mask[slot_global_idx] == 0:
+        for p_idx in range(self.cantidad_profesores):
+            for d_idx in range(self.cantidad_dias):
+                franjas_dia = self.franjas_por_dia_indices[d_idx]
+                prof_dia = matriz_profesor_franja[p_idx, franjas_dia]
+                indices_activos = np.where(prof_dia > 0)[0]
+                if len(indices_activos) >= 2:
+                    primer_idx = indices_activos[0]
+                    ultimo_idx = indices_activos[-1]
+                    for paso in range(primer_idx + 1, ultimo_idx):
+                        if prof_dia[paso] == 0:
+                            franja_global_idx = franjas_dia[paso]
+                            if self.mascara_almuerzo[franja_global_idx] == 0:
                                 penalizacion_ventanas += 1
 
         total_blanda = (
-            self.W_A * penalizacion_almuerzo + 
-            self.W_E * penalizacion_espaciado + 
-            self.W_JUE * penalizacion_jueves + 
-            self.W_SAB * penalizacion_sabado + 
-            self.W_V * penalizacion_ventanas
+            self.peso_almuerzo * penalizacion_almuerzo
+            + self.peso_espaciado * penalizacion_espaciado
+            + self.peso_jueves * penalizacion_jueves
+            + self.peso_sabado * penalizacion_sabado
+            + self.peso_ventanas * penalizacion_ventanas
         )
-        
+
         return {
-            'violaciones_restricciones_duras': hcv,
-            'penalizacion_blanda': total_blanda,
-            'penalizacion_almuerzo': penalizacion_almuerzo,
-            'penalizacion_espaciado': penalizacion_espaciado,
-            'penalizacion_jueves': penalizacion_jueves,
-            'penalizacion_sabado': penalizacion_sabado,
-            'penalizacion_ventanas': penalizacion_ventanas,
-            'colision_profesor': viol_colision_profesor,
-            'carga_maxima_profesor': viol_carga_maxima_profesor,
-            'estabilidad_salones': viol_estabilidad_salones,
-            'colision_salones_fisicos': viol_colision_salones_fisicos,
-            'infracciones_espaciado': viol_espaciado,
-            'conflicto_curricular': viol_conflicto_curricular
+            "violaciones_restricciones_duras": total_duras,
+            "penalizacion_blanda": total_blanda,
+            "penalizacion_almuerzo": penalizacion_almuerzo,
+            "penalizacion_espaciado": penalizacion_espaciado,
+            "penalizacion_jueves": penalizacion_jueves,
+            "penalizacion_sabado": penalizacion_sabado,
+            "penalizacion_ventanas": penalizacion_ventanas,
+            "colision_profesor": viol_colision_profesor,
+            "carga_maxima_profesor": viol_carga_maxima_profesor,
+            "estabilidad_salones": viol_estabilidad_salones,
+            "colision_salones_fisicos": viol_colision_salones_fisicos,
+            "infracciones_espaciado": viol_espaciado,
+            "conflicto_curricular": viol_conflicto_curricular,
         }
 
+    def obtener_violaciones_duras(self, solution):
+        """Retorna la cantidad total de violaciones duras."""
+        return self.evaluar_solucion(solution)["violaciones_restricciones_duras"]
+
+    # Alias de compatibilidad hacia atrás
+    def evaluate_solution(self, solution):
+        return self.evaluar_solucion(solution)
+
     def get_hcv(self, solution):
-        return self.evaluate_solution(solution)['violaciones_restricciones_duras']
+        return self.obtener_violaciones_duras(solution)
 
 
 class _EstadoAsignacion:
-    """Estructura de seguimiento de estado para el operador constructivo heurístico MCF."""
+    """Estado de ocupación de recursos para la asignación heurística."""
+
     __slots__ = (
-        'choices', 'r_indices', 't_starts',
-        'prof_slot', 'room_slot', 'event_slot',
-        'prof_daily_hours', 'slot_events'
+        "opciones_seleccionadas",
+        "indices_salones",
+        "franjas_inicio",
+        "ocupacion_profesor_franja",
+        "ocupacion_salon_franja",
+        "ocupacion_evento_franja",
+        "horas_diarias_profesor",
+        "eventos_por_franja",
     )
 
-    def __init__(self, num_events: int, num_teachers: int, num_rooms: int, num_slots: int, num_days: int):
-        self.choices = np.full(num_events, -1, dtype=np.int32)
-        self.r_indices = np.full(num_events, -1, dtype=np.int32)
-        self.t_starts = np.full(num_events, -1, dtype=np.int32)
-        self.prof_slot = [[0] * num_slots for _ in range(num_teachers)]
-        self.room_slot = [[0] * num_slots for _ in range(num_rooms)]
-        self.event_slot = [[0] * num_slots for _ in range(num_events)]
-        self.prof_daily_hours = [[0] * num_days for _ in range(num_teachers)]
-        self.slot_events = [[] for _ in range(num_slots)]
+    def __init__(
+        self,
+        cantidad_eventos: int,
+        cantidad_profesores: int,
+        cantidad_salones: int,
+        cantidad_franjas: int,
+        cantidad_dias: int,
+    ):
+        self.opciones_seleccionadas = np.full(cantidad_eventos, -1, dtype=np.int32)
+        self.indices_salones = np.full(cantidad_eventos, -1, dtype=np.int32)
+        self.franjas_inicio = np.full(cantidad_eventos, -1, dtype=np.int32)
+        self.ocupacion_profesor_franja = [[0] * cantidad_franjas for _ in range(cantidad_profesores)]
+        self.ocupacion_salon_franja = [[0] * cantidad_franjas for _ in range(cantidad_salones)]
+        self.ocupacion_evento_franja = [[0] * cantidad_franjas for _ in range(cantidad_eventos)]
+        self.horas_diarias_profesor = [[0] * cantidad_dias for _ in range(cantidad_profesores)]
+        self.eventos_por_franja = [[] for _ in range(cantidad_franjas)]
 
 
-class UCTPHybridProblem(UCTPProblemBase):
-    """
-    Variante híbrida memética del problema UCTP.
-    Sobrescribe correct_solution incorporando el operador constructivo heurístico
-    Most Constrained First (MCF) con aprendizaje lamarckiano y desplazamiento en cadena de 1 paso.
-    """
+class ProblemaUCTPMemetico(ProblemaUCTPBase):
+    """Problema UCTP memético con operador heurístico constructivo y de reparación."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
-        # Calcular carga semanal de profesores para el ordenamiento por saturación
-        self.teacher_weekly_load = {}
-        for p in self.P:
-            self.teacher_weekly_load[p] = sum(self.Dur[e] for e in self.E_p[p])
-            
-        # Calcular dificultad de cada evento (Saturación estructural + carga docente)
-        evento_a_prof = construir_evento_profesor(self.E_p)
-        self.event_difficulty = np.empty(self.num_events, dtype=np.float64)
-        for idx in range(self.num_events):
-            e = self.E[idx]
-            p = evento_a_prof[e]
-            p_load = self.teacher_weekly_load[p]
-            num_choices = len(self.valid_starts[idx])
-            self.event_difficulty[idx] = (1000.0 / max(1, num_choices)) + p_load
-            
-        # Ordenar eventos por dificultad descendente (Most Constrained First) con orden estable
-        self.event_priority_order = np.argsort(self.event_difficulty, kind='stable')[::-1]
 
-    def _asignar_evento(self, estado: _EstadoAsignacion, idx: int, c: int) -> None:
-        """Asigna un evento con la opción c y actualiza las matrices de ocupación."""
-        estado.choices[idx] = c
-        r_idx = self.valid_starts_r_idx[idx][c]
-        t_start = self.valid_starts_t[idx][c]
-        p_idx = self.event_p_idx[idx]
-        dur = self.event_dur[idx]
-        d_idx = self.slot_to_day[t_start]
-        
-        estado.r_indices[idx] = r_idx
-        estado.t_starts[idx] = t_start
+        self.carga_semanal_profesor = {}
+        for profesor in self.profesores:
+            self.carga_semanal_profesor[profesor] = sum(
+                self.duracion_por_evento[evento] for evento in self.eventos_por_profesor[profesor]
+            )
+
+        evento_a_profesor = construir_evento_profesor(self.eventos_por_profesor)
+        self.dificultad_evento = np.empty(self.cantidad_eventos, dtype=np.float64)
+        for idx in range(self.cantidad_eventos):
+            evento = self.eventos[idx]
+            profesor = evento_a_profesor[evento]
+            carga_docente = self.carga_semanal_profesor[profesor]
+            opciones_inicio = len(self.inicios_validos[idx])
+            self.dificultad_evento[idx] = (1000.0 / max(1, opciones_inicio)) + carga_docente
+
+        self.orden_prioridad_eventos = np.argsort(self.dificultad_evento, kind="stable")[::-1]
+
+    def _asignar_evento(self, estado: _EstadoAsignacion, idx: int, opcion: int) -> None:
+        """Asigna un evento con una opción dada y actualiza las matrices de ocupación."""
+        estado.opciones_seleccionadas[idx] = opcion
+        r_idx = self.salones_validos_idx[idx][opcion]
+        f_inicio = self.franjas_validas_inicio[idx][opcion]
+        p_idx = self.indice_profesor_por_evento[idx]
+        dur = self.duracion_eventos_lista[idx]
+        d_idx = self.dia_por_franja_array[f_inicio]
+
+        estado.indices_salones[idx] = r_idx
+        estado.franjas_inicio[idx] = f_inicio
         for offset in range(dur):
-            t_idx = t_start + offset - self.t_min
-            estado.prof_slot[p_idx][t_idx] += 1
-            estado.room_slot[r_idx][t_idx] += 1
-            estado.event_slot[idx][t_idx] = 1
-            estado.slot_events[t_idx].append(idx)
-        estado.prof_daily_hours[p_idx][d_idx] += dur
+            t_idx = f_inicio + offset - self.franja_minima
+            estado.ocupacion_profesor_franja[p_idx][t_idx] += 1
+            estado.ocupacion_salon_franja[r_idx][t_idx] += 1
+            estado.ocupacion_evento_franja[idx][t_idx] = 1
+            estado.eventos_por_franja[t_idx].append(idx)
+        estado.horas_diarias_profesor[p_idx][d_idx] += dur
 
     def _desasignar_evento(self, estado: _EstadoAsignacion, idx: int) -> None:
         """Revierte la asignación de un evento y libera sus recursos en las matrices."""
-        c = estado.choices[idx]
-        if c == -1 or estado.t_starts[idx] == -1:
+        opcion = estado.opciones_seleccionadas[idx]
+        if opcion == -1 or estado.franjas_inicio[idx] == -1:
             return
-        r_idx = estado.r_indices[idx]
-        t_start = estado.t_starts[idx]
-        p_idx = self.event_p_idx[idx]
-        dur = self.event_dur[idx]
-        d_idx = self.slot_to_day[t_start]
-        
-        for offset in range(dur):
-            t_idx = t_start + offset - self.t_min
-            estado.prof_slot[p_idx][t_idx] -= 1
-            estado.room_slot[r_idx][t_idx] -= 1
-            estado.event_slot[idx][t_idx] = 0
-            estado.slot_events[t_idx].remove(idx)
-        estado.prof_daily_hours[p_idx][d_idx] -= dur
-        estado.r_indices[idx] = -1
-        estado.t_starts[idx] = -1
+        r_idx = estado.indices_salones[idx]
+        f_inicio = estado.franjas_inicio[idx]
+        p_idx = self.indice_profesor_por_evento[idx]
+        dur = self.duracion_eventos_lista[idx]
+        d_idx = self.dia_por_franja_array[f_inicio]
 
-    def _es_factible(self, estado: _EstadoAsignacion, idx: int, c: int) -> bool:
-        """Verifica si asignar la opción c al evento idx no viola ninguna restricción dura."""
-        r_idx = self.valid_starts_r_idx[idx][c]
-        t_start = self.valid_starts_t[idx][c]
-        p_idx = self.event_p_idx[idx]
-        dur = self.event_dur[idx]
-        s_idx = self.s_to_idx[self.EVENTO_SECCION[self.E[idx]]]
-        
-        # 1. Colisión de profesor y salón físico
         for offset in range(dur):
-            t_idx = t_start + offset - self.t_min
-            if estado.prof_slot[p_idx][t_idx] >= 1:
+            t_idx = f_inicio + offset - self.franja_minima
+            estado.ocupacion_profesor_franja[p_idx][t_idx] -= 1
+            estado.ocupacion_salon_franja[r_idx][t_idx] -= 1
+            estado.ocupacion_evento_franja[idx][t_idx] = 0
+            estado.eventos_por_franja[t_idx].remove(idx)
+        estado.horas_diarias_profesor[p_idx][d_idx] -= dur
+        estado.indices_salones[idx] = -1
+        estado.franjas_inicio[idx] = -1
+
+    def _es_factible(self, estado: _EstadoAsignacion, idx: int, opcion: int) -> bool:
+        """Verifica si asignar la opción al evento no viola ninguna restricción dura."""
+        r_idx = self.salones_validos_idx[idx][opcion]
+        f_inicio = self.franjas_validas_inicio[idx][opcion]
+        p_idx = self.indice_profesor_por_evento[idx]
+        dur = self.duracion_eventos_lista[idx]
+        s_idx = self.indice_por_seccion[self.seccion_por_evento[self.eventos[idx]]]
+
+        for offset in range(dur):
+            t_idx = f_inicio + offset - self.franja_minima
+            if estado.ocupacion_profesor_franja[p_idx][t_idx] >= 1:
                 return False
-            if r_idx in self.physical_room_indices_set and estado.room_slot[r_idx][t_idx] >= 1:
+            if (
+                r_idx in self.conjunto_indices_salones_fisicos
+                and estado.ocupacion_salon_franja[r_idx][t_idx] >= 1
+            ):
                 return False
-                
-        # 2. Carga diaria máxima del profesor (8 horas)
-        d_idx = self.slot_to_day[t_start]
-        if estado.prof_daily_hours[p_idx][d_idx] + dur > 8:
+
+        d_idx = self.dia_por_franja_array[f_inicio]
+        if estado.horas_diarias_profesor[p_idx][d_idx] + dur > 8:
             return False
-            
-        # 3. Estabilidad de salones por sección (máximo 2 salones distintos)
-        other_evs = [ev for ev in self.section_events[s_idx] if ev != idx]
-        assigned_rooms = [estado.r_indices[ev] for ev in other_evs if estado.r_indices[ev] != -1]
-        unique_assigned = set(assigned_rooms)
-        if r_idx not in unique_assigned and len(unique_assigned) >= 2:
+
+        otros_eventos = [ev for ev in self.eventos_de_seccion[s_idx] if ev != idx]
+        salones_asignados = [
+            estado.indices_salones[ev] for ev in otros_eventos if estado.indices_salones[ev] != -1
+        ]
+        salones_unicos = set(salones_asignados)
+        if r_idx not in salones_unicos and len(salones_unicos) >= 2:
             return False
-            
-        # 4. Conflicto curricular
-        for constraint in self.event_curriculum_constraints[idx]:
-            evs_c = constraint['evs_c']
-            num_secciones = constraint['num_secciones']
-            evs_other = constraint['evs_other']
-            
+
+        for restriccion in self.restricciones_curriculares_por_evento[idx]:
+            evs_c = restriccion["evs_c"]
+            num_secciones = restriccion["num_secciones"]
+            evs_other = restriccion["evs_other"]
+
             for offset in range(dur):
-                t_idx = t_start + offset - self.t_min
+                t_idx = f_inicio + offset - self.franja_minima
                 if idx in evs_c:
-                    active_c_at_t = 0
-                    for ev in evs_c:
-                        active_c_at_t += estado.event_slot[ev][t_idx]
-                    active_c_at_t += 1
-                    if active_c_at_t == num_secciones:
-                        has_other = False
-                        for ev in evs_other:
-                            if estado.event_slot[ev][t_idx] > 0:
-                                has_other = True
-                                break
-                        if has_other:
+                    activas_c = sum(estado.ocupacion_evento_franja[ev][t_idx] for ev in evs_c) + 1
+                    if activas_c == num_secciones:
+                        if any(estado.ocupacion_evento_franja[ev][t_idx] > 0 for ev in evs_other):
                             return False
                 elif idx in evs_other:
-                    active_c_at_t = 0
-                    for ev in evs_c:
-                        active_c_at_t += estado.event_slot[ev][t_idx]
-                    if active_c_at_t == num_secciones:
+                    activas_c = sum(estado.ocupacion_evento_franja[ev][t_idx] for ev in evs_c)
+                    if activas_c == num_secciones:
                         return False
-                        
+
         return True
 
-    def _intentar_asignacion_directa(self, estado: _EstadoAsignacion, idx: int, c_curr: int) -> bool:
+    def _intentar_asignacion_directa(self, estado: _EstadoAsignacion, idx: int, opcion_actual: int) -> bool:
         """Intenta conservar la asignación actual si es factible sin conflictos."""
-        if self._es_factible(estado, idx, c_curr):
-            self._asignar_evento(estado, idx, c_curr)
+        if self._es_factible(estado, idx, opcion_actual):
+            self._asignar_evento(estado, idx, opcion_actual)
             return True
         return False
 
-    def _intentar_alternativa_greedy(self, estado: _EstadoAsignacion, idx: int, c_curr: int) -> bool:
+    def _intentar_alternativa_greedy(self, estado: _EstadoAsignacion, idx: int, opcion_actual: int) -> bool:
         """Explora alternativas factibles en orden aleatorio para el evento."""
-        num_choices = len(self.valid_starts_t[idx])
-        start_choice = int(self.generator.integers(0, num_choices))
-        
-        for offset in range(num_choices):
-            c_cand = (start_choice + offset) % num_choices
-            if c_cand == c_curr:
+        total_opciones = len(self.franjas_validas_inicio[idx])
+        inicio_aleatorio = int(self.generator.integers(0, total_opciones))
+
+        for offset in range(total_opciones):
+            opcion_candidata = (inicio_aleatorio + offset) % total_opciones
+            if opcion_candidata == opcion_actual:
                 continue
-            if self._es_factible(estado, idx, c_cand):
-                self._asignar_evento(estado, idx, c_cand)
+            if self._es_factible(estado, idx, opcion_candidata):
+                self._asignar_evento(estado, idx, opcion_candidata)
                 return True
         return False
 
-    def _intentar_desplazamiento_1_paso(self, estado: _EstadoAsignacion, idx: int, c_curr: int) -> bool:
+    def _intentar_desplazamiento_1_paso(self, estado: _EstadoAsignacion, idx: int, opcion_actual: int) -> bool:
         """Aplica desplazamiento en cadena de 1 paso si un único evento obstaculiza la asignación."""
-        num_choices = len(self.valid_starts_t[idx])
-        start_disp = int(self.generator.integers(0, num_choices))
-        
-        for offset in range(num_choices):
-            c_cand = (start_disp + offset) % num_choices
-            if c_cand == c_curr:
+        total_opciones = len(self.franjas_validas_inicio[idx])
+        inicio_desplazamiento = int(self.generator.integers(0, total_opciones))
+
+        for offset in range(total_opciones):
+            opcion_candidata = (inicio_desplazamiento + offset) % total_opciones
+            if opcion_candidata == opcion_actual:
                 continue
-            
-            r_cand = self.valid_starts_r_idx[idx][c_cand]
-            t_cand = self.valid_starts_t[idx][c_cand]
-            dur = self.event_dur[idx]
-            p_idx = self.event_p_idx[idx]
-            
-            blocking_events = set()
+
+            r_candidato = self.salones_validos_idx[idx][opcion_candidata]
+            f_candidata = self.franjas_validas_inicio[idx][opcion_candidata]
+            dur = self.duracion_eventos_lista[idx]
+            p_idx = self.indice_profesor_por_evento[idx]
+
+            eventos_bloqueantes = set()
             for offset_dur in range(dur):
-                t_idx = t_cand + offset_dur - self.t_min
-                for ev_idx in estado.slot_events[t_idx]:
+                t_idx = f_candidata + offset_dur - self.franja_minima
+                for ev_idx in estado.eventos_por_franja[t_idx]:
                     if ev_idx != idx:
-                        if self.event_p_idx[ev_idx] == p_idx:
-                            blocking_events.add(ev_idx)
-                        if r_cand in self.physical_room_indices_set and estado.r_indices[ev_idx] == r_cand:
-                            blocking_events.add(ev_idx)
-                            
-            if len(blocking_events) == 1:
-                idx_block = sorted(blocking_events)[0]
-                c_block_curr = estado.choices[idx_block]
-                
-                self._desasignar_evento(estado, idx_block)
-                
-                num_block_choices = len(self.valid_starts_t[idx_block])
-                start_block = int(self.generator.integers(0, num_block_choices))
-                best_block_choice = None
-                
-                for offset_block in range(num_block_choices):
-                    c_block_cand = (start_block + offset_block) % num_block_choices
-                    if c_block_cand == c_block_curr:
+                        if self.indice_profesor_por_evento[ev_idx] == p_idx:
+                            eventos_bloqueantes.add(ev_idx)
+                        if (
+                            r_candidato in self.conjunto_indices_salones_fisicos
+                            and estado.indices_salones[ev_idx] == r_candidato
+                        ):
+                            eventos_bloqueantes.add(ev_idx)
+
+            if len(eventos_bloqueantes) == 1:
+                idx_bloqueante = sorted(eventos_bloqueantes)[0]
+                opcion_bloqueante_actual = estado.opciones_seleccionadas[idx_bloqueante]
+
+                self._desasignar_evento(estado, idx_bloqueante)
+
+                total_opciones_bloqueante = len(self.franjas_validas_inicio[idx_bloqueante])
+                inicio_bloqueante = int(self.generator.integers(0, total_opciones_bloqueante))
+                mejor_opcion_bloqueante = None
+
+                for offset_b in range(total_opciones_bloqueante):
+                    opcion_b = (inicio_bloqueante + offset_b) % total_opciones_bloqueante
+                    if opcion_b == opcion_bloqueante_actual:
                         continue
-                    if self._es_factible(estado, idx_block, c_block_cand):
-                        best_block_choice = c_block_cand
+                    if self._es_factible(estado, idx_bloqueante, opcion_b):
+                        mejor_opcion_bloqueante = opcion_b
                         break
-                        
-                if best_block_choice is not None and self._es_factible(estado, idx, c_cand):
-                    self._asignar_evento(estado, idx_block, best_block_choice)
-                    self._asignar_evento(estado, idx, c_cand)
+
+                if mejor_opcion_bloqueante is not None and self._es_factible(estado, idx, opcion_candidata):
+                    self._asignar_evento(estado, idx_bloqueante, mejor_opcion_bloqueante)
+                    self._asignar_evento(estado, idx, opcion_candidata)
                     return True
                 else:
-                    self._asignar_evento(estado, idx_block, c_block_curr)
-                    
+                    self._asignar_evento(estado, idx_bloqueante, opcion_bloqueante_actual)
+
         return False
 
     def correct_solution(self, solution):
-        """
-        Operador constructivo heurístico MCF con aprendizaje lamarckiano y desplazamiento en cadena.
-        """
-        choices = np.clip(np.round(solution).astype(np.int32), 0, self.max_choices)
+        """Ajusta y repara la solución usando heurística constructiva y búsqueda local."""
+        opciones = np.clip(np.round(solution).astype(np.int32), 0, self.max_opciones_evento)
         estado = _EstadoAsignacion(
-            self.num_events, self.num_teachers, self.num_rooms, 
-            self.num_slots, self.num_days
+            self.cantidad_eventos,
+            self.cantidad_profesores,
+            self.cantidad_salones,
+            self.cantidad_franjas,
+            self.cantidad_dias,
         )
-        estado.choices[:] = choices
+        estado.opciones_seleccionadas[:] = opciones
 
-        for idx in self.event_priority_order:
-            c_curr = estado.choices[idx]
-            
-            if self._intentar_asignacion_directa(estado, idx, c_curr):
+        for idx in self.orden_prioridad_eventos:
+            opcion_actual = estado.opciones_seleccionadas[idx]
+
+            if self._intentar_asignacion_directa(estado, idx, opcion_actual):
                 continue
-            if self._intentar_alternativa_greedy(estado, idx, c_curr):
+            if self._intentar_alternativa_greedy(estado, idx, opcion_actual):
                 continue
-            if self._intentar_desplazamiento_1_paso(estado, idx, c_curr):
+            if self._intentar_desplazamiento_1_paso(estado, idx, opcion_actual):
                 continue
-            self._asignar_evento(estado, idx, c_curr)
-            
-        return estado.choices.astype(np.float64)
+            self._asignar_evento(estado, idx, opcion_actual)
+
+        return estado.opciones_seleccionadas.astype(np.float64)
 
 
-def precomputar_combinaciones_inicio(E, R, T, T_d, D, d_jue, Dur, EVENTO_SECCION, E_p, Alumno, Req, Tiene, F, CAP, ES_VIRTUAL, Disp):
-    """
-    Filtra topológicamente las combinaciones válidas (salón, franja) para cada evento (reducción de dominio).
-    """
-    valid_starts = {}
-    evento_a_prof = construir_evento_profesor(E_p)
-    franja_a_dia = construir_franja_a_dia(T_d)
+def precomputar_combinaciones_inicio(
+    eventos: list[int],
+    salones: list[str],
+    franjas_horarias: list[int],
+    franjas_por_dia: dict[str, list[int]],
+    dias: list[str],
+    dia_cierre_remoto: str,
+    duracion_por_evento: dict[int, int],
+    seccion_por_evento: dict[int, str],
+    eventos_por_profesor: dict[str, list[int]],
+    alumnos_por_seccion: dict[str, int],
+    seccion_requiere_caracteristica: dict[tuple[str, str], int],
+    salon_tiene_caracteristica: dict[tuple[str, str], int],
+    caracteristicas: list[str],
+    capacidad_por_salon: dict[str, int],
+    es_virtual_por_salon: dict[str, bool],
+    disponibilidad_por_profesor: dict[tuple[str, int], int],
+) -> dict[int, list[tuple[str, int]]]:
+    """Calcula las combinaciones válidas (salón, franja) para cada evento."""
+    inicios_validos = {}
+    evento_a_profesor = construir_evento_profesor(eventos_por_profesor)
+    franja_a_dia = construir_franja_a_dia(franjas_por_dia)
 
-    for idx_e, e in enumerate(E):
-        starts = []
-        s = EVENTO_SECCION[e]
-        p_assigned = evento_a_prof[e]
-        
+    for idx_evento, evento in enumerate(eventos):
+        combinaciones = []
+        seccion = seccion_por_evento[evento]
+        profesor = evento_a_profesor[evento]
+        duracion = duracion_por_evento[evento]
+
         salones_elegibles = [
-            r for r in R 
-            if CAP[r] >= Alumno[s] and all(Req[(s, f)] <= Tiene[(r, f)] for f in F)
+            salon
+            for salon in salones
+            if capacidad_por_salon[salon] >= alumnos_por_seccion[seccion]
+            and all(
+                seccion_requiere_caracteristica[(seccion, carac)]
+                <= salon_tiene_caracteristica[(salon, carac)]
+                for carac in caracteristicas
+            )
         ]
-        
-        for r in salones_elegibles:
-            if ES_VIRTUAL[r]:
-                franjas_operativas = T_d[d_jue]
+
+        for salon in salones_elegibles:
+            if es_virtual_por_salon[salon]:
+                franjas_operativas = franjas_por_dia[dia_cierre_remoto]
             else:
-                franjas_operativas = [t for t in T if t not in T_d[d_jue]]
-                
-            for t in franjas_operativas:
-                dia_t = franja_a_dia.get(t)
-                if dia_t is None:
+                franjas_operativas = [
+                    franja for franja in franjas_horarias if franja not in franjas_por_dia[dia_cierre_remoto]
+                ]
+
+            for franja in franjas_operativas:
+                dia_franja = franja_a_dia.get(franja)
+                if dia_franja is None:
                     continue
-                
-                if t + Dur[e] - 1 > max(T_d[dia_t]):
+
+                if franja + duracion - 1 > max(franjas_por_dia[dia_franja]):
                     continue
-                    
-                if all(t + offset in franjas_operativas and Disp.get((p_assigned, t + offset), 0) == 1 for offset in range(Dur[e])):
-                    starts.append((r, t))
-                    
-        if not starts:
-            raise ValueError(f"Infactibilidad crítica detectada: El evento {e} no tiene ninguna combinación de inicio válida.")
-        valid_starts[idx_e] = starts
-        
-    return valid_starts
+
+                if all(
+                    franja + offset in franjas_operativas
+                    and disponibilidad_por_profesor.get((profesor, franja + offset), 0) == 1
+                    for offset in range(duracion)
+                ):
+                    combinaciones.append((salon, franja))
+
+        if not combinaciones:
+            raise ValueError(f"El evento {evento} no tiene ninguna combinación de inicio válida.")
+        inicios_validos[idx_evento] = combinaciones
+
+    return inicios_validos
 
 
-def precomputar_restricciones_curriculares(K, E_k, EVENTO_SECCION, SECCION_CURSO, E):
-    """
-    Precomputa las estructuras necesarias para la restricción de cursos multi-sección sin conflicto curricular.
-    """
+def precomputar_restricciones_curriculares(
+    curriculos: list[str],
+    eventos_por_curriculo: dict[str, list[int]],
+    seccion_por_evento: dict[int, str],
+    curso_por_seccion: dict[str, str],
+    eventos: list[int],
+) -> list[dict]:
+    """Precomputa los conflictos curriculares para cursos multisección."""
     restricciones_curriculares = []
-    for k in K:
-        cursos_en_k = {}
-        for e in E_k[k]:
-            s = EVENTO_SECCION[e]
-            c = SECCION_CURSO[s]
-            if c not in cursos_en_k:
-                cursos_en_k[c] = []
-            cursos_en_k[c].append(e)
-            
-        for c, evs_in_c in cursos_en_k.items():
-            secciones_unicas = set(EVENTO_SECCION[e] for e in evs_in_c)
+    for curriculo in curriculos:
+        cursos_en_curriculo = {}
+        for evento in eventos_por_curriculo[curriculo]:
+            seccion = seccion_por_evento[evento]
+            curso = curso_por_seccion[seccion]
+            if curso not in cursos_en_curriculo:
+                cursos_en_curriculo[curso] = []
+            cursos_en_curriculo[curso].append(evento)
+
+        for curso, eventos_curso in cursos_en_curriculo.items():
+            secciones_unicas = set(seccion_por_evento[e] for e in eventos_curso)
             if len(secciones_unicas) > 1:
                 num_secciones = len(secciones_unicas)
-                evs_other = [e for e in E_k[k] if e not in evs_in_c]
-                
-                evs_c_idx = [E.index(e) for e in evs_in_c]
-                evs_other_idx = [E.index(e) for e in evs_other]
-                
-                restricciones_curriculares.append({
-                    'evs_c': evs_c_idx,
-                    'num_secciones': num_secciones,
-                    'evs_other': evs_other_idx
-                })
+                eventos_otros = [e for e in eventos_por_curriculo[curriculo] if e not in eventos_curso]
+
+                evs_c_idx = [eventos.index(e) for e in eventos_curso]
+                evs_other_idx = [eventos.index(e) for e in eventos_otros]
+
+                restricciones_curriculares.append(
+                    {
+                        "evs_c": evs_c_idx,
+                        "num_secciones": num_secciones,
+                        "evs_other": evs_other_idx,
+                    }
+                )
     return restricciones_curriculares

@@ -1,17 +1,13 @@
-"""Algoritmo Genético Clásico (GA) para el problema UCTP / CB-CTT.
-
-Implementa la metaheurística poblacional canónica con cruzamiento uniforme,
-mutación aleatoria y selección por torneo sobre variables discretas.
-"""
+"""Algoritmo Genético Clásico (GA) para UCTP."""
 from mealpy.evolutionary_based.GA import BaseGA
 
-from base_optimizer_uctp import OptimizerUCTPMixin
-from problema_uctp import UCTPProblemBase
+from base_optimizer_uctp import MixinOptimizadorUCTP
+from problema_uctp import ProblemaUCTPBase
 from runner_metaheuristicas import crear_parser_metaheuristica, ejecutar_benchmark
 
 
-class CustomGA(OptimizerUCTPMixin, BaseGA):
-    """Subclase de BaseGA adaptada para UCTP con registro de TTF y parada temprana."""
+class OptimizadorGA(MixinOptimizadorUCTP, BaseGA):
+    """Algoritmo Genético con métricas de factibilidad y parada temprana."""
     pass
 
 
@@ -38,15 +34,15 @@ def obtener_parametros_mealpy(config_base, args):
 
 def main():
     parser = crear_parser_metaheuristica("GA Clásico", paciencia_defecto=20)
-    parser.add_argument("--tam_poblacion", "--pop_size", dest="tam_poblacion", type=int, default=None, help="Tamaño de la población")
-    parser.add_argument("--prob_cruce", "--pc", dest="prob_cruce", type=float, default=None, help="Probabilidad de cruzamiento")
-    parser.add_argument("--prob_mutacion", "--pm", dest="prob_mutacion", type=float, default=None, help="Probabilidad de mutación")
+    parser.add_argument("--tam_poblacion", type=int, default=None, help="Tamaño de la población")
+    parser.add_argument("--prob_cruce", type=float, default=None, help="Probabilidad de cruzamiento")
+    parser.add_argument("--prob_mutacion", type=float, default=None, help="Probabilidad de mutación")
     args = parser.parse_args()
 
     ejecutar_benchmark(
         nombre_metodo="GA",
-        clase_optimizador=CustomGA,
-        clase_problema=UCTPProblemBase,
+        clase_optimizador=OptimizadorGA,
+        clase_problema=ProblemaUCTPBase,
         args=args,
         configs_escala=CONFIGS_GA,
         obtener_parametros_mealpy=obtener_parametros_mealpy,

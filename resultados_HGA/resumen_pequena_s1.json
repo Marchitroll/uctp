@@ -1,8 +1,8 @@
 {
   "metodo": "HGA",
   "escala": "pequena",
-  "total_corridas": 1,
-  "corridas_factibles": 1,
+  "total_corridas": 30,
+  "corridas_factibles": 30,
   "tasa_factibilidad_final": 100.0,
   "mejor_df": 0,
   "promedio_df": 0.0,
@@ -15,12 +15,12 @@
     "version_mealpy": "3.0.2",
     "libreria_optimizacion": "mealpy (HGA)"
   },
-  "mejor_z": 68.0,
-  "promedio_z": 68.0,
-  "mediana_z": 68.0,
-  "peor_z": 68.0,
-  "desviacion_z": 0.0,
-  "TTF_promedio": 0.125,
-  "tiempo_cpu_promedio": 0.36,
-  "evaluaciones_aptitud_promedio": 300
+  "mejor_z": 0.0,
+  "promedio_z": 5.83,
+  "mediana_z": 5.0,
+  "peor_z": 13.0,
+  "desviacion_z": 4.11,
+  "TTF_promedio": 0.088,
+  "tiempo_cpu_promedio": 2.08,
+  "evaluaciones_aptitud_promedio": 2725
 }

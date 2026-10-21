@@ -1,212 +1,217 @@
-"""
-cargador_datos.py
-Módulo encargado exclusivamente de la lectura, procesamiento preliminar y estructuración
-de los datos de entrada del problema UCTP desde archivos CSV y configuración JSON.
-"""
-
+"""Carga y estructura los datos de entrada del UCTP desde CSV y config.json."""
 import csv
-import json
 import os
 
 from tipos_uctp import DatosUCTP
 from uctp_utils import cargar_config_institucional
 
 
-def cargar_configuracion(filepath):
-    """
-    Carga los parámetros institucionales desde un archivo JSON y deriva los conjuntos D, T, T_d, d_jue y Almuerzo.
-    Soporta franjas heterogéneas, donde cada día puede tener un número diferente de franjas.
-    """
-    cfg = cargar_config_institucional(filepath)
+def cargar_configuracion(ruta_archivo: str):
+    """Carga la configuración institucional y deriva conjuntos temporales y franjas de almuerzo."""
+    cfg = cargar_config_institucional(ruta_archivo)
 
-    D = cfg['dias']
-    d_jue = cfg['dia_cierre']
-    pos_almuerzo = cfg['posicion_almuerzo']
-    dias_sin_almuerzo = set(cfg.get('dias_sin_almuerzo', []))
+    dias = cfg["dias"]
+    dia_cierre_remoto = cfg["dia_cierre"]
+    posicion_almuerzo = cfg["posicion_almuerzo"]
+    dias_sin_almuerzo = set(cfg.get("dias_sin_almuerzo", []))
+    franjas_por_dia_cfg = cfg["franjas_por_dia"]
 
-    # Asocia a cada día su respectivo número de franjas
-    fpd = cfg['franjas_por_dia']
-
-    # Construye el conjunto T_d acumulando las franjas de cada día secuencialmente
-    T_d = {}
+    franjas_por_dia = {}
     cursor = 1
-    for dia in D:
-        n = fpd[dia]
-        T_d[dia] = list(range(cursor, cursor + n))
-        cursor += n
+    for dia in dias:
+        cantidad = franjas_por_dia_cfg[dia]
+        franjas_por_dia[dia] = list(range(cursor, cursor + cantidad))
+        cursor += cantidad
 
-    # Representa el conjunto global de todas las franjas horarias
-    T = list(range(1, cursor))
+    franjas_horarias = list(range(1, cursor))
 
-    # Define el horario de almuerzo según la posición pos_almuerzo dentro de cada día (índice base 1)
     almuerzo_set = set()
-    for dia in D:
+    for dia in dias:
         if dia in dias_sin_almuerzo:
             continue
-        slots = T_d[dia]
-        if pos_almuerzo <= len(slots):
-            almuerzo_set.add(slots[pos_almuerzo - 1])
-    Almuerzo = {t: (1 if t in almuerzo_set else 0) for t in T}
+        franjas_dia = franjas_por_dia[dia]
+        if posicion_almuerzo <= len(franjas_dia):
+            almuerzo_set.add(franjas_dia[posicion_almuerzo - 1])
+    almuerzo_por_dia = {franja: (1 if franja in almuerzo_set else 0) for franja in franjas_horarias}
 
-    return D, T, T_d, d_jue, Almuerzo
-
-
-def cargar_datos_salones(filepath):
-    """
-    Carga los datos de los salones desde un archivo CSV y retorna R, CAP, ES_VIRTUAL y CARACTERISTICAS.
-    """
-    R = []
-    CAP = {}
-    ES_VIRTUAL = {}
-    CARACTERISTICAS = {}
-    with open(filepath, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            r = row['id_salon'].strip()
-            R.append(r)
-            CAP[r] = int(row['capacidad'])
-            ES_VIRTUAL[r] = row['es_virtual'].strip().lower() == 'true'
-            CARACTERISTICAS[r] = [c.strip() for c in row['caracteristicas'].split(',')] if row['caracteristicas'].strip() else []
-    return R, CAP, ES_VIRTUAL, CARACTERISTICAS
+    return dias, franjas_horarias, franjas_por_dia, dia_cierre_remoto, almuerzo_por_dia
 
 
-def cargar_cursos(filepath):
-    """
-    Carga los datos de los cursos y sus requisitos de infraestructura asociados.
-    """
-    CURSOS = []
-    REQ_CURSO = {}
-    with open(filepath, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            id_curso = row['id_curso'].strip()
-            CURSOS.append(id_curso)
-            reqs = row['requisitos'].strip()
-            REQ_CURSO[id_curso] = [r.strip() for r in reqs.split(',')] if reqs else []
-    return CURSOS, REQ_CURSO
+def cargar_datos_salones(ruta_archivo: str):
+    """Carga los salones desde un archivo CSV con sus capacidades y atributos de equipamiento."""
+    salones = []
+    capacidad_por_salon = {}
+    es_virtual_por_salon = {}
+    caracteristicas_por_salon = {}
+    with open(ruta_archivo, "r", encoding="utf-8") as archivo:
+        lector = csv.DictReader(archivo)
+        for fila in lector:
+            salon = fila["id_salon"].strip()
+            salones.append(salon)
+            capacidad_por_salon[salon] = int(fila["capacidad"])
+            es_virtual_por_salon[salon] = fila["es_virtual"].strip().lower() == "true"
+            texto_carac = fila["caracteristicas"].strip()
+            caracteristicas_por_salon[salon] = [c.strip() for c in texto_carac.split(",")] if texto_carac else []
+    return salones, capacidad_por_salon, es_virtual_por_salon, caracteristicas_por_salon
 
 
-def cargar_secciones(filepath):
-    """
-    Carga las secciones académicas y retorna S, el mapeo seccion->curso y el número de alumnos por sección.
-    """
-    S = []
-    SECCION_CURSO = {}
-    Alumno = {}
-    with open(filepath, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            s = row['id_seccion'].strip()
-            S.append(s)
-            SECCION_CURSO[s] = row['id_curso'].strip()
-            Alumno[s] = int(row['num_alumnos'])
-    return S, SECCION_CURSO, Alumno
+def cargar_cursos(ruta_archivo: str):
+    """Carga cursos y sus requisitos de equipamiento."""
+    cursos = []
+    requisitos_por_curso = {}
+    with open(ruta_archivo, "r", encoding="utf-8") as archivo:
+        lector = csv.DictReader(archivo)
+        for fila in lector:
+            id_curso = fila["id_curso"].strip()
+            cursos.append(id_curso)
+            reqs = fila["requisitos"].strip()
+            requisitos_por_curso[id_curso] = [r.strip() for r in reqs.split(",")] if reqs else []
+    return cursos, requisitos_por_curso
 
 
-def cargar_eventos(filepath):
-    """
-    Carga los eventos de clase y retorna E, E_s, E_p, Dur y el mapeo evento->seccion.
-    """
-    E = []
-    E_s = {}
-    E_p = {}
-    Dur = {}
-    EVENTO_SECCION = {}
-    with open(filepath, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            e = int(row['id_evento'])
-            s = row['id_seccion'].strip()
-            p = row['id_profesor'].strip()
-            d = int(row['duracion'])
-
-            E.append(e)
-            Dur[e] = d
-            EVENTO_SECCION[e] = s
-
-            # Agrupa los eventos correspondientes a cada sección
-            if s not in E_s:
-                E_s[s] = []
-            E_s[s].append(e)
-
-            # Agrupa los eventos correspondientes a cada profesor
-            if p not in E_p:
-                E_p[p] = []
-            E_p[p].append(e)
-
-    return E, E_s, E_p, Dur, EVENTO_SECCION
+def cargar_secciones(ruta_archivo: str):
+    """Carga secciones, curso asociado y alumnos inscritos."""
+    secciones = []
+    curso_por_seccion = {}
+    alumnos_por_seccion = {}
+    with open(ruta_archivo, "r", encoding="utf-8") as archivo:
+        lector = csv.DictReader(archivo)
+        for fila in lector:
+            seccion = fila["id_seccion"].strip()
+            secciones.append(seccion)
+            curso_por_seccion[seccion] = fila["id_curso"].strip()
+            alumnos_por_seccion[seccion] = int(fila["num_alumnos"])
+    return secciones, curso_por_seccion, alumnos_por_seccion
 
 
-def cargar_curriculos(curriculos_path, bridge_path):
-    """
-    Carga los currículos académicos y la tabla puente, y retorna K y E_k.
-    """
-    K = []
-    with open(curriculos_path, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            K.append(row['id_curriculo'].strip())
+def cargar_eventos(ruta_archivo: str):
+    """Carga eventos de clase, duraciones y asignaciones a sección y profesor."""
+    eventos = []
+    eventos_por_seccion = {}
+    eventos_por_profesor = {}
+    duracion_por_evento = {}
+    seccion_por_evento = {}
+    with open(ruta_archivo, "r", encoding="utf-8") as archivo:
+        lector = csv.DictReader(archivo)
+        for fila in lector:
+            evento = int(fila["id_evento"])
+            seccion = fila["id_seccion"].strip()
+            profesor = fila["id_profesor"].strip()
+            duracion = int(fila["duracion"])
 
-    E_k = {k: [] for k in K}
-    with open(bridge_path, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            k = row['id_curriculo'].strip()
-            e = int(row['id_evento'])
-            if k in E_k:
-                E_k[k].append(e)
+            eventos.append(evento)
+            duracion_por_evento[evento] = duracion
+            seccion_por_evento[evento] = seccion
 
-    return K, E_k
+            if seccion not in eventos_por_seccion:
+                eventos_por_seccion[seccion] = []
+            eventos_por_seccion[seccion].append(evento)
 
+            if profesor not in eventos_por_profesor:
+                eventos_por_profesor[profesor] = []
+            eventos_por_profesor[profesor].append(evento)
 
-def cargar_disponibilidad_profesores(filepath, P, T):
-    """
-    Carga la disponibilidad horaria de los profesores y retorna la matriz binaria Disp.
-    """
-    Disp = {(p, t): 0 for p in P for t in T}
-    with open(filepath, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            p = row['id_profesor'].strip()
-            if p in P:
-                f_inicio = int(row['franja_inicio'])
-                f_fin = int(row['franja_fin'])
-                for t in range(f_inicio, f_fin + 1):
-                    if t in T:
-                        Disp[(p, t)] = 1
-    return Disp
+    return eventos, eventos_por_seccion, eventos_por_profesor, duracion_por_evento, seccion_por_evento
 
 
-def cargar_datos_uctp(data_dir='dataset'):
-    """
-    Carga la totalidad de conjuntos y parámetros requeridos para el modelo MIP
-    desde los archivos JSON y CSV correspondientes dentro del directorio especificado.
-    """
-    D, T, T_d, d_jue, Almuerzo = cargar_configuracion(os.path.join(os.path.dirname(__file__), 'config.json'))
-    R, CAP, ES_VIRTUAL, CARACTERISTICAS = cargar_datos_salones(os.path.join(data_dir, 'salones.csv'))
-    CURSOS, REQ_CURSO = cargar_cursos(os.path.join(data_dir, 'cursos.csv'))
-    S, SECCION_CURSO, Alumno = cargar_secciones(os.path.join(data_dir, 'secciones.csv'))
-    E, E_s, E_p, Dur, EVENTO_SECCION = cargar_eventos(os.path.join(data_dir, 'eventos.csv'))
-    P = list(E_p.keys())
-    K, E_k = cargar_curriculos(os.path.join(data_dir, 'curriculos.csv'), os.path.join(data_dir, 'curriculo_evento.csv'))
-    Disp = cargar_disponibilidad_profesores(os.path.join(data_dir, 'profesores_disponibilidad.csv'), P, T)
+def cargar_curriculos(ruta_curriculos: str, ruta_puente: str):
+    """Carga currículos y la tabla puente currículo-evento."""
+    curriculos = []
+    with open(ruta_curriculos, "r", encoding="utf-8") as archivo:
+        lector = csv.DictReader(archivo)
+        for fila in lector:
+            curriculos.append(fila["id_curriculo"].strip())
 
-    # Define el conjunto general de características requeridas o poseídas (unión de cursos y salones)
-    F = sorted(
-        set(f for carac in CARACTERISTICAS.values() for f in carac if f)
-        | set(f for reqs in REQ_CURSO.values() for f in reqs if f)
+    eventos_por_curriculo = {curriculo: [] for curriculo in curriculos}
+    with open(ruta_puente, "r", encoding="utf-8") as archivo:
+        lector = csv.DictReader(archivo)
+        for fila in lector:
+            curriculo = fila["id_curriculo"].strip()
+            evento = int(fila["id_evento"])
+            if curriculo in eventos_por_curriculo:
+                eventos_por_curriculo[curriculo].append(evento)
+
+    return curriculos, eventos_por_curriculo
+
+
+def cargar_disponibilidad_profesores(ruta_archivo: str, profesores: list[str], franjas_horarias: list[int]):
+    """Carga la matriz binaria de disponibilidad docente."""
+    disponibilidad_por_profesor = {(prof, franja): 0 for prof in profesores for franja in franjas_horarias}
+    with open(ruta_archivo, "r", encoding="utf-8") as archivo:
+        lector = csv.DictReader(archivo)
+        for fila in lector:
+            profesor = fila["id_profesor"].strip()
+            if profesor in profesores:
+                inicio = int(fila["franja_inicio"])
+                fin = int(fila["franja_fin"])
+                for franja in range(inicio, fin + 1):
+                    if franja in franjas_horarias:
+                        disponibilidad_por_profesor[(profesor, franja)] = 1
+    return disponibilidad_por_profesor
+
+
+def cargar_datos_uctp(dir_datos: str = "dataset") -> DatosUCTP:
+    """Carga todos los conjuntos y parámetros del problema UCTP."""
+    dias, franjas_horarias, franjas_por_dia, dia_cierre_remoto, almuerzo_por_dia = cargar_configuracion(
+        os.path.join(os.path.dirname(__file__), "config.json")
+    )
+    salones, capacidad_por_salon, es_virtual_por_salon, caracteristicas_por_salon = cargar_datos_salones(
+        os.path.join(dir_datos, "salones.csv")
+    )
+    cursos, requisitos_por_curso = cargar_cursos(os.path.join(dir_datos, "cursos.csv"))
+    secciones, curso_por_seccion, alumnos_por_seccion = cargar_secciones(os.path.join(dir_datos, "secciones.csv"))
+    eventos, eventos_por_seccion, eventos_por_profesor, duracion_por_evento, seccion_por_evento = cargar_eventos(
+        os.path.join(dir_datos, "eventos.csv")
+    )
+    profesores = list(eventos_por_profesor.keys())
+    curriculos, eventos_por_curriculo = cargar_curriculos(
+        os.path.join(dir_datos, "curriculos.csv"), os.path.join(dir_datos, "curriculo_evento.csv")
+    )
+    disponibilidad_por_profesor = cargar_disponibilidad_profesores(
+        os.path.join(dir_datos, "profesores_disponibilidad.csv"), profesores, franjas_horarias
     )
 
-    # Parámetros binarios Tiene y Req
-    Tiene = {(r, f): 1 if f in CARACTERISTICAS[r] else 0 for r in R for f in F}
-    Req = {(s, f): 1 if f in REQ_CURSO[SECCION_CURSO[s]] else 0 for s in S for f in F}
+    caracteristicas = sorted(
+        set(carac for lista in caracteristicas_por_salon.values() for carac in lista if carac)
+        | set(req for lista in requisitos_por_curso.values() for req in lista if req)
+    )
+
+    salon_tiene_caracteristica = {
+        (salon, carac): 1 if carac in caracteristicas_por_salon[salon] else 0
+        for salon in salones
+        for carac in caracteristicas
+    }
+    seccion_requiere_caracteristica = {
+        (seccion, carac): 1 if carac in requisitos_por_curso[curso_por_seccion[seccion]] else 0
+        for seccion in secciones
+        for carac in caracteristicas
+    }
 
     return DatosUCTP(
-        D=D, T=T, T_d=T_d, d_jue=d_jue, Almuerzo=Almuerzo,
-        R=R, CAP=CAP, ES_VIRTUAL=ES_VIRTUAL, CARACTERISTICAS=CARACTERISTICAS,
-        CURSOS=CURSOS, REQ_CURSO=REQ_CURSO,
-        S=S, SECCION_CURSO=SECCION_CURSO, Alumno=Alumno,
-        E=E, E_s=E_s, E_p=E_p, Dur=Dur, EVENTO_SECCION=EVENTO_SECCION,
-        P=P, K=K, E_k=E_k, Disp=Disp,
-        F=F, Tiene=Tiene, Req=Req
+        dias=dias,
+        franjas_horarias=franjas_horarias,
+        franjas_por_dia=franjas_por_dia,
+        dia_cierre_remoto=dia_cierre_remoto,
+        almuerzo_por_dia=almuerzo_por_dia,
+        salones=salones,
+        capacidad_por_salon=capacidad_por_salon,
+        es_virtual_por_salon=es_virtual_por_salon,
+        caracteristicas_por_salon=caracteristicas_por_salon,
+        cursos=cursos,
+        requisitos_por_curso=requisitos_por_curso,
+        secciones=secciones,
+        curso_por_seccion=curso_por_seccion,
+        alumnos_por_seccion=alumnos_por_seccion,
+        eventos=eventos,
+        eventos_por_seccion=eventos_por_seccion,
+        eventos_por_profesor=eventos_por_profesor,
+        duracion_por_evento=duracion_por_evento,
+        seccion_por_evento=seccion_por_evento,
+        profesores=profesores,
+        curriculos=curriculos,
+        eventos_por_curriculo=eventos_por_curriculo,
+        disponibilidad_por_profesor=disponibilidad_por_profesor,
+        caracteristicas=caracteristicas,
+        salon_tiene_caracteristica=salon_tiene_caracteristica,
+        seccion_requiere_caracteristica=seccion_requiere_caracteristica,
     )

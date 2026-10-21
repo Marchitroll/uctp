@@ -1,37 +1,37 @@
-from mip import Model, BINARY, INTEGER, CONTINUOUS, xsum, minimize
-import time
+"""Optimizador exacto de programación entera mixta (MIP) para el UCTP con solver HiGHS."""
 import argparse
-from exportador_horarios import imprimir_metricas, exportar_horarios, exportar_metricas_mip
+import time
+from mip import Model, BINARY, INTEGER, CONTINUOUS, xsum, minimize
 from cargador_datos import cargar_datos_uctp
+from exportador_horarios import imprimir_metricas, exportar_horarios, exportar_metricas_mip
 from tipos_uctp import DatosUCTP
 from uctp_utils import detectar_escala, cargar_config_institucional
-
 
 def crear_parser_mip() -> argparse.ArgumentParser:
     """Crea y retorna el parser de argumentos CLI para el optimizador MIP."""
     parser = argparse.ArgumentParser(description="Optimizador MIP para UCTP")
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
+    grupo_tiempo = parser.add_mutually_exclusive_group()
+    grupo_tiempo.add_argument(
         "--horas",
         type=float,
-        help="Tiempo maximo de optimizacion en horas"
+        help="Tiempo máximo de optimización en horas",
     )
-    group.add_argument(
+    grupo_tiempo.add_argument(
         "--minutos",
         type=float,
-        help="Tiempo maximo de optimizacion en minutos"
+        help="Tiempo máximo de optimización en minutos",
     )
     parser.add_argument(
         "--dir_datos",
         type=str,
         default="dataset",
-        help="Directorio del dataset (default: 'dataset')"
+        help="Directorio del dataset (default: 'dataset')",
     )
     parser.add_argument(
         "--etiqueta",
         type=str,
         default=None,
-        help="Etiqueta identificadora de la instancia (ej. 's1')"
+        help="Etiqueta identificadora de la instancia (ej. 's1')",
     )
     return parser
 
@@ -39,348 +39,433 @@ def crear_parser_mip() -> argparse.ArgumentParser:
 def construir_modelo_mip(datos: DatosUCTP) -> tuple[Model, dict, dict, tuple]:
     """
     Construye la formulación matemática MIP para UCTP usando HiGHS.
-    
+
     Retorna:
         model: Objeto Model de python-mip con restricciones y función objetivo
-        x: Variables de asignación x[e, r, t]
-        y: Variables de inicio y[e, r, t]
-        vars_blandas: Tupla (P_almuerzo, P_espaciado, P_jueves, P_sabado, P_ventanas)
+        x: Variables de asignación x[evento, salon, franja]
+        y: Variables de inicio y[evento, salon, franja]
+        vars_blandas: Tupla (penalizacion_almuerzo, penalizacion_espaciado, penalizacion_jueves, penalizacion_sabado, penalizacion_ventanas)
     """
-    D, T, T_d, d_jue, Almuerzo = datos.D, datos.T, datos.T_d, datos.d_jue, datos.Almuerzo
-    R, CAP, ES_VIRTUAL = datos.R, datos.CAP, datos.ES_VIRTUAL
-    S, SECCION_CURSO, Alumno = datos.S, datos.SECCION_CURSO, datos.Alumno
-    E, E_s, E_p, Dur, EVENTO_SECCION = datos.E, datos.E_s, datos.E_p, datos.Dur, datos.EVENTO_SECCION
-    P, K, E_k, Disp = datos.P, datos.K, datos.E_k, datos.Disp
-    F, Tiene, Req = datos.F, datos.Tiene, datos.Req
-    Cursos_Agrupados = list(E_s.values())
+    dias = datos.dias
+    franjas_horarias = datos.franjas_horarias
+    franjas_por_dia = datos.franjas_por_dia
+    dia_cierre_remoto = datos.dia_cierre_remoto
+    almuerzo_por_franja = datos.almuerzo_por_dia
+    salones = datos.salones
+    capacidad_por_salon = datos.capacidad_por_salon
+    es_virtual_por_salon = datos.es_virtual_por_salon
+    secciones = datos.secciones
+    curso_por_seccion = datos.curso_por_seccion
+    alumnos_por_seccion = datos.alumnos_por_seccion
+    eventos = datos.eventos
+    eventos_por_seccion = datos.eventos_por_seccion
+    eventos_por_profesor = datos.eventos_por_profesor
+    duracion_por_evento = datos.duracion_por_evento
+    seccion_por_evento = datos.seccion_por_evento
+    profesores = datos.profesores
+    curriculos = datos.curriculos
+    eventos_por_curriculo = datos.eventos_por_curriculo
+    disponibilidad_por_profesor = datos.disponibilidad_por_profesor
+    caracteristicas = datos.caracteristicas
+    salon_tiene_caracteristica = datos.salon_tiene_caracteristica
+    seccion_requiere_caracteristica = datos.seccion_requiere_caracteristica
+    cursos_agrupados = list(eventos_por_seccion.values())
 
     model = Model(name="UCTP_Universidad", solver_name="HiGHS")
 
-    # ========================================================================
-    # FILTRADO TOPOLÓGICO (REDUCCIÓN DE DOMINIO)
-    # ========================================================================
-    Valid_SR = set()
-    Valid_ERT = set()
+    # Dominio válido de salones y franjas por evento
+    pares_seccion_salon_validos = set()
+    ternas_evento_salon_franja_validas = set()
 
-    for s in S:
+    for seccion in secciones:
         salones_elegibles = [
-            r for r in R 
-            if CAP[r] >= Alumno[s] and all(Req[(s, f)] <= Tiene[(r, f)] for f in F)
+            salon for salon in salones 
+            if capacidad_por_salon[salon] >= alumnos_por_seccion[seccion] 
+            and all(seccion_requiere_caracteristica[(seccion, carac)] <= salon_tiene_caracteristica[(salon, carac)] for carac in caracteristicas)
         ]
         
-        for r in salones_elegibles:
-            Valid_SR.add((s, r))
+        for salon in salones_elegibles:
+            pares_seccion_salon_validos.add((seccion, salon))
             
-            if ES_VIRTUAL[r]:
-                franjas_operativas = T_d[d_jue]
+            if es_virtual_por_salon[salon]:
+                franjas_operativas = franjas_por_dia[dia_cierre_remoto]
             else:
-                franjas_operativas = [t for t in T if t not in T_d[d_jue]]
+                franjas_operativas = [franja for franja in franjas_horarias if franja not in franjas_por_dia[dia_cierre_remoto]]
                 
-            for e in E_s[s]:
-                p_asignado = next(prof for prof, eventos_prof in E_p.items() if e in eventos_prof)
-                for t in franjas_operativas:
-                    if Disp[(p_asignado, t)] == 1:
-                        Valid_ERT.add((e, r, t))
+            for evento in eventos_por_seccion[seccion]:
+                profesor_asignado = next(prof for prof, eventos_prof in eventos_por_profesor.items() if evento in eventos_prof)
+                for franja in franjas_operativas:
+                    if disponibilidad_por_profesor[(profesor_asignado, franja)] == 1:
+                        ternas_evento_salon_franja_validas.add((evento, salon, franja))
 
-    # ========================================================================
-    # VARIABLES DE DECISIÓN (INSTANCIACIÓN DISPERSA)
-    # ========================================================================
+    # Variables de decisión
     x = {
-        (e, r, t): model.add_var(name=f"x_{e}_{r}_{t}", var_type=BINARY)
-        for (e, r, t) in Valid_ERT
+        (evento, salon, franja): model.add_var(name=f"x_{evento}_{salon}_{franja}", var_type=BINARY)
+        for (evento, salon, franja) in ternas_evento_salon_franja_validas
     }
 
     y = {
-        (e, r, t): model.add_var(name=f"y_{e}_{r}_{t}", var_type=BINARY)
-        for (e, r, t) in Valid_ERT
+        (evento, salon, franja): model.add_var(name=f"y_{evento}_{salon}_{franja}", var_type=BINARY)
+        for (evento, salon, franja) in ternas_evento_salon_franja_validas
     }
 
-    w = {
-        (s, r): model.add_var(name=f"w_{s}_{r}", var_type=BINARY)
-        for (s, r) in Valid_SR
+    indicador_seccion_salon = {
+        (seccion, salon): model.add_var(name=f"w_{seccion}_{salon}", var_type=BINARY)
+        for (seccion, salon) in pares_seccion_salon_validos
     }
 
-    P_almuerzo = model.add_var(name="P_almuerzo", var_type=INTEGER, lb=0)
-    v_espaciado = {
-        (tuple(c), i): model.add_var(name=f"v_espaciado_{c[0]}_{i}", var_type=CONTINUOUS, lb=0)
-        for c in Cursos_Agrupados
-        for i in range(len(D) - 1)
+    penalizacion_almuerzo = model.add_var(name="P_almuerzo", var_type=INTEGER, lb=0)
+    violaciones_espaciado = {
+        (tuple(eventos_curso), indice_dia): model.add_var(
+            name=f"violacion_espaciado_{eventos_curso[0]}_{indice_dia}", var_type=CONTINUOUS, lb=0
+        )
+        for eventos_curso in cursos_agrupados
+        for indice_dia in range(len(dias) - 1)
     }
-    P_espaciado = model.add_var(name="P_espaciado", var_type=CONTINUOUS, lb=0)
-    P_jueves = model.add_var(name="P_jueves", var_type=INTEGER, lb=0)
-    P_sabado = model.add_var(name="P_sabado", var_type=INTEGER, lb=0)
-    P_ventanas = model.add_var(name="P_ventanas", var_type=CONTINUOUS, lb=0)
+    penalizacion_espaciado = model.add_var(name="P_espaciado", var_type=CONTINUOUS, lb=0)
+    penalizacion_jueves = model.add_var(name="P_jueves", var_type=INTEGER, lb=0)
+    penalizacion_sabado = model.add_var(name="P_sabado", var_type=INTEGER, lb=0)
+    penalizacion_ventanas = model.add_var(name="P_ventanas", var_type=CONTINUOUS, lb=0)
 
     print("[INFO] Inicialización completa: conjuntos, parámetros y variables.")
-    print(f"       E={len(E)} eventos | R={len(R)} salones | T={len(T)} franjas | P={len(P)} profesores")
+    print(f"       Eventos={len(eventos)} | Salones={len(salones)} | Franjas={len(franjas_horarias)} | Profesores={len(profesores)}")
 
-    # ========================================================================
-    # 1. DISPONIBILIDAD Y NO COLISIÓN DEL PROFESOR
-    # ========================================================================
-    for p in P:
-        for t in T:
-            suma_clases_profesor = xsum(x[e, r, t] for e in E_p[p] for r in R if (e, r, t) in x)
-            model += suma_clases_profesor <= Disp[p, t], f"DispProf_{p}_franja_{t}"
-
-    # ========================================================================
-    # 2. CARGA DIARIA MÁXIMA DEL PROFESOR (MÁXIMO 8 HORAS DE CLASE POR DÍA)
-    # ========================================================================
-    MAX_HORAS_DIARIAS = 8
-    for p in P:
-        for d in D:
-            suma_clases_diarias = xsum(
-                x[e, r, t] 
-                for e in E_p[p] 
-                for r in R 
-                for t in T_d[d] 
-                if (e, r, t) in x
+    # 1. Disponibilidad y no colisión de docentes
+    for profesor in profesores:
+        for franja in franjas_horarias:
+            suma_clases_profesor = xsum(
+                x[evento, salon, franja]
+                for evento in eventos_por_profesor[profesor]
+                for salon in salones
+                if (evento, salon, franja) in x
             )
-            model += suma_clases_diarias <= MAX_HORAS_DIARIAS, f"CargaMaximaProfesor_{p}_{d}"
+            model += suma_clases_profesor <= disponibilidad_por_profesor[profesor, franja], f"DispProf_{profesor}_franja_{franja}"
 
-    # ========================================================================
-    # 3. COBERTURA TOTAL DE EVENTOS
-    # ========================================================================
-    for e in E:
-        suma_asignaciones = xsum(x[e, r, t] for r in R for t in T if (e, r, t) in x)
-        model += suma_asignaciones == Dur[e], f"Cobertura_Evento_{e}"
+    # 2. Carga diaria máxima por docente (8h)
+    MAX_HORAS_DIARIAS = 8
+    for profesor in profesores:
+        for dia in dias:
+            suma_clases_diarias = xsum(
+                x[evento, salon, franja]
+                for evento in eventos_por_profesor[profesor]
+                for salon in salones
+                for franja in franjas_por_dia[dia]
+                if (evento, salon, franja) in x
+            )
+            model += suma_clases_diarias <= MAX_HORAS_DIARIAS, f"CargaMaximaProfesor_{profesor}_{dia}"
 
-    # ========================================================================
-    # 4. ESTABILIDAD DE SALONES
-    # ========================================================================
-    for s in S:
-        for r in R:
-            if (s, r) not in w:
+    # 3. Cobertura de eventos
+    for evento in eventos:
+        suma_asignaciones = xsum(
+            x[evento, salon, franja]
+            for salon in salones
+            for franja in franjas_horarias
+            if (evento, salon, franja) in x
+        )
+        model += suma_asignaciones == duracion_por_evento[evento], f"Cobertura_Evento_{evento}"
+
+    # 4. Estabilidad de salones (máximo 2 por sección)
+    for seccion in secciones:
+        for salon in salones:
+            if (seccion, salon) not in indicador_seccion_salon:
                 continue
-            for e in E_s[s]:
-                suma_temporal = xsum(x[e, r, t] for t in T if (e, r, t) in x)
-                model += suma_temporal <= Dur[e] * w[s, r], f"Vincular_w_{s}_{e}_{r}"
+            for evento in eventos_por_seccion[seccion]:
+                suma_temporal = xsum(
+                    x[evento, salon, franja]
+                    for franja in franjas_horarias
+                    if (evento, salon, franja) in x
+                )
+                model += (
+                    suma_temporal <= duracion_por_evento[evento] * indicador_seccion_salon[seccion, salon],
+                    f"Vincular_salon_{seccion}_{evento}_{salon}",
+                )
 
-    for s in S:
-        model += xsum(w[s, r] for r in R if (s, r) in w) <= 2, f"EstabilidadSalones_{s}"
+    for seccion in secciones:
+        model += (
+            xsum(indicador_seccion_salon[seccion, salon] for salon in salones if (seccion, salon) in indicador_seccion_salon) <= 2,
+            f"EstabilidadSalones_{seccion}",
+        )
 
-    # ========================================================================
-    # 5. NO COLISIÓN DE SALONES FÍSICOS
-    # ========================================================================
-    for r in R:
-        if not ES_VIRTUAL[r]:
-            for t in T:
-                suma_eventos_salon = xsum(x[e, r, t] for e in E if (e, r, t) in x)
-                model += suma_eventos_salon <= 1, f"ColisionSalonesFisicos_{r}_franja_{t}"
+    # 5. No colisión en salones físicos
+    for salon in salones:
+        if not es_virtual_por_salon[salon]:
+            for franja in franjas_horarias:
+                suma_eventos_salon = xsum(
+                    x[evento, salon, franja]
+                    for evento in eventos
+                    if (evento, salon, franja) in x
+                )
+                model += suma_eventos_salon <= 1, f"ColisionSalonesFisicos_{salon}_franja_{franja}"
 
-    # ========================================================================
-    # 6. CONTINUIDAD Y NO FRAGMENTACIÓN
-    # ========================================================================
-    for e in E:
-        model += xsum(y[e, r, t] for r in R for t in T if (e, r, t) in y) == 1, f"UnicoInicio_Evento_{e}"
+    # 6. Continuidad y franja única de inicio
+    for evento in eventos:
+        model += (
+            xsum(y[evento, salon, franja] for salon in salones for franja in franjas_horarias if (evento, salon, franja) in y) == 1,
+            f"UnicoInicio_Evento_{evento}",
+        )
 
-    for d in D:
-        for t in T_d[d]:
-            for e in E:
-                arranques_validos = [tau for tau in T_d[d] if (t - Dur[e] + 1) <= tau <= t]
-                for r in R:
-                    if (e, r, t) in x:
-                        suma_arranques = xsum(y[e, r, tau] for tau in arranques_validos if (e, r, tau) in y)
-                        model += x[e, r, t] == suma_arranques, f"Continua_d{d}_t{t}_e{e}_r{r}"
+    for dia in dias:
+        for franja in franjas_por_dia[dia]:
+            for evento in eventos:
+                arranques_validos = [
+                    tau for tau in franjas_por_dia[dia]
+                    if (franja - duracion_por_evento[evento] + 1) <= tau <= franja
+                ]
+                for salon in salones:
+                    if (evento, salon, franja) in x:
+                        suma_arranques = xsum(
+                            y[evento, salon, tau]
+                            for tau in arranques_validos
+                            if (evento, salon, tau) in y
+                        )
+                        model += x[evento, salon, franja] == suma_arranques, f"Continua_d{dia}_t{franja}_e{evento}_r{salon}"
 
-    # ========================================================================
-    # 7. ESPACIADO DE SESIONES (RESTRICCIÓN BLANDA PENALIZADA)
-    # ========================================================================
-    for c in Cursos_Agrupados:
-        for i in range(len(D) - 1):
-            dia_actual = D[i]
-            dia_siguiente = D[i+1]
-            arranques_hoy = xsum(y[e, r, t] for e in c for r in R for t in T_d[dia_actual] if (e, r, t) in y)
-            arranques_manana = xsum(y[e, r, t] for e in c for r in R for t in T_d[dia_siguiente] if (e, r, t) in y)
-            model += arranques_hoy + arranques_manana <= 1 + v_espaciado[tuple(c), i], f"Espaciado_Curso_{c[0]}_Dia_{i}"
+    # 7. Espaciado entre sesiones consecutivas (blanda)
+    for eventos_curso in cursos_agrupados:
+        for indice_dia in range(len(dias) - 1):
+            dia_actual = dias[indice_dia]
+            dia_siguiente = dias[indice_dia + 1]
+            arranques_hoy = xsum(
+                y[evento, salon, franja]
+                for evento in eventos_curso
+                for salon in salones
+                for franja in franjas_por_dia[dia_actual]
+                if (evento, salon, franja) in y
+            )
+            arranques_manana = xsum(
+                y[evento, salon, franja]
+                for evento in eventos_curso
+                for salon in salones
+                for franja in franjas_por_dia[dia_siguiente]
+                if (evento, salon, franja) in y
+            )
+            model += (
+                arranques_hoy + arranques_manana <= 1 + violaciones_espaciado[tuple(eventos_curso), indice_dia],
+                f"Espaciado_Curso_{eventos_curso[0]}_Dia_{indice_dia}",
+            )
 
-    model += P_espaciado == xsum(
-        v_espaciado[tuple(c), i]
-        for c in Cursos_Agrupados
-        for i in range(len(D) - 1)
+    model += penalizacion_espaciado == xsum(
+        violaciones_espaciado[tuple(eventos_curso), indice_dia]
+        for eventos_curso in cursos_agrupados
+        for indice_dia in range(len(dias) - 1)
     ), "Calculo_Penalizacion_Espaciado"
 
-    # ========================================================================
-    # 8. CONTROL DE DESBORDAMIENTO DIARIO
-    # ========================================================================
-    for d in D:
-        ultima_franja = max(T_d[d])
-        for e in E:
-            limite_inicio = ultima_franja - Dur[e] + 1
-            for t in T_d[d]:
-                if t > limite_inicio:
-                    for r in R:
-                        if (e, r, t) in y:
-                            model += y[e, r, t] == 0, f"Desborde_d{d}_e{e}_r{r}_t{t}"
+    # 8. Sin desborde al final del día
+    for dia in dias:
+        ultima_franja = max(franjas_por_dia[dia])
+        for evento in eventos:
+            limite_inicio = ultima_franja - duracion_por_evento[evento] + 1
+            for franja in franjas_por_dia[dia]:
+                if franja > limite_inicio:
+                    for salon in salones:
+                        if (evento, salon, franja) in y:
+                            model += y[evento, salon, franja] == 0, f"Desborde_d{dia}_e{evento}_r{salon}_t{franja}"
 
-    # ========================================================================
-    # 9. OFERTA GLOBAL DE SECCIONES SIN CONFLICTO
-    # ========================================================================
-    for k in K:
-        cursos_en_k = {}
-        for e in E_k[k]:
-            s = EVENTO_SECCION[e]
-            c = SECCION_CURSO[s]
-            if c not in cursos_en_k:
-                cursos_en_k[c] = set()
-            cursos_en_k[c].add(e)
+    # 9. No solapamiento curricular
+    for curriculo in curriculos:
+        cursos_en_curriculo = {}
+        for evento in eventos_por_curriculo[curriculo]:
+            seccion = seccion_por_evento[evento]
+            curso = curso_por_seccion[seccion]
+            if curso not in cursos_en_curriculo:
+                cursos_en_curriculo[curso] = set()
+            cursos_en_curriculo[curso].add(evento)
         
-        for c, eventos_c in cursos_en_k.items():
-            secciones_unicas = set(EVENTO_SECCION[e] for e in eventos_c)
+        for curso, eventos_curso in cursos_en_curriculo.items():
+            secciones_unicas = set(seccion_por_evento[ev] for ev in eventos_curso)
             if len(secciones_unicas) > 1:
                 num_secciones = len(secciones_unicas)
-                eventos_otros = [e for e in E_k[k] if e not in eventos_c]
+                eventos_otros = [ev for ev in eventos_por_curriculo[curriculo] if ev not in eventos_curso]
                 
-                for t in T:
-                    vars_multi = [x[e, r, t] for e in eventos_c for r in R if (e, r, t) in x]
+                for franja in franjas_horarias:
+                    vars_multi = [x[ev, salon, franja] for ev in eventos_curso for salon in salones if (ev, salon, franja) in x]
                     if not vars_multi:
                         continue
-                    for e_other in eventos_otros:
-                        vars_other = [x[e_other, r, t] for r in R if (e_other, r, t) in x]
-                        if vars_other:
+                    for evento_otro in eventos_otros:
+                        vars_otro = [x[evento_otro, salon, franja] for salon in salones if (evento_otro, salon, franja) in x]
+                        if vars_otro:
                             model += (
-                                xsum(vars_multi) + xsum(vars_other) <= num_secciones, 
-                                f"ConflictoCurricular_{k}_{c}_{e_other}_t{t}"
+                                xsum(vars_multi) + xsum(vars_otro) <= num_secciones, 
+                                f"ConflictoCurricular_{curriculo}_{curso}_{evento_otro}_t{franja}",
                             )
 
-    # ========================================================================
-    # RESTRICCIONES BLANDAS Y FUNCIÓN OBJETIVO
-    # ========================================================================
-    model += P_almuerzo == xsum(
-        x[e, r, t]
-        for (e, r, t) in x.keys()
-        if Almuerzo[t] == 1
+    # Penalizaciones blandas y función objetivo
+    model += penalizacion_almuerzo == xsum(
+        x[evento, salon, franja]
+        for (evento, salon, franja) in x.keys()
+        if almuerzo_por_franja[franja] == 1
     ), "Calculo_Penalizacion_Almuerzo"
 
-    d_sab = "Sabado"
-    model += P_jueves == xsum(
-        x[e, r, t]
-        for (e, r, t) in x.keys()
-        if t in T_d[d_jue]
+    dia_sabado = "Sabado"
+    model += penalizacion_jueves == xsum(
+        x[evento, salon, franja]
+        for (evento, salon, franja) in x.keys()
+        if franja in franjas_por_dia[dia_cierre_remoto]
     ), "Calculo_Penalizacion_Jueves"
 
-    model += P_sabado == xsum(
-        x[e, r, t]
-        for (e, r, t) in x.keys()
-        if t in T_d[d_sab]
+    model += penalizacion_sabado == xsum(
+        x[evento, salon, franja]
+        for (evento, salon, franja) in x.keys()
+        if dia_sabado in franjas_por_dia and franja in franjas_por_dia[dia_sabado]
     ), "Calculo_Penalizacion_Sabado"
 
-    gap_vars = []
-    for p in P:
-        for d in D:
-            slots_d = T_d[d]
-            if not slots_d:
+    # Penalización de ventanas docentes libres (blanda)
+    # Cada variable representa un posible espacio libre entre 2 clases de un profesor.
+    variables_brecha = []
+    for profesor in profesores:
+        for dia in dias:
+            franjas_dia = franjas_por_dia[dia]
+            if not franjas_dia:
                 continue
             
-            f_p = {}
-            l_p = {}
-            for idx_t, t in enumerate(slots_d):
-                f_p[t] = model.add_var(name=f"f_{p}_{t}", var_type=CONTINUOUS, lb=0, ub=1)
-                l_p[t] = model.add_var(name=f"l_{p}_{t}", var_type=CONTINUOUS, lb=0, ub=1)
-                u_pt = xsum(x[e, r, t] for e in E_p[p] for r in R if (e, r, t) in x)
+            inicio_jornada = {}
+            final_jornada = {}
+            for indice_franja, franja in enumerate(franjas_dia):
+                # Indicadores de inicio y final de jornada para el profesor en la franja actual. Se minimizarán.
+                inicio_jornada[franja] = model.add_var(name=f"primera_ocup_{profesor}_{franja}", var_type=CONTINUOUS, lb=0, ub=1)
+                final_jornada[franja] = model.add_var(name=f"ultima_ocup_{profesor}_{franja}", var_type=CONTINUOUS, lb=0, ub=1)
+                ocupacion_profesor_franja = xsum(
+                    x[evento, salon, franja]
+                    for evento in eventos_por_profesor[profesor]
+                    for salon in salones
+                    if (evento, salon, franja) in x
+                )
                 
-                model += f_p[t] >= u_pt, f"F_ge_U_{p}_{t}"
-                if idx_t > 0:
-                    prev_t = slots_d[idx_t - 1]
-                    model += f_p[t] >= f_p[prev_t], f"F_prop_{p}_{t}"
+                model += inicio_jornada[franja] >= ocupacion_profesor_franja, f"PrimeraOcup_ge_U_{profesor}_{franja}"
+                if indice_franja > 0:
+                    franja_anterior = franjas_dia[indice_franja - 1]
+                    model += inicio_jornada[franja] >= inicio_jornada[franja_anterior], f"PrimeraOcup_prop_{profesor}_{franja}"
                     
-                model += l_p[t] >= u_pt, f"L_ge_U_{p}_{t}"
-                if idx_t > 0:
-                    prev_t = slots_d[idx_t - 1]
-                    model += l_p[prev_t] >= l_p[t], f"L_prop_{p}_{prev_t}"
-                    
-            for t in slots_d:
-                if Almuerzo[t] == 0:
-                    u_pt = xsum(x[e, r, t] for e in E_p[p] for r in R if (e, r, t) in x)
-                    g_pt = model.add_var(name=f"gap_{p}_{t}", var_type=CONTINUOUS, lb=0)
-                    model += g_pt >= f_p[t] + l_p[t] - 1 - u_pt, f"GapDef_{p}_{t}"
-                    gap_vars.append(g_pt)
+                model += final_jornada[franja] >= ocupacion_profesor_franja, f"UltimaOcup_ge_U_{profesor}_{franja}"
+                if indice_franja > 0:
+                    franja_anterior = franjas_dia[indice_franja - 1]
+                    model += final_jornada[franja_anterior] >= final_jornada[franja], f"UltimaOcup_prop_{profesor}_{franja_anterior}"
+            
+            # Se calcula la brecha docente si no hay almuerzo en esa franja.      
+            for franja in franjas_dia:
+                if almuerzo_por_franja[franja] == 0:
+                    ocupacion_profesor_franja = xsum(
+                        x[evento, salon, franja]
+                        for evento in eventos_por_profesor[profesor]
+                        for salon in salones
+                        if (evento, salon, franja) in x
+                    )
+                    brecha_profesor_franja = model.add_var(name=f"brecha_{profesor}_{franja}", var_type=CONTINUOUS, lb=0)
+                    # La brecha se calcula como la diferencia entre la ocupación del profesor y los indicadores de inicio y final de jornada.
+                    model += (
+                        brecha_profesor_franja >= inicio_jornada[franja] + final_jornada[franja] - 1 - ocupacion_profesor_franja,
+                        f"BrechaDef_{profesor}_{franja}",
+                    )
+                    variables_brecha.append(brecha_profesor_franja)
 
-    model += P_ventanas == xsum(gap_vars), "Calculo_Penalizacion_Ventanas"
+    
+    model += penalizacion_ventanas == xsum(variables_brecha), "Calculo_Penalizacion_Ventanas"
 
     pesos = cargar_config_institucional().get("pesos_penalizacion", {})
-    W_A = pesos.get("W_A", 1)
-    W_E = pesos.get("W_E", 10)
-    W_JUE = pesos.get("W_JUE", 1)
-    W_SAB = pesos.get("W_SAB", 3)
-    W_V = pesos.get("W_V", 2)
+    peso_almuerzo = pesos.get("W_A", 1)
+    peso_espaciado = pesos.get("W_E", 10)
+    peso_jueves = pesos.get("W_JUE", 1)
+    peso_sabado = pesos.get("W_SAB", 3)
+    peso_ventanas = pesos.get("W_V", 2)
 
     model.objective = minimize(
-        W_A * P_almuerzo + 
-        W_E * P_espaciado + 
-        W_JUE * P_jueves + 
-        W_SAB * P_sabado + 
-        W_V * P_ventanas
+        peso_almuerzo * penalizacion_almuerzo + 
+        peso_espaciado * penalizacion_espaciado + 
+        peso_jueves * penalizacion_jueves + 
+        peso_sabado * penalizacion_sabado + 
+        peso_ventanas * penalizacion_ventanas
     )
 
-    return model, x, y, (P_almuerzo, P_espaciado, P_jueves, P_sabado, P_ventanas)
+    return model, x, y, (penalizacion_almuerzo, penalizacion_espaciado, penalizacion_jueves, penalizacion_sabado, penalizacion_ventanas)
 
 
 def resolver_mip(minutos: float = None, horas: float = None, dir_datos: str = "dataset", etiqueta: str = None):
-    """
-    Carga los datos de la instancia, construye el modelo MIP y ejecuta la optimización con HiGHS.
-    """
+    """Ejecuta la optimización del modelo MIP con HiGHS."""
     if horas is not None:
-        max_seconds = int(horas * 3600)
-        tiempo_desc = f"{horas} horas"
+        segundos_maximos = int(horas * 3600)
+        descripcion_tiempo = f"{horas} horas"
     elif minutos is not None:
-        max_seconds = int(minutos * 60)
-        tiempo_desc = f"{minutos} minutos"
+        segundos_maximos = int(minutos * 60)
+        descripcion_tiempo = f"{minutos} minutos"
     else:
-        max_seconds = 7200
-        tiempo_desc = "2.0 horas (por defecto)"
+        segundos_maximos = 7200
+        descripcion_tiempo = "2.0 horas (por defecto)"
 
-    datos = cargar_datos_uctp(data_dir=dir_datos)
+    datos = cargar_datos_uctp(dir_datos=dir_datos)
     model, x, y, vars_blandas = construir_modelo_mip(datos)
-    P_almuerzo, P_espaciado, P_jueves, P_sabado, P_ventanas = vars_blandas
+    penalizacion_almuerzo, penalizacion_espaciado, penalizacion_jueves, penalizacion_sabado, penalizacion_ventanas = vars_blandas
 
-    lp_filename = f"UCTP_{etiqueta}.lp" if etiqueta else "UCTP_Universidad.lp"
-    model.write(lp_filename)
-    print(f"[INFO] Archivo LP generado exitosamente: {lp_filename}")
+    nombre_archivo_lp = f"UCTP_{etiqueta}.lp" if etiqueta else "UCTP_Universidad.lp"
+    model.write(nombre_archivo_lp)
+    print(f"[INFO] Archivo LP generado exitosamente: {nombre_archivo_lp}")
 
     model.verbose = 2
-    print(f"[INFO] Iniciando el proceso de optimización (máximo {tiempo_desc} / {max_seconds} segundos)...")
+    print(f"[INFO] Iniciando el proceso de optimización (máximo {descripcion_tiempo} / {segundos_maximos} segundos)...")
 
-    start_time = time.process_time()
-    status = model.optimize(max_seconds=max_seconds)
-    cpu_time = time.process_time() - start_time
-    nodes_explored = 0
+    tiempo_inicio = time.process_time()
+    estado = model.optimize(max_seconds=segundos_maximos)
+    tiempo_cpu = time.process_time() - tiempo_inicio
+    nodos_explorados = 0
 
-    escala_base = detectar_escala(datos.K)
+    desglose_penalizaciones = None
+    if model.num_solutions > 0:
+        desglose_penalizaciones = {
+            "penalizacion_almuerzo": round(float(penalizacion_almuerzo.x)),
+            "penalizacion_espaciado": round(float(penalizacion_espaciado.x)),
+            "penalizacion_jueves": round(float(penalizacion_jueves.x)),
+            "penalizacion_sabado": round(float(penalizacion_sabado.x)),
+            "penalizacion_ventanas": round(float(penalizacion_ventanas.x)),
+        }
+
+    escala_base = detectar_escala(datos.curriculos)
     escala_salida = f"{escala_base}_{etiqueta}" if etiqueta else None
-    exportar_metricas_mip(status, cpu_time, nodes_explored, model, datos.K, output_dir=escala_salida)
+    exportar_metricas_mip(
+        estado,
+        tiempo_cpu,
+        nodos_explorados,
+        model,
+        datos.curriculos,
+        dir_salida=escala_salida,
+        desglose_penalizaciones=desglose_penalizaciones,
+    )
 
     pesos = cargar_config_institucional().get("pesos_penalizacion", {})
-    W_A = pesos.get("W_A", 1)
-    W_E = pesos.get("W_E", 10)
-    W_JUE = pesos.get("W_JUE", 1)
-    W_SAB = pesos.get("W_SAB", 3)
-    W_V = pesos.get("W_V", 2)
+    peso_almuerzo = pesos.get("W_A", 1)
+    peso_espaciado = pesos.get("W_E", 10)
+    peso_jueves = pesos.get("W_JUE", 1)
+    peso_sabado = pesos.get("W_SAB", 3)
+    peso_ventanas = pesos.get("W_V", 2)
 
     if model.num_solutions > 0:
-        imprimir_metricas(status, cpu_time, model, nodes_explored=nodes_explored)
+        imprimir_metricas(estado, tiempo_cpu, model, nodos_explorados=nodos_explorados)
         print(" [DETALLE DE RESTRICCIONES BLANDAS]")
         print(" " + "-"*50)
-        print(f"   - Almuerzo (franjas de clase) : {P_almuerzo.x:.0f} (peso {W_A})")
-        print(f"   - Espaciado (infracciones)     : {P_espaciado.x:.0f} (peso {W_E})")
-        print(f"   - Jueves (franjas virtuales)  : {P_jueves.x:.0f} (peso {W_JUE})")
-        print(f"   - Sábado (franjas fin de sem) : {P_sabado.x:.0f} (peso {W_SAB})")
-        print(f"   - Ventanas docentes (ociosas) : {P_ventanas.x:.0f} (peso {W_V})")
+        print(f"   - Almuerzo (franjas de clase) : {penalizacion_almuerzo.x:.0f} (peso {peso_almuerzo})")
+        print(f"   - Espaciado (infracciones)     : {penalizacion_espaciado.x:.0f} (peso {peso_espaciado})")
+        print(f"   - Jueves (franjas virtuales)  : {penalizacion_jueves.x:.0f} (peso {peso_jueves})")
+        print(f"   - Sábado (franjas fin de sem) : {penalizacion_sabado.x:.0f} (peso {peso_sabado})")
+        print(f"   - Ventanas docentes (ociosas) : {penalizacion_ventanas.x:.0f} (peso {peso_ventanas})")
         print(f"   => Costo Total Ponderado (Z)   : {model.objective_value:.2f}")
         print(" " + "-"*50 + "\n")
 
-        out_path = f"horarios_{escala_base}_{etiqueta}/MIP" if etiqueta else f"horarios_{escala_base}/MIP"
+        dir_horarios_salida = f"horarios_{escala_base}_{etiqueta}/MIP" if etiqueta else f"horarios_{escala_base}/MIP"
         exportar_horarios(
-            x, datos.K, datos.E_k, datos.T_d, datos.D, 
-            datos.EVENTO_SECCION, datos.SECCION_CURSO, 
-            E_p=datos.E_p, output_dir=out_path
+            x,
+            curriculos=datos.curriculos,
+            eventos_por_curriculo=datos.eventos_por_curriculo,
+            franjas_por_dia=datos.franjas_por_dia,
+            dias=datos.dias,
+            seccion_por_evento=datos.seccion_por_evento,
+            curso_por_seccion=datos.curso_por_seccion,
+            eventos_por_profesor=datos.eventos_por_profesor,
+            dir_salida=dir_horarios_salida,
         )
     else:
-        print(f"\n[ALERTA] No se encontró ninguna solución factible. Estado final: {status.name if hasattr(status, 'name') else status}")
-        print(f"[INFO] Tiempo de Procesamiento CPU: {cpu_time:.2f} segundos")
-        print(f"[INFO] Nodos B&B Explorados      : {nodes_explored}")
+        print(f"\n[ALERTA] No se encontró ninguna solución factible. Estado final: {estado.name if hasattr(estado, 'name') else estado}")
+        print(f"[INFO] Tiempo de Procesamiento CPU: {tiempo_cpu:.2f} segundos")
+        print(f"[INFO] Nodos B&B Explorados      : {nodos_explorados}")
 
-    return model, status, cpu_time
-
+    return model, estado, tiempo_cpu
 
 def main():
     parser = crear_parser_mip()
@@ -389,9 +474,8 @@ def main():
         minutos=args.minutos,
         horas=args.horas,
         dir_datos=args.dir_datos,
-        etiqueta=args.etiqueta
+        etiqueta=args.etiqueta,
     )
-
 
 if __name__ == '__main__':
     main()

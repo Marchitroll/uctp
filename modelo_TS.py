@@ -1,28 +1,23 @@
-"""Búsqueda Tabú (Tabu Search - TS) para el problema UCTP / CB-CTT.
-
-Implementa un vecindario discreto adaptado sobre inicios válidos, memoria tabú
-de soluciones recientes, criterio de aspiración y early stopping por estancamiento.
-"""
+"""Búsqueda Tabú (TS) para UCTP."""
 from collections import deque
 
 import numpy as np
 from mealpy.math_based.TS import OriginalTS
 
-from base_optimizer_uctp import OptimizerUCTPMixin
-from problema_uctp import UCTPProblemBase
+from base_optimizer_uctp import MixinOptimizadorUCTP
+from problema_uctp import ProblemaUCTPBase
 from runner_metaheuristicas import crear_parser_metaheuristica, ejecutar_benchmark
 
 
-class CustomTS(OptimizerUCTPMixin, OriginalTS):
-    """Subclase de OriginalTS adaptada para optimización combinatoria discreta en UCTP."""
+class OptimizadorTS(MixinOptimizadorUCTP, OriginalTS):
+    """Búsqueda Tabú con vecindario discreto y parada temprana."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Optimización de estructura de datos: deque con maxlen para O(1) tabu list
         self.tabu_deque = deque(maxlen=self.tabu_size)
 
     def evolve(self, epoch):
-        """Generación de vecindario discreto y selección del mejor candidato no tabú."""
+        """Genera el vecindario y selecciona el mejor candidato no tabú."""
         list_candidates = []
         attempts = 0
         max_attempts = self.neighbour_size * 5
@@ -32,12 +27,12 @@ class CustomTS(OptimizerUCTPMixin, OriginalTS):
             cand = self.x.copy()
             num_flips = 1 if self.generator.random() < 0.75 else 2
             dims_to_change = self.generator.choice(
-                self.problem.num_events,
-                size=min(num_flips, self.problem.num_events),
+                self.problem.cantidad_eventos,
+                size=min(num_flips, self.problem.cantidad_eventos),
                 replace=False,
             )
             for d in dims_to_change:
-                max_c = self.problem.max_choices[d]
+                max_c = self.problem.max_opciones_evento[d]
                 if max_c > 0:
                     current_c = int(cand[d])
                     new_c = self.generator.integers(0, max_c)
@@ -58,11 +53,10 @@ class CustomTS(OptimizerUCTPMixin, OriginalTS):
                 agent.target = self.get_target(cand)
             list_candidates.append(agent)
 
-        # Fallback si todos los candidatos generados eran tabú
         if len(list_candidates) == 0:
             cand = self.x.copy()
-            d = self.generator.integers(0, self.problem.num_events)
-            max_c = self.problem.max_choices[d]
+            d = self.generator.integers(0, self.problem.cantidad_eventos)
+            max_c = self.problem.max_opciones_evento[d]
             if max_c > 0:
                 cand[d] = (int(cand[d]) + 1) % (max_c + 1)
             agent = self.generate_empty_agent(cand)
@@ -103,15 +97,13 @@ def obtener_parametros_mealpy(config_base, args):
 def main():
     parser = crear_parser_metaheuristica("Búsqueda Tabú", paciencia_defecto=100)
     parser.add_argument(
-        "--tam_vecindario", "--neighbour_size",
-        dest="tam_vecindario",
+        "--tam_vecindario",
         type=int,
         default=None,
         help="Cantidad de soluciones candidatas generadas en cada iteración",
     )
     parser.add_argument(
-        "--tam_tabu", "--tabu_size",
-        dest="tam_tabu",
+        "--tam_tabu",
         type=int,
         default=None,
         help="Capacidad máxima de la memoria tabú",
@@ -120,8 +112,8 @@ def main():
 
     ejecutar_benchmark(
         nombre_metodo="TS",
-        clase_optimizador=CustomTS,
-        clase_problema=UCTPProblemBase,
+        clase_optimizador=OptimizadorTS,
+        clase_problema=ProblemaUCTPBase,
         args=args,
         configs_escala=CONFIGS_TS,
         obtener_parametros_mealpy=obtener_parametros_mealpy,

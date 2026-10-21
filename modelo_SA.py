@@ -1,30 +1,26 @@
-"""Recocido Simulado (Simulated Annealing - SA) para el problema UCTP / CB-CTT.
-
-Implementa perturbación discreta adaptada a inicios válidos y criterio de aceptación
-de Metropolis con enfriamiento progresivo y early stopping por convergencia.
-"""
+"""Recocido Simulado (SA) para UCTP."""
 import numpy as np
 from mealpy.physics_based.SA import OriginalSA
-
-from base_optimizer_uctp import OptimizerUCTPMixin
-from problema_uctp import UCTPProblemBase
+from base_optimizer_uctp import MixinOptimizadorUCTP
+from problema_uctp import ProblemaUCTPBase
 from runner_metaheuristicas import crear_parser_metaheuristica, ejecutar_benchmark
 
 
-class CustomSA(OptimizerUCTPMixin, OriginalSA):
-    """Subclase de OriginalSA adaptada para optimización combinatoria discreta en UCTP."""
+class OptimizadorSA(MixinOptimizadorUCTP, OriginalSA):
+    """Recocido Simulado con perturbación discreta (el cambio no es gradual) y parada temprana."""
 
     def evolve(self, epoch):
-        """Perturbación discreta y criterio de Metropolis adaptado para UCTP."""
+        """crear una solución ligeramente diferente y decidir si conservarla"""
+        
         pos_new = self.agent_current.solution.copy()
         num_flips = 1 if self.generator.random() < 0.75 else 2
         dims_to_change = self.generator.choice(
-            self.problem.num_events,
-            size=min(num_flips, self.problem.num_events),
+            self.problem.cantidad_eventos,
+            size=min(num_flips, self.problem.cantidad_eventos),
             replace=False,
         )
         for d in dims_to_change:
-            max_c = self.problem.max_choices[d]
+            max_c = self.problem.max_opciones_evento[d]
             if max_c > 0:
                 current_c = int(pos_new[d])
                 new_c = self.generator.integers(0, max_c)
@@ -66,8 +62,7 @@ def obtener_parametros_mealpy(config_base, args):
 def main():
     parser = crear_parser_metaheuristica("Recocido Simulado", paciencia_defecto=300)
     parser.add_argument(
-        "--temp_inicial", "--temp_init",
-        dest="temp_inicial",
+        "--temp_inicial",
         type=float,
         default=None,
         help="Temperatura inicial de enfriamiento",
@@ -76,8 +71,8 @@ def main():
 
     ejecutar_benchmark(
         nombre_metodo="SA",
-        clase_optimizador=CustomSA,
-        clase_problema=UCTPProblemBase,
+        clase_optimizador=OptimizadorSA,
+        clase_problema=ProblemaUCTPBase,
         args=args,
         configs_escala=CONFIGS_SA,
         obtener_parametros_mealpy=obtener_parametros_mealpy,

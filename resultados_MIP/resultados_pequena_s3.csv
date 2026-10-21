@@ -1,2 +1,2 @@
-metodo,escala,Z,HCV,CPU_time,nodes_explored,lower_bound,gap_pct,status
-MIP,pequena_s3,14.0,0,5780.203125,0,14.0,0.0,OPTIMAL
+metodo,escala,Z,HCV,tiempo_cpu,factible,nodos_explorados,limite_inferior,brecha_pct,estado,penalizacion_almuerzo,penalizacion_espaciado,penalizacion_jueves,penalizacion_sabado,penalizacion_ventanas
+MIP,pequena_s3,0.0,0,204.0781,True,0,0.0,0.0,OPTIMAL,0,0,0,0,0

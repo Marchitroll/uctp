@@ -1,19 +1,11 @@
 {
   "metodo": "TS",
   "escala": "pequena",
-  "tag": "s3",
   "total_corridas": 30,
+  "corridas_factibles": 30,
   "tasa_factibilidad_final": 100.0,
   "mejor_df": 0,
   "promedio_df": 0.0,
-  "ttf_promedio": 0.7291666666666666,
-  "cpu_promedio": 2.975,
-  "evaluaciones_aptitud_promedio": 6008.0,
-  "mejor_z": 30.0,
-  "peor_z": 81.0,
-  "promedio_z": 59.13333333333333,
-  "mediana_z": 60.5,
-  "desviacion_z": 11.43416940075043,
   "entorno": {
     "sistema_operativo": "Windows 11",
     "procesador": "Intel64 Family 6 Model 151 Stepping 2, GenuineIntel",
@@ -21,7 +13,14 @@
     "version_python": "3.13.15",
     "version_mip": "2.0.0",
     "version_mealpy": "3.0.2",
-    "libreria_optimizacion": "mealpy.math_based.TS.OriginalTS (Discrete)",
-    "version_optimizacion": "3.0.x"
-  }
+    "libreria_optimizacion": "mealpy (TS)"
+  },
+  "mejor_z": 17.0,
+  "promedio_z": 30.47,
+  "mediana_z": 29.0,
+  "peor_z": 52.0,
+  "desviacion_z": 8.83,
+  "TTF_promedio": 0.1865,
+  "tiempo_cpu_promedio": 2.22,
+  "evaluaciones_aptitud_promedio": 4637
 }
