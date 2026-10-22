@@ -30,7 +30,11 @@ Generación determinista con semilla base `SEED = 50`.
 * **Matrícula por sección:** 25 a 36 alumnos.
 
 ### 3.2 Eventos de Clase
-* **Eventos por sección:** 2 o 3 eventos semanales en bloques continuos de 2 o 3 horas.
+* **Carga lectiva semanal:** Cada asignatura define sus horas semanales en la malla (4h, 5h, 6h o 7h), las cuales se descomponen en 2 o 3 bloques indivisibles de 2 o 3 horas lectivas:
+  * **4 horas semanales (2 días):** Bloques base de `[2, 2]`.
+  * **5 horas semanales (2 días):** Bloques base de `[2, 3]`, cuyas secciones permutan en `[2, 3]` y `[3, 2]`.
+  * **6 horas semanales (2 días):** Bloques base de `[3, 3]` (política institucional para ciencias básicas).
+  * **7 horas semanales (3 días):** Bloques base de `[2, 2, 3]`, cuyas secciones permutan en `[2, 2, 3]`, `[2, 3, 2]` y `[3, 2, 2]`.
 * Todos los eventos de una misma sección se asignan al mismo docente.
 
 ### 3.3 Profesores y Compatibilidad de Áreas
@@ -70,15 +74,15 @@ Nueve instancias semi-sintéticas evaluadas (`{escala}_s{semilla}`):
 
 | Escala | Instancia | Semilla | Niveles | Cursos | Secciones | Eventos | Docentes | Salones Físicos | Salón Virtual |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Pequeña** | `pequena_s1` | 1 | Nivel 03 | 6 | 9 | 20 | 15 | 20 | 1 |
-| **Pequeña** | `pequena_s2` | 2 | Nivel 03 | 6 | 8 | 17 | 15 | 20 | 1 |
-| **Pequeña** | `pequena_s3` | 3 | Nivel 03 | 6 | 10 | 25 | 15 | 20 | 1 |
-| **Mediana** | `mediana_s1` | 1 | Niveles 03–06 | 37 | 74 | 184 | 15 | 20 | 1 |
-| **Mediana** | `mediana_s2` | 2 | Niveles 03–06 | 37 | 74 | 181 | 15 | 20 | 1 |
-| **Mediana** | `mediana_s3` | 3 | Niveles 03–06 | 37 | 70 | 180 | 15 | 20 | 1 |
-| **Grande** | `grande_s1` | 1 | Niveles 03–10 | 62 | 122 | 305 | 50 | 100 | 1 |
-| **Grande** | `grande_s2` | 2 | Niveles 03–10 | 62 | 124 | 310 | 50 | 100 | 1 |
-| **Grande** | `grande_s3` | 3 | Niveles 03–10 | 62 | 123 | 307 | 50 | 100 | 1 |
+| **Pequeña** | `pequena_s1` | 1 | Nivel 03 | 6 | 9 | 18 | 15 | 20 | 1 |
+| **Pequeña** | `pequena_s2` | 2 | Nivel 03 | 6 | 8 | 16 | 15 | 20 | 1 |
+| **Pequeña** | `pequena_s3` | 3 | Nivel 03 | 6 | 10 | 20 | 15 | 20 | 1 |
+| **Mediana** | `mediana_s1` | 1 | Niveles 03–06 | 37 | 74 | 153 | 15 | 20 | 1 |
+| **Mediana** | `mediana_s2` | 2 | Niveles 03–06 | 37 | 74 | 153 | 15 | 20 | 1 |
+| **Mediana** | `mediana_s3` | 3 | Niveles 03–06 | 37 | 70 | 146 | 15 | 20 | 1 |
+| **Grande** | `grande_s1` | 1 | Niveles 03–10 | 62 | 122 | 252 | 50 | 100 | 1 |
+| **Grande** | `grande_s2` | 2 | Niveles 03–10 | 62 | 124 | 254 | 50 | 100 | 1 |
+| **Grande** | `grande_s3` | 3 | Niveles 03–10 | 62 | 123 | 255 | 50 | 100 | 1 |
 
 Generación por comando:
 ```bash
@@ -95,7 +99,7 @@ Archivos CSV exportados en UTF-8:
 
 | Archivo | Campos Clave | Descripción |
 | :--- | :--- | :--- |
-| `cursos.csv` | `id_curso`, `requisitos` | Asignaturas y requerimientos de infraestructura. |
+| `cursos.csv` | `id_curso`, `requisitos`, `horas_semanales` | Asignaturas, requerimientos de infraestructura y carga lectiva semanal. |
 | `secciones.csv` | `id_seccion`, `id_curso`, `num_alumnos` | Secciones y alumnos matriculados. |
 | `eventos.csv` | `id_evento`, `id_seccion`, `id_profesor`, `duracion` | Bloques indivisibles de clase. |
 | `profesores.csv` | `id_profesor`, `nombre`, `especialidad` | Catálogo docente y especialidad. |

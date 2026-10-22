@@ -1,7 +1,7 @@
-id_curso,requisitos
-IA_Aplicada,"mesa,pc"
-Calculo_II,mesa
-Sist_Organizacionales,mesa
-Fisica_Sistemas,mesa
-Estr_Discretas,mesa
-Intro_Programacion,"mesa,pc"
+id_curso,requisitos,horas_semanales
+IA_Aplicada,"mesa,pc",5
+Calculo_II,mesa,6
+Sist_Organizacionales,mesa,4
+Fisica_Sistemas,mesa,5
+Estr_Discretas,mesa,4
+Intro_Programacion,"mesa,pc",5

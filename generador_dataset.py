@@ -6,161 +6,131 @@ import random
 
 from uctp_utils import cargar_config_institucional
 
+
+# Curso: Asignatura de la malla curricular.
+# Evento: Unidad mínima e indivisible de asignación horaria (bloque continuo de clase). Cada curso se
+# abre en secciones (ej. Calculo_II_A), y cada sección se descompone en 2 o 3 eventos semanales de 2 o 3 horas lectivas fijas.
+# Franja horaria: Unidad atómica y discreta de tiempo semanal (bloque de 1 hora reloj).
+
+
+SEMILLA_PREDETERMINADA = 50
+DIR_SALIDA_PREDETERMINADO = 'dataset'
+LETRAS_SECCIONES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+SECCIONES_POR_CURSO = (1, 3)
+ALUMNOS_POR_SECCION = (25, 36)
+LIMITE_HORAS_SEMANAL = 48
+MIN_DIAS_PROFESOR = 4
+PROPORCION_SALONES_CON_PC = 0.6
+NUM_SALONES_DEEP_LEARNING = 1
+CAPACIDAD_SALON_FISICO = 36
+CAPACIDAD_VIRTUAL = 99999
+CARACTERISTICAS_POSIBLES = ['mesa', 'pc', 'deep_learning']
+PROBABILIDADES_TURNOS_DOCENTE = [30, 30, 40]
+# Si un día tiene 8 o menos franjas, es una jornada tan corta que no tiene sentido dividirla en mañana y tarde
+LIMITE_FRANJAS_JORNADA_CORTA = 8
+# Mañana (primer 70% de todas las franjas de un día), Tarde (último 70%) o Completo (100%).
+COBERTURA_TURNO_PARCIAL = 0.7
+
+RECURSOS_POR_ESCALA = {
+    'pequena': {
+        'profesores': 15,
+        'salones_fisicos': 20,
+    },
+    'mediana': {
+        'profesores': 15,
+        'salones_fisicos': 20,
+    },
+    'grande': {
+        'profesores': 50,
+        'salones_fisicos': 100,
+    },
+}
+
 MALLA_OBLIGATORIA = {
     'Nivel_03': [
-        ('IA_Aplicada', 'mesa,pc'),
-        ('Calculo_II', 'mesa'),
-        ('Sist_Organizacionales', 'mesa'),
-        ('Fisica_Sistemas', 'mesa'),
-        ('Estr_Discretas', 'mesa'),
-        ('Intro_Programacion', 'mesa,pc'),
+        # id_curso, requisitos, horas_semanales
+        ('IA_Aplicada', 'mesa,pc', 5),
+        ('Calculo_II', 'mesa', 6),
+        ('Sist_Organizacionales', 'mesa', 4),
+        ('Fisica_Sistemas', 'mesa', 5),
+        ('Estr_Discretas', 'mesa', 4),
+        ('Intro_Programacion', 'mesa,pc', 5),
     ],
     'Nivel_04': [
-        ('Estadistica_Prob', 'mesa'),
-        ('Calculo_III', 'mesa'),
-        ('Mod_Integracion', 'mesa,pc'),
-        ('Costeo_Operaciones', 'mesa'),
-        ('POO', 'mesa,pc'),
-        ('Arq_Computadoras', 'mesa,pc'),
+        ('Estadistica_Prob', 'mesa', 4),
+        ('Calculo_III', 'mesa', 6),
+        ('Mod_Integracion', 'mesa,pc', 5),
+        ('Costeo_Operaciones', 'mesa', 4),
+        ('POO', 'mesa,pc', 7),
+        ('Arq_Computadoras', 'mesa,pc', 5),
     ],
     'Nivel_05': [
-        ('Estadistica_Aplicada', 'mesa'),
-        ('IO_I', 'mesa'),
-        ('Sist_Operativos', 'mesa,pc'),
-        ('Competencias_Gerenciales', 'mesa'),
-        ('ED_I', 'mesa,pc'),
-        ('Mod_BD', 'mesa,pc'),
+        ('Estadistica_Aplicada', 'mesa', 4),
+        ('IO_I', 'mesa', 5),
+        ('Sist_Operativos', 'mesa,pc', 5),
+        ('Competencias_Gerenciales', 'mesa', 4),
+        ('ED_I', 'mesa,pc', 7),
+        ('Mod_BD', 'mesa,pc', 5),
     ],
     'Nivel_06': [
-        ('Ing_Procesos_Negocio', 'mesa'),
-        ('Redes', 'mesa,pc'),
-        ('Simulacion', 'mesa,pc'),
-        ('ED_II', 'mesa,pc'),
-        ('Prog_Web', 'mesa,pc'),
-        ('Gestion_Financiera', 'mesa'),
+        ('Ing_Procesos_Negocio', 'mesa', 4),
+        ('Redes', 'mesa,pc', 5),
+        ('Simulacion', 'mesa,pc', 4),
+        ('ED_II', 'mesa,pc', 7),
+        ('Prog_Web', 'mesa,pc', 5),
+        ('Gestion_Financiera', 'mesa', 4),
     ],
     'Nivel_07': [
-        ('Sist_Intel_Empresarial', 'mesa,pc'),
-        ('Gestion_Operaciones', 'mesa'),
-        ('Ing_Software_I', 'mesa,pc'),
-        ('Machine_Learning', 'mesa,pc'),
-        ('Ciberseguridad', 'mesa,pc'),
+        ('Sist_Intel_Empresarial', 'mesa,pc', 4),
+        ('Gestion_Operaciones', 'mesa', 4),
+        ('Ing_Software_I', 'mesa,pc', 5),
+        ('Machine_Learning', 'mesa,pc', 5),
+        ('Ciberseguridad', 'mesa,pc', 5),
     ],
     'Nivel_08': [
-        ('Propuesta_Investigacion', 'mesa'),
-        ('Sist_ERP', 'mesa,pc'),
-        ('Auditoria_Control', 'mesa'),
-        ('Ing_Software_II', 'mesa,pc'),
+        ('Propuesta_Investigacion', 'mesa', 4),
+        ('Sist_ERP', 'mesa,pc', 5),
+        ('Auditoria_Control', 'mesa', 4),
+        ('Ing_Software_II', 'mesa,pc', 5),
     ],
     'Nivel_09': [
-        ('Seminario_I', 'mesa'),
-        ('Plan_Estrategico', 'mesa'),
-        ('Gestion_Proyectos', 'mesa'),
-        ('Seg_Sistemas', 'mesa,pc'),
+        ('Seminario_I', 'mesa', 4),
+        ('Plan_Estrategico', 'mesa', 4),
+        ('Gestion_Proyectos', 'mesa', 4),
+        ('Seg_Sistemas', 'mesa,pc', 4),
     ],
     'Nivel_10': [
-        ('Seminario_II', 'mesa'),
-        ('Gestion_Servicios_Dig', 'mesa'),
-        ('Proy_Integrador', 'mesa,pc'),
+        ('Seminario_II', 'mesa', 4),
+        ('Gestion_Servicios_Dig', 'mesa', 4),
+        ('Proy_Integrador', 'mesa,pc', 7),
     ],
 }
 
 ELECTIVOS = [
-    ('Paradigmas_Prog', 'mesa,pc', 6),
-    ('IoT', 'mesa,pc', 6),
-    ('Gestion_BD', 'mesa,pc', 6),
-    ('Ing_Conocimiento', 'mesa', 6),
-    ('Sist_Distribuidos', 'mesa,pc', 6),
-    ('Analitica_Negocios', 'mesa', 6),
-    ('Cloud', 'mesa,pc', 6),
-    ('Innovacion_Digital', 'mesa', 6),
-    ('Proy_Videojuegos', 'mesa,pc', 6),
-    ('HCI', 'mesa,pc', 6),
-    ('Arq_TI', 'mesa', 6),
-    ('DevOps', 'mesa,pc', 6),
-    ('Arq_Software', 'mesa,pc', 6),
-    ('Analisis_Algoritmos', 'mesa,pc', 7),
-    ('Redes_Avanzadas', 'mesa,pc', 7),
-    ('Prog_Movil', 'mesa,pc', 7),
-    ('Seg_Salud_Ocup', 'mesa', 7),
-    ('Deep_Learning', 'mesa,pc,deep_learning', 8),
-    ('Topicos_Ciberseg', 'mesa,pc', 8),
-    ('Analitica_BigData', 'mesa,pc', 8),
-    ('Proy_Desarrollo_SW', 'mesa,pc', 9),
-    ('Arq_Empresarial', 'mesa', 10),
+    # id_curso, requisitos, nivel_minimo, horas_semanales
+    ('Paradigmas_Prog', 'mesa,pc', 6, 4),
+    ('IoT', 'mesa,pc', 6, 4),
+    ('Gestion_BD', 'mesa,pc', 6, 4),
+    ('Ing_Conocimiento', 'mesa', 6, 4),
+    ('Sist_Distribuidos', 'mesa,pc', 6, 4),
+    ('Analitica_Negocios', 'mesa', 6, 4),
+    ('Cloud', 'mesa,pc', 6, 4),
+    ('Innovacion_Digital', 'mesa', 6, 4),
+    ('Proy_Videojuegos', 'mesa,pc', 6, 4),
+    ('HCI', 'mesa,pc', 6, 4),
+    ('Arq_TI', 'mesa', 6, 4),
+    ('DevOps', 'mesa,pc', 6, 4),
+    ('Arq_Software', 'mesa,pc', 6, 4),
+    ('Analisis_Algoritmos', 'mesa,pc', 7, 4),
+    ('Redes_Avanzadas', 'mesa,pc', 7, 4),
+    ('Prog_Movil', 'mesa,pc', 7, 4),
+    ('Seg_Salud_Ocup', 'mesa', 7, 4),
+    ('Deep_Learning', 'mesa,pc,deep_learning', 8, 4),
+    ('Topicos_Ciberseg', 'mesa,pc', 8, 4),
+    ('Analitica_BigData', 'mesa,pc', 8, 4),
+    ('Proy_Desarrollo_SW', 'mesa,pc', 9, 4),
+    ('Arq_Empresarial', 'mesa', 10, 4),
 ]
-
-SECCIONES_POR_CURSO = (1, 3)
-EVENTOS_POR_SECCION = [2, 3]
-DURACION_EVENTOS = [2, 3]
-NUM_PROFESORES = 50
-NUM_SALONES_FISICOS = 100
-NUM_SALONES_CON_PC = 60
-NUM_SALONES_DEEP_LEARNING = 1
-CAPACIDAD_SALON_FISICO = 36
-CAPACIDAD_VIRTUAL = 99999
-LIMITE_HORAS_SEMANAL = 48
-MIN_DIAS_PROFESOR = 4
-
-PESOS_TURNOS = [30, 30, 40]
-UMBRAL_COMPLETO_FRANJAS = 8
-FRACCION_BLOQUE_TURNO = 0.7
-LETRAS_SECCIONES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-PROFESORES_INSTANCIA_PEQUENA = 15
-SALONES_INSTANCIA_PEQUENA = 20
-PROPORCION_SALONES_CON_PC = 0.6
-ALUMNOS_POR_SECCION = (25, 36)
-CARACTERISTICAS_POSIBLES = ['mesa', 'pc', 'deep_learning']
-
-SEMILLA_PREDETERMINADA = 50
-DIR_SALIDA_PREDETERMINADO = 'dataset'
-
-
-def generar_cursos(malla: dict[str, list], electivos: list[tuple]) -> list[dict]:
-    """Extrae la totalidad de asignaturas únicas combinando los cursos obligatorios y electivos."""
-    cursos = []
-    cursos_vistos = set()
-
-    for nivel, lista_cursos in malla.items():
-        for id_curso, requisitos in lista_cursos:
-            if id_curso not in cursos_vistos:
-                cursos_vistos.add(id_curso)
-                cursos.append({
-                    'id_curso': id_curso,
-                    'requisitos': requisitos,
-                })
-
-    for id_curso, requisitos, _ in electivos:
-        if id_curso not in cursos_vistos:
-            cursos_vistos.add(id_curso)
-            cursos.append({
-                'id_curso': id_curso,
-                'requisitos': requisitos,
-            })
-
-    return cursos
-
-
-def generar_secciones(cursos: list[dict], rango_secciones: tuple[int, int], rango_alumnos: tuple[int, int]) -> list[dict]:
-    """Genera secciones para cada curso."""
-    secciones = []
-    letras = LETRAS_SECCIONES
-    min_secciones = rango_secciones[0]
-    max_secciones = rango_secciones[1]
-    min_alumnos = rango_alumnos[0]
-    max_alumnos = rango_alumnos[1]
-
-    for curso in cursos:
-        num_secciones = random.randint(min_secciones, max_secciones)
-        for indice_seccion in range(num_secciones):
-            alumnos_seccion = random.randint(min_alumnos, max_alumnos)
-            secciones.append({
-                'id_seccion': f"{curso['id_curso']}_{letras[indice_seccion]}",
-                'id_curso': curso['id_curso'],
-                'num_alumnos': alumnos_seccion,
-            })
-    return secciones
-
 
 AREAS_CURSOS = {
     'Calculo_II': 'CIENCIAS_BASICAS',
@@ -240,6 +210,81 @@ COMPATIBILIDAD = {
 }
 
 
+def deducir_duraciones_eventos(horas_semanales: int) -> list[int]:
+    if horas_semanales == 4:
+        return [2, 2]
+    if horas_semanales == 5:
+        return [2, 3]
+    if horas_semanales == 6:
+        return [3, 3]
+    if horas_semanales == 7:
+        return [2, 2, 3]
+    if horas_semanales == 8:
+        return [2, 3, 3]
+    raise ValueError(f"Horas semanales no contempladas en la malla: {horas_semanales}")
+
+
+def generar_cursos(malla: dict[str, list], electivos: list[tuple]) -> list[dict]:
+    """Extrae la totalidad de asignaturas únicas combinando los cursos obligatorios y electivos."""
+    cursos = []
+    cursos_vistos = set()
+
+    for lista_cursos in malla.values():
+        for curso_tupla in lista_cursos:
+            id_curso = curso_tupla[0]
+            requisitos = curso_tupla[1]
+            horas_semanales = curso_tupla[2]
+            duraciones_eventos_base = deducir_duraciones_eventos(horas_semanales)
+
+            if id_curso not in cursos_vistos:
+                cursos_vistos.add(id_curso)
+                cursos.append({
+                    'id_curso': id_curso,
+                    'requisitos': requisitos,
+                    'horas_semanales': horas_semanales,
+                    'duraciones_eventos': duraciones_eventos_base,
+                })
+
+    for electivo_tupla in electivos:
+        id_curso = electivo_tupla[0]
+        requisitos = electivo_tupla[1]
+        horas_semanales = electivo_tupla[3]
+        duraciones_eventos_base = deducir_duraciones_eventos(horas_semanales)
+        if id_curso not in cursos_vistos:
+            cursos_vistos.add(id_curso)
+            cursos.append({
+                'id_curso': id_curso,
+                'requisitos': requisitos,
+                'horas_semanales': horas_semanales,
+                'duraciones_eventos': duraciones_eventos_base,
+            })
+
+    return cursos
+
+
+def generar_secciones(cursos: list[dict], rango_secciones: tuple[int, int], rango_alumnos: tuple[int, int]) -> list[dict]:
+    """Genera secciones para cada curso."""
+    secciones = []
+    letras = LETRAS_SECCIONES
+    min_secciones = rango_secciones[0]
+    max_secciones = rango_secciones[1]
+    min_alumnos = rango_alumnos[0]
+    max_alumnos = rango_alumnos[1]
+
+    for curso in cursos:
+        id_curso = curso['id_curso']
+        num_secciones = random.randint(min_secciones, max_secciones)
+        for indice_seccion in range(num_secciones):
+            alumnos_seccion = random.randint(min_alumnos, max_alumnos)
+            letra_seccion = letras[indice_seccion]
+            secciones.append({
+                'id_seccion': f"{id_curso}_{letra_seccion}",
+                'id_curso': id_curso,
+                'num_alumnos': alumnos_seccion,
+            })
+    return secciones
+
+
 def generar_profesores(cantidad_profesores: int) -> list[dict]:
     """Genera los profesores con su especialidad."""
     especialidades = [
@@ -265,7 +310,7 @@ def generar_profesores(cantidad_profesores: int) -> list[dict]:
     return profesores
 
 
-def generar_eventos(secciones: list[dict], profesores: list[dict], rango_eventos: list[int], duraciones: list[int]) -> tuple[list[dict], dict[str, int]]:
+def generar_eventos(secciones: list[dict], profesores: list[dict], cursos: list[dict]) -> tuple[list[dict], dict[str, int]]:
     """Genera los eventos por sección y asigna docentes según especialidad y carga."""
     eventos = []
     id_evento = 1
@@ -279,55 +324,51 @@ def generar_eventos(secciones: list[dict], profesores: list[dict], rango_eventos
         cursos_por_profesor[id_profesor] = set()
         areas_por_profesor[id_profesor] = set()
 
-    duraciones_por_curso = {}
-    min_eventos = rango_eventos[0]
-    max_eventos = rango_eventos[1]
+    catalogo_duraciones_por_curso = {}
+    for curso in cursos:
+        id_curso = curso['id_curso']
+        catalogo_duraciones_por_curso[id_curso] = list(curso['duraciones_eventos'])
 
     for seccion in secciones:
+        id_seccion = seccion['id_seccion']
         id_curso = seccion['id_curso']
-        if id_curso not in duraciones_por_curso:
-            cantidad_eventos = random.randint(min_eventos, max_eventos)
 
-            # Plantilla única por curso para garantizar la misma carga horaria entre secciones
-            duraciones_del_curso = []
-            for _ in range(cantidad_eventos):
-                duracion_elegida = random.choice(duraciones)
-                duraciones_del_curso.append(duracion_elegida)
-
-            duraciones_por_curso[id_curso] = duraciones_del_curso
-
-        duraciones_base_curso = duraciones_por_curso[id_curso]
-        duraciones_seccion = random.sample(duraciones_base_curso, len(duraciones_base_curso))
+        duraciones_base = catalogo_duraciones_por_curso[id_curso]
+        duraciones_seccion = random.sample(duraciones_base, len(duraciones_base))
         total_horas_seccion = sum(duraciones_seccion)
         
         area = AREAS_CURSOS.get(id_curso, 'INGENIERIA_SOFTWARE')
         
-        profesores_compatibles = [
-            profesor for profesor in profesores 
-            if area in COMPATIBILIDAD.get(profesor['especialidad'], ['INGENIERIA_SOFTWARE'])
-        ]
+        profesores_compatibles = []
+        for profesor in profesores:
+            especialidad = profesor['especialidad']
+            areas_compatibles = COMPATIBILIDAD.get(especialidad, ['INGENIERIA_SOFTWARE'])
+            if area in areas_compatibles:
+                profesores_compatibles.append(profesor)
         if not profesores_compatibles:
-            profesores_compatibles = profesores
+            profesores_compatibles = list(profesores)
 
-        candidatos = [
-            profesor for profesor in profesores_compatibles 
-            if horas_por_profesor[profesor['id_profesor']] + total_horas_seccion <= LIMITE_HORAS_SEMANAL
-        ]
+        candidatos = []
+        for profesor in profesores_compatibles:
+            id_profesor = profesor['id_profesor']
+            carga_proyectada = horas_por_profesor[id_profesor] + total_horas_seccion
+            if carga_proyectada <= LIMITE_HORAS_SEMANAL:
+                candidatos.append(profesor)
         if not candidatos:
-            candidatos = profesores_compatibles
+            candidatos = list(profesores_compatibles)
             
-        candidatos_mismo_curso = [
-            profesor for profesor in candidatos 
-            if id_curso in cursos_por_profesor[profesor['id_profesor']]
-        ]
-        candidatos_misma_area = [
-            profesor for profesor in candidatos 
-            if area in areas_por_profesor[profesor['id_profesor']]
-        ]
+        candidatos_mismo_curso = []
+        candidatos_misma_area = []
+        for profesor in candidatos:
+            id_profesor = profesor['id_profesor']
+            if id_curso in cursos_por_profesor[id_profesor]:
+                candidatos_mismo_curso.append(profesor)
+            if area in areas_por_profesor[id_profesor]:
+                candidatos_misma_area.append(profesor)
         
-        if candidatos_mismo_curso:
+        if len(candidatos_mismo_curso) > 0:
             candidatos_priorizados = candidatos_mismo_curso
-        elif candidatos_misma_area:
+        elif len(candidatos_misma_area) > 0:
             candidatos_priorizados = candidatos_misma_area
         else:
             candidatos_priorizados = candidatos
@@ -347,12 +388,12 @@ def generar_eventos(secciones: list[dict], profesores: list[dict], rango_eventos
         cursos_por_profesor[id_profesor_asignado].add(id_curso)
         areas_por_profesor[id_profesor_asignado].add(area)
         
-        for duracion in duraciones_seccion:
+        for duracion_evento in duraciones_seccion:
             eventos.append({
                 'id_evento': id_evento,
-                'id_seccion': seccion['id_seccion'],
+                'id_seccion': id_seccion,
                 'id_profesor': id_profesor_asignado,
-                'duracion': duracion,
+                'duracion': duracion_evento,
             })
             id_evento += 1
 
@@ -398,10 +439,13 @@ def generar_curriculos(malla: dict[str, list], electivos: list[tuple], secciones
             'nombre': f"Ruta {id_nivel.replace('_', ' ')}",
         })
 
-        for id_curso, _ in malla[id_nivel]:
+        for curso_tupla in malla[id_nivel]:
+            id_curso = curso_tupla[0]
             agregar_curso_a_curriculo(id_nivel, id_curso)
 
-        for id_curso, _, nivel_minimo in electivos:
+        for electivo_tupla in electivos:
+            id_curso = electivo_tupla[0]
+            nivel_minimo = electivo_tupla[2]
             if nivel_minimo <= numero_nivel:
                 agregar_curso_a_curriculo(id_nivel, id_curso)
 
@@ -428,7 +472,10 @@ def generar_disponibilidad(profesores: list[dict], config: dict, horas_por_profe
         franja_inicio_por_dia[dia] = franja_acumulada
         franja_acumulada += franjas_por_dia[dia]
 
-    dias_habiles = [dia for dia in dias if dia != dia_cierre]
+    dias_habiles = []
+    for dia in dias:
+        if dia != dia_cierre:
+            dias_habiles.append(dia)
 
     for profesor in profesores:
         id_profesor = profesor['id_profesor']
@@ -446,16 +493,16 @@ def generar_disponibilidad(profesores: list[dict], config: dict, horas_por_profe
             franja_base = franja_inicio_por_dia[dia]
             total_franjas_dia = franjas_por_dia[dia]
 
-            if dia == dia_cierre or total_franjas_dia <= UMBRAL_COMPLETO_FRANJAS or horas_asignadas > 12:
+            if dia == dia_cierre or total_franjas_dia <= LIMITE_FRANJAS_JORNADA_CORTA or horas_asignadas > 12:
                 turno = 'completo'
             else:
-                turno = random.choices(['mañana', 'tarde', 'completo'], weights=PESOS_TURNOS, k=1)[0]
+                turno = random.choices(['mañana', 'tarde', 'completo'], weights=PROBABILIDADES_TURNOS_DOCENTE, k=1)[0]
 
             if turno == 'mañana':
                 franja_inicio = franja_base
-                franja_fin = franja_base + int(total_franjas_dia * FRACCION_BLOQUE_TURNO) - 1
+                franja_fin = franja_base + int(total_franjas_dia * COBERTURA_TURNO_PARCIAL) - 1
             elif turno == 'tarde':
-                franja_inicio = franja_base + total_franjas_dia - int(total_franjas_dia * FRACCION_BLOQUE_TURNO)
+                franja_inicio = franja_base + total_franjas_dia - int(total_franjas_dia * COBERTURA_TURNO_PARCIAL)
                 franja_fin = franja_base + total_franjas_dia - 1
             else:
                 franja_inicio = franja_base
@@ -489,35 +536,20 @@ def generar_salones(
         'caracteristicas': ','.join(caracteristicas_posibles),
     })
 
-    numero_salon = 1
+    for numero_salon in range(1, cantidad_fisicos + 1):
+        if numero_salon <= cantidad_deep_learning:
+            caracteristicas = 'mesa,pc,deep_learning'
+        elif numero_salon <= cantidad_con_pc:
+            caracteristicas = 'mesa,pc'
+        else:
+            caracteristicas = 'mesa'
 
-    for _ in range(cantidad_deep_learning):
         salones.append({
             'id_salon': f"salon_{numero_salon}",
             'capacidad': capacidad_fisica,
             'es_virtual': False,
-            'caracteristicas': 'mesa,pc,deep_learning',
+            'caracteristicas': caracteristicas,
         })
-        numero_salon += 1
-
-    for _ in range(cantidad_con_pc - cantidad_deep_learning):
-        salones.append({
-            'id_salon': f"salon_{numero_salon}",
-            'capacidad': capacidad_fisica,
-            'es_virtual': False,
-            'caracteristicas': 'mesa,pc',
-        })
-        numero_salon += 1
-
-    salones_tipicos = cantidad_fisicos - cantidad_con_pc
-    for _ in range(salones_tipicos):
-        salones.append({
-            'id_salon': f"salon_{numero_salon}",
-            'capacidad': capacidad_fisica,
-            'es_virtual': False,
-            'caracteristicas': 'mesa',
-        })
-        numero_salon += 1
 
     return salones
 
@@ -560,10 +592,13 @@ def main():
 
     instancia = args.instancia.lower()
     if instancia in ["pequena", "pequeña"]:
+        escala = "pequena"
         niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:1]
     elif instancia == "mediana":
+        escala = "mediana"
         niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())[:4]
     else:
+        escala = "grande"
         niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())
     
     malla_reducida = {}
@@ -578,13 +613,14 @@ def main():
             nivel_maximo = numero_nivel
 
     electivos_reducidos = []
-    for electivo in ELECTIVOS:
-        nivel_minimo_electivo = electivo[2]
+    for electivo_tupla in ELECTIVOS:
+        nivel_minimo_electivo = electivo_tupla[2]
         if nivel_minimo_electivo <= nivel_maximo:
-            electivos_reducidos.append(electivo)
+            electivos_reducidos.append(electivo_tupla)
 
-    cantidad_profesores_instancia = PROFESORES_INSTANCIA_PEQUENA if len(niveles_objetivo) < 5 else NUM_PROFESORES
-    cantidad_salones_instancia = SALONES_INSTANCIA_PEQUENA if len(niveles_objetivo) < 5 else NUM_SALONES_FISICOS
+    recursos_escala = RECURSOS_POR_ESCALA[escala]
+    cantidad_profesores_instancia = recursos_escala['profesores']
+    cantidad_salones_instancia = recursos_escala['salones_fisicos']
 
     ruta_configuracion = os.path.join(os.path.dirname(__file__), 'config.json')
     config = cargar_config_institucional(ruta_configuracion)
@@ -593,7 +629,7 @@ def main():
     cursos = generar_cursos(malla_reducida, electivos_reducidos)
     secciones = generar_secciones(cursos, SECCIONES_POR_CURSO, ALUMNOS_POR_SECCION)
     profesores = generar_profesores(cantidad_profesores_instancia)
-    eventos, horas_por_profesor = generar_eventos(secciones, profesores, EVENTOS_POR_SECCION, DURACION_EVENTOS)
+    eventos, horas_por_profesor = generar_eventos(secciones, profesores, cursos)
     curriculos, asignaciones_curriculo_evento = generar_curriculos(malla_reducida, electivos_reducidos, secciones, eventos)
     
     disponibilidad = generar_disponibilidad(profesores, config, horas_por_profesor)
@@ -607,9 +643,17 @@ def main():
     )
 
     print("\n[INFO] Escribiendo archivos CSV...")
+    filas_cursos = []
+    for curso in cursos:
+        filas_cursos.append({
+            'id_curso': curso['id_curso'],
+            'requisitos': curso['requisitos'],
+            'horas_semanales': curso['horas_semanales'],
+        })
+
     escribir_csv(
-        os.path.join(dir_salida, 'cursos.csv'), cursos,
-        ['id_curso', 'requisitos'],
+        os.path.join(dir_salida, 'cursos.csv'), filas_cursos,
+        ['id_curso', 'requisitos', 'horas_semanales'],
     )
     escribir_csv(
         os.path.join(dir_salida, 'secciones.csv'), secciones,
