@@ -217,8 +217,6 @@ __marimo__/
 # ============================================================================
 # Reglas Específicas del Proyecto UCTP
 # ============================================================================
-# Datos generados por generador_dataset.py
-dataset/
 
 # Mallas horarias generadas dinámicamente por los optimizadores
 horarios_*/

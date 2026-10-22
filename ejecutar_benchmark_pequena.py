@@ -9,6 +9,29 @@ from datetime import datetime
 import pandas as pd
 
 
+ARCHIVOS_DATASET_REQUERIDOS = [
+    "cursos.csv",
+    "secciones.csv",
+    "eventos.csv",
+    "profesores.csv",
+    "profesores_disponibilidad.csv",
+    "salones.csv",
+    "curriculos.csv",
+    "curriculo_evento.csv",
+]
+
+
+def dataset_esta_completo(directorio: str) -> bool:
+    """Verifica si el directorio existe y contiene todos los archivos CSV requeridos."""
+    if not os.path.isdir(directorio):
+        return False
+    for nombre_archivo in ARCHIVOS_DATASET_REQUERIDOS:
+        ruta_archivo = os.path.join(directorio, nombre_archivo)
+        if not os.path.isfile(ruta_archivo):
+            return False
+    return True
+
+
 def ejecutar_comando(comando: list[str], descripcion: str):
     """Ejecuta un subproceso con trazabilidad por consola y control de fallos."""
     print(f"\n{'='*80}")
@@ -135,6 +158,11 @@ def main():
         action="store_true",
         help="Modo prueba de humo rápida: 1 corrida y pocas iteraciones para validar el pipeline.",
     )
+    parser.add_argument(
+        "--forzar_dataset",
+        action="store_true",
+        help="Fuerza la regeneración de los datasets aunque ya existan en disco.",
+    )
     args = parser.parse_args()
 
     python_ejecutable = sys.executable
@@ -166,17 +194,24 @@ def main():
         epocas_ts = None
         epocas_sa = None
 
-    # 1. Generación de datasets
-    print("\n--- FASE 1: Generación de Conjuntos de Datos Semi-sintéticos ---")
-    for semilla in semillas_a_ejecutar:
-        dir_salida = f"dataset/pequena_s{semilla}"
-        comando = [
-            python_ejecutable, "generador_dataset.py",
-            "--instancia", "pequena",
-            "--semilla", str(semilla),
-            "--dir_salida", dir_salida,
-        ]
-        ejecutar_comando(comando, f"Generando dataset pequeña con semilla {semilla} en '{dir_salida}'")
+    # 1. Verificación y generación de datasets (todas las escalas: pequeña, mediana, grande)
+    print("\n--- FASE 1: Verificación y Generación de Datasets (Pequeño, Mediano, Grande) ---")
+    escalas_dataset = ["pequena", "mediana", "grande"]
+    semillas_dataset = [1, 2, 3]
+
+    for escala in escalas_dataset:
+        for semilla in semillas_dataset:
+            dir_salida = f"dataset/{escala}_s{semilla}"
+            if dataset_esta_completo(dir_salida) and not args.forzar_dataset:
+                print(f"  [OMITIDO] El dataset '{dir_salida}' ya existe y está completo.")
+            else:
+                comando = [
+                    python_ejecutable, "generador_dataset.py",
+                    "--instancia", escala,
+                    "--semilla", str(semilla),
+                    "--dir_salida", dir_salida,
+                ]
+                ejecutar_comando(comando, f"Generando dataset {escala} con semilla {semilla} en '{dir_salida}'")
 
     # 2. Ejecución de modelos
     print("\n--- FASE 2: Ejecución de Modelos de Optimización ---")
@@ -222,17 +257,20 @@ def main():
     print("\n--- FASE 3: Consolidación de Resultados y Actualización de Directorios ---")
     consolidar_archivos(semillas_a_ejecutar, metodos)
 
-    # Copiar dataset/pequena_s1 a dataset/ raíz
+    # Copiar dataset/pequena_s1 a dataset/ raíz solo si no existe o se fuerza regeneración
     fuente_s1 = "dataset/pequena_s1"
     destino_raiz = "dataset"
-    if os.path.exists(fuente_s1):
-        print(f"\n[INFO] Copiando '{fuente_s1}' a '{destino_raiz}' raíz...")
-        for nombre_archivo in os.listdir(fuente_s1):
-            ruta_origen = os.path.join(fuente_s1, nombre_archivo)
-            ruta_destino = os.path.join(destino_raiz, nombre_archivo)
-            if os.path.isfile(ruta_origen):
-                shutil.copy2(ruta_origen, ruta_destino)
-        print("  [OK] Copia a la raíz dataset/ completada exitosamente.")
+    if not dataset_esta_completo(destino_raiz) or args.forzar_dataset:
+        if os.path.exists(fuente_s1):
+            print(f"\n[INFO] Copiando '{fuente_s1}' a '{destino_raiz}' raíz...")
+            for nombre_archivo in os.listdir(fuente_s1):
+                ruta_origen = os.path.join(fuente_s1, nombre_archivo)
+                ruta_destino = os.path.join(destino_raiz, nombre_archivo)
+                if os.path.isfile(ruta_origen):
+                    shutil.copy2(ruta_origen, ruta_destino)
+            print("  [OK] Copia a la raíz dataset/ completada exitosamente.")
+    else:
+        print(f"\n[INFO] Directorio raíz '{destino_raiz}' ya contiene los archivos del dataset.")
 
     # 4. Reporte analítico de desviación
     print("\n--- FASE 4: Consolidación Analítica con reporte_desviacion.py ---")

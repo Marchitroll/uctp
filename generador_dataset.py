@@ -106,9 +106,9 @@ PESOS_TURNOS = [30, 30, 40]
 UMBRAL_COMPLETO_FRANJAS = 8
 FRACCION_BLOQUE_TURNO = 0.7
 LETRAS_SECCIONES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-PROFES_PEQ_INSTANCIA = 15
-SALONES_PEQ_INSTANCIA = 20
-RATIO_SALONES_CON_PC = 0.6
+PROFESORES_INSTANCIA_PEQUENA = 15
+SALONES_INSTANCIA_PEQUENA = 20
+PROPORCION_SALONES_CON_PC = 0.6
 ALUMNOS_POR_SECCION = (25, 36)
 CARACTERISTICAS_POSIBLES = ['mesa', 'pc', 'deep_learning']
 
@@ -145,13 +145,19 @@ def generar_secciones(cursos: list[dict], rango_secciones: tuple[int, int], rang
     """Genera secciones para cada curso."""
     secciones = []
     letras = LETRAS_SECCIONES
+    min_secciones = rango_secciones[0]
+    max_secciones = rango_secciones[1]
+    min_alumnos = rango_alumnos[0]
+    max_alumnos = rango_alumnos[1]
+
     for curso in cursos:
-        num_secciones = random.randint(*rango_secciones)
+        num_secciones = random.randint(min_secciones, max_secciones)
         for indice_seccion in range(num_secciones):
+            alumnos_seccion = random.randint(min_alumnos, max_alumnos)
             secciones.append({
                 'id_seccion': f"{curso['id_curso']}_{letras[indice_seccion]}",
                 'id_curso': curso['id_curso'],
-                'num_alumnos': random.randint(*rango_alumnos),
+                'num_alumnos': alumnos_seccion,
             })
     return secciones
 
@@ -234,7 +240,7 @@ COMPATIBILIDAD = {
 }
 
 
-def generar_profesores(num_profesores: int) -> list[dict]:
+def generar_profesores(cantidad_profesores: int) -> list[dict]:
     """Genera los profesores con su especialidad."""
     especialidades = [
         'INGENIERIA_SOFTWARE',
@@ -245,7 +251,7 @@ def generar_profesores(num_profesores: int) -> list[dict]:
     ]
     pesos = [0.25, 0.20, 0.20, 0.15, 0.20]
     profesores = []
-    for indice_profesor in range(num_profesores):
+    for indice_profesor in range(cantidad_profesores):
         if indice_profesor < len(especialidades):
             especialidad = especialidades[indice_profesor]
         else:
@@ -264,169 +270,199 @@ def generar_eventos(secciones: list[dict], profesores: list[dict], rango_eventos
     eventos = []
     id_evento = 1
     
-    horas_profesor = {prof['id_profesor']: 0 for prof in profesores}
-    cursos_por_profesor = {prof['id_profesor']: set() for prof in profesores}
-    areas_por_profesor = {prof['id_profesor']: set() for prof in profesores}
+    horas_por_profesor = {}
+    cursos_por_profesor = {}
+    areas_por_profesor = {}
+    for profesor in profesores:
+        id_profesor = profesor['id_profesor']
+        horas_por_profesor[id_profesor] = 0
+        cursos_por_profesor[id_profesor] = set()
+        areas_por_profesor[id_profesor] = set()
 
     duraciones_por_curso = {}
+    min_eventos = rango_eventos[0]
+    max_eventos = rango_eventos[1]
 
     for seccion in secciones:
         id_curso = seccion['id_curso']
         if id_curso not in duraciones_por_curso:
-            num_eventos = random.randint(*rango_eventos)
-            duraciones_por_curso[id_curso] = [random.choice(duraciones) for _ in range(num_eventos)]
+            cantidad_eventos = random.randint(min_eventos, max_eventos)
 
-        duraciones_seccion = duraciones_por_curso[id_curso]
+            # Plantilla única por curso para garantizar la misma carga horaria entre secciones
+            duraciones_del_curso = []
+            for _ in range(cantidad_eventos):
+                duracion_elegida = random.choice(duraciones)
+                duraciones_del_curso.append(duracion_elegida)
+
+            duraciones_por_curso[id_curso] = duraciones_del_curso
+
+        duraciones_base_curso = duraciones_por_curso[id_curso]
+        duraciones_seccion = random.sample(duraciones_base_curso, len(duraciones_base_curso))
         total_horas_seccion = sum(duraciones_seccion)
         
         area = AREAS_CURSOS.get(id_curso, 'INGENIERIA_SOFTWARE')
         
         profesores_compatibles = [
-            prof for prof in profesores 
-            if area in COMPATIBILIDAD.get(prof['especialidad'], ['INGENIERIA_SOFTWARE'])
+            profesor for profesor in profesores 
+            if area in COMPATIBILIDAD.get(profesor['especialidad'], ['INGENIERIA_SOFTWARE'])
         ]
         if not profesores_compatibles:
             profesores_compatibles = profesores
 
         candidatos = [
-            prof for prof in profesores_compatibles 
-            if horas_profesor[prof['id_profesor']] + total_horas_seccion <= LIMITE_HORAS_SEMANAL
+            profesor for profesor in profesores_compatibles 
+            if horas_por_profesor[profesor['id_profesor']] + total_horas_seccion <= LIMITE_HORAS_SEMANAL
         ]
         if not candidatos:
             candidatos = profesores_compatibles
             
         candidatos_mismo_curso = [
-            prof for prof in candidatos 
-            if id_curso in cursos_por_profesor[prof['id_profesor']]
+            profesor for profesor in candidatos 
+            if id_curso in cursos_por_profesor[profesor['id_profesor']]
         ]
         candidatos_misma_area = [
-            prof for prof in candidatos 
-            if area in areas_por_profesor[prof['id_profesor']]
+            profesor for profesor in candidatos 
+            if area in areas_por_profesor[profesor['id_profesor']]
         ]
         
         if candidatos_mismo_curso:
-            profesor_asignado_dict = min(candidatos_mismo_curso, key=lambda prof: horas_profesor[prof['id_profesor']])
+            candidatos_priorizados = candidatos_mismo_curso
         elif candidatos_misma_area:
-            profesor_asignado_dict = min(candidatos_misma_area, key=lambda prof: horas_profesor[prof['id_profesor']])
+            candidatos_priorizados = candidatos_misma_area
         else:
-            profesor_asignado_dict = min(candidatos, key=lambda prof: horas_profesor[prof['id_profesor']])
+            candidatos_priorizados = candidatos
+
+        # Política de balanceo equitativo de carga horaria docente
+        profesor_elegido = None
+        menor_carga_horas = float('inf')
+        for profesor in candidatos_priorizados:
+            id_candidato = profesor['id_profesor']
+            horas_acumuladas = horas_por_profesor[id_candidato]
+            if horas_acumuladas < menor_carga_horas:
+                menor_carga_horas = horas_acumuladas
+                profesor_elegido = profesor
             
-        profesor_asignado = profesor_asignado_dict['id_profesor']
-        horas_profesor[profesor_asignado] += total_horas_seccion
-        cursos_por_profesor[profesor_asignado].add(id_curso)
-        areas_por_profesor[profesor_asignado].add(area)
+        id_profesor_asignado = profesor_elegido['id_profesor']
+        horas_por_profesor[id_profesor_asignado] += total_horas_seccion
+        cursos_por_profesor[id_profesor_asignado].add(id_curso)
+        areas_por_profesor[id_profesor_asignado].add(area)
         
         for duracion in duraciones_seccion:
             eventos.append({
                 'id_evento': id_evento,
                 'id_seccion': seccion['id_seccion'],
-                'id_profesor': profesor_asignado,
+                'id_profesor': id_profesor_asignado,
                 'duracion': duracion,
             })
             id_evento += 1
 
-    return eventos, horas_profesor
+    return eventos, horas_por_profesor
 
 
 def generar_curriculos(malla: dict[str, list], electivos: list[tuple], secciones: list[dict], eventos: list[dict]) -> tuple[list[dict], list[dict]]:
     """Genera currículos por nivel y la relación con sus eventos."""
-    seccion_a_eventos = {}
+    eventos_por_seccion = {}
     for evento in eventos:
         id_seccion = evento['id_seccion']
-        if id_seccion not in seccion_a_eventos:
-            seccion_a_eventos[id_seccion] = []
-        seccion_a_eventos[id_seccion].append(evento['id_evento'])
+        if id_seccion not in eventos_por_seccion:
+            eventos_por_seccion[id_seccion] = []
+        eventos_por_seccion[id_seccion].append(evento['id_evento'])
 
-    curso_a_secciones = {}
+    secciones_por_curso = {}
     for seccion in secciones:
         id_curso = seccion['id_curso']
-        if id_curso not in curso_a_secciones:
-            curso_a_secciones[id_curso] = []
-        curso_a_secciones[id_curso].append(seccion['id_seccion'])
+        if id_curso not in secciones_por_curso:
+            secciones_por_curso[id_curso] = []
+        secciones_por_curso[id_curso].append(seccion['id_seccion'])
 
     niveles = sorted(malla.keys())
     curriculos = []
     asignaciones_curriculo_evento = []
 
-    def agregar_curso_a_curriculo(nivel_id: str, id_curso: str):
+    def agregar_curso_a_curriculo(id_nivel: str, id_curso: str):
         """Agrega los eventos del curso al currículo."""
-        if id_curso in curso_a_secciones:
-            for id_seccion in curso_a_secciones[id_curso]:
-                if id_seccion in seccion_a_eventos:
-                    for id_evento in seccion_a_eventos[id_seccion]:
+        if id_curso in secciones_por_curso:
+            for id_seccion in secciones_por_curso[id_curso]:
+                if id_seccion in eventos_por_seccion:
+                    for id_evento in eventos_por_seccion[id_seccion]:
                         asignaciones_curriculo_evento.append({
-                            'id_curriculo': nivel_id,
+                            'id_curriculo': id_nivel,
                             'id_evento': id_evento,
                         })
 
-    for nivel_id in niveles:
-        num_nivel = int(nivel_id.split('_')[1])
+    for id_nivel in niveles:
+        numero_nivel = int(id_nivel.split('_')[1])
 
         curriculos.append({
-            'id_curriculo': nivel_id,
-            'nombre': f"Ruta {nivel_id.replace('_', ' ')}",
+            'id_curriculo': id_nivel,
+            'nombre': f"Ruta {id_nivel.replace('_', ' ')}",
         })
 
-        for id_curso, _ in malla[nivel_id]:
-            agregar_curso_a_curriculo(nivel_id, id_curso)
+        for id_curso, _ in malla[id_nivel]:
+            agregar_curso_a_curriculo(id_nivel, id_curso)
 
         for id_curso, _, nivel_minimo in electivos:
-            if nivel_minimo <= num_nivel:
-                agregar_curso_a_curriculo(nivel_id, id_curso)
+            if nivel_minimo <= numero_nivel:
+                agregar_curso_a_curriculo(id_nivel, id_curso)
 
     return curriculos, asignaciones_curriculo_evento
 
 
-def generar_disponibilidad(profesores: list[dict], config: dict, horas_profesor: dict[str, int] = None) -> list[dict]:
+def generar_disponibilidad(profesores: list[dict], config: dict, horas_por_profesor: dict[str, int] = None) -> list[dict]:
     """Genera franjas de disponibilidad para cada docente según su carga."""
     disponibilidad = []
     dias = config['dias']
     dia_cierre = config['dia_cierre']
 
     franjas_por_dia_raw = config['franjas_por_dia']
-    franjas_por_dia = franjas_por_dia_raw if isinstance(franjas_por_dia_raw, dict) else {dia: franjas_por_dia_raw for dia in dias}
+    if isinstance(franjas_por_dia_raw, dict):
+        franjas_por_dia = franjas_por_dia_raw
+    else:
+        franjas_por_dia = {}
+        for dia in dias:
+            franjas_por_dia[dia] = franjas_por_dia_raw
 
-    base_dia = {}
-    cursor = 1
+    franja_inicio_por_dia = {}
+    franja_acumulada = 1
     for dia in dias:
-        base_dia[dia] = cursor
-        cursor += franjas_por_dia[dia]
+        franja_inicio_por_dia[dia] = franja_acumulada
+        franja_acumulada += franjas_por_dia[dia]
 
     dias_habiles = [dia for dia in dias if dia != dia_cierre]
 
-    for prof in profesores:
-        id_profesor = prof['id_profesor']
-        horas = horas_profesor.get(id_profesor, 0) if horas_profesor else 0
+    for profesor in profesores:
+        id_profesor = profesor['id_profesor']
+        horas_asignadas = horas_por_profesor.get(id_profesor, 0) if horas_por_profesor else 0
 
-        if horas > 12:
+        if horas_asignadas > 12:
             dias_disponibles = list(dias_habiles)
         else:
-            num_dias = random.randint(MIN_DIAS_PROFESOR, len(dias_habiles))
-            dias_disponibles = random.sample(dias_habiles, k=num_dias)
+            cantidad_dias = random.randint(MIN_DIAS_PROFESOR, len(dias_habiles))
+            dias_disponibles = random.sample(dias_habiles, k=cantidad_dias)
 
         dias_disponibles.append(dia_cierre)
 
         for dia in dias_disponibles:
-            base = base_dia[dia]
+            franja_base = franja_inicio_por_dia[dia]
             total_franjas_dia = franjas_por_dia[dia]
 
-            if dia == dia_cierre or total_franjas_dia <= UMBRAL_COMPLETO_FRANJAS or horas > 12:
+            if dia == dia_cierre or total_franjas_dia <= UMBRAL_COMPLETO_FRANJAS or horas_asignadas > 12:
                 turno = 'completo'
             else:
                 turno = random.choices(['mañana', 'tarde', 'completo'], weights=PESOS_TURNOS, k=1)[0]
 
             if turno == 'mañana':
-                franja_inicio = base
-                franja_fin = base + int(total_franjas_dia * FRACCION_BLOQUE_TURNO) - 1
+                franja_inicio = franja_base
+                franja_fin = franja_base + int(total_franjas_dia * FRACCION_BLOQUE_TURNO) - 1
             elif turno == 'tarde':
-                franja_inicio = base + total_franjas_dia - int(total_franjas_dia * FRACCION_BLOQUE_TURNO)
-                franja_fin = base + total_franjas_dia - 1
+                franja_inicio = franja_base + total_franjas_dia - int(total_franjas_dia * FRACCION_BLOQUE_TURNO)
+                franja_fin = franja_base + total_franjas_dia - 1
             else:
-                franja_inicio = base
-                franja_fin = base + total_franjas_dia - 1
+                franja_inicio = franja_base
+                franja_fin = franja_base + total_franjas_dia - 1
 
             disponibilidad.append({
-                'id_profesor': prof['id_profesor'],
+                'id_profesor': profesor['id_profesor'],
                 'dia': dia,
                 'franja_inicio': franja_inicio,
                 'franja_fin': franja_fin,
@@ -436,9 +472,9 @@ def generar_disponibilidad(profesores: list[dict], config: dict, horas_profesor:
 
 
 def generar_salones(
-    num_fisicos: int,
-    num_con_pc: int,
-    num_deep_learning: int,
+    cantidad_fisicos: int,
+    cantidad_con_pc: int,
+    cantidad_deep_learning: int,
     capacidad_fisica: int,
     capacidad_virtual: int,
     caracteristicas_posibles: list[str],
@@ -453,35 +489,35 @@ def generar_salones(
         'caracteristicas': ','.join(caracteristicas_posibles),
     })
 
-    salon_id = 1
+    numero_salon = 1
 
-    for _ in range(num_deep_learning):
+    for _ in range(cantidad_deep_learning):
         salones.append({
-            'id_salon': f"salon_{salon_id}",
+            'id_salon': f"salon_{numero_salon}",
             'capacidad': capacidad_fisica,
             'es_virtual': False,
             'caracteristicas': 'mesa,pc,deep_learning',
         })
-        salon_id += 1
+        numero_salon += 1
 
-    for _ in range(num_con_pc - num_deep_learning):
+    for _ in range(cantidad_con_pc - cantidad_deep_learning):
         salones.append({
-            'id_salon': f"salon_{salon_id}",
+            'id_salon': f"salon_{numero_salon}",
             'capacidad': capacidad_fisica,
             'es_virtual': False,
             'caracteristicas': 'mesa,pc',
         })
-        salon_id += 1
+        numero_salon += 1
 
-    salones_tipicos = num_fisicos - num_con_pc
+    salones_tipicos = cantidad_fisicos - cantidad_con_pc
     for _ in range(salones_tipicos):
         salones.append({
-            'id_salon': f"salon_{salon_id}",
+            'id_salon': f"salon_{numero_salon}",
             'capacidad': capacidad_fisica,
             'es_virtual': False,
             'caracteristicas': 'mesa',
         })
-        salon_id += 1
+        numero_salon += 1
 
     return salones
 
@@ -530,27 +566,40 @@ def main():
     else:
         niveles_objetivo = sorted(MALLA_OBLIGATORIA.keys())
     
-    malla_reducida = {nivel: cursos for nivel, cursos in MALLA_OBLIGATORIA.items() if nivel in niveles_objetivo}
-    max_nivel = max([int(nivel.split('_')[1]) for nivel in niveles_objetivo])
-    electivos_reducidos = [electivo for electivo in ELECTIVOS if electivo[2] <= max_nivel]
+    malla_reducida = {}
+    for nivel, cursos in MALLA_OBLIGATORIA.items():
+        if nivel in niveles_objetivo:
+            malla_reducida[nivel] = cursos
 
-    num_profs_instancia = PROFES_PEQ_INSTANCIA if len(niveles_objetivo) < 5 else NUM_PROFESORES
-    num_salones_instancia = SALONES_PEQ_INSTANCIA if len(niveles_objetivo) < 5 else NUM_SALONES_FISICOS
+    nivel_maximo = 0
+    for nivel in niveles_objetivo:
+        numero_nivel = int(nivel.split('_')[1])
+        if numero_nivel > nivel_maximo:
+            nivel_maximo = numero_nivel
 
-    config_path = os.path.join(os.path.dirname(__file__), 'config.json')
-    config = cargar_config_institucional(config_path)
+    electivos_reducidos = []
+    for electivo in ELECTIVOS:
+        nivel_minimo_electivo = electivo[2]
+        if nivel_minimo_electivo <= nivel_maximo:
+            electivos_reducidos.append(electivo)
+
+    cantidad_profesores_instancia = PROFESORES_INSTANCIA_PEQUENA if len(niveles_objetivo) < 5 else NUM_PROFESORES
+    cantidad_salones_instancia = SALONES_INSTANCIA_PEQUENA if len(niveles_objetivo) < 5 else NUM_SALONES_FISICOS
+
+    ruta_configuracion = os.path.join(os.path.dirname(__file__), 'config.json')
+    config = cargar_config_institucional(ruta_configuracion)
     print(f"[INFO] Generando instancia para niveles: {niveles_objetivo}")
 
     cursos = generar_cursos(malla_reducida, electivos_reducidos)
     secciones = generar_secciones(cursos, SECCIONES_POR_CURSO, ALUMNOS_POR_SECCION)
-    profesores = generar_profesores(num_profs_instancia)
-    eventos, horas_prof = generar_eventos(secciones, profesores, EVENTOS_POR_SECCION, DURACION_EVENTOS)
+    profesores = generar_profesores(cantidad_profesores_instancia)
+    eventos, horas_por_profesor = generar_eventos(secciones, profesores, EVENTOS_POR_SECCION, DURACION_EVENTOS)
     curriculos, asignaciones_curriculo_evento = generar_curriculos(malla_reducida, electivos_reducidos, secciones, eventos)
     
-    disponibilidad = generar_disponibilidad(profesores, config, horas_prof)
+    disponibilidad = generar_disponibilidad(profesores, config, horas_por_profesor)
     salones = generar_salones(
-        num_salones_instancia, 
-        int(num_salones_instancia * RATIO_SALONES_CON_PC),
+        cantidad_salones_instancia, 
+        int(cantidad_salones_instancia * PROPORCION_SALONES_CON_PC),
         NUM_SALONES_DEEP_LEARNING, 
         CAPACIDAD_SALON_FISICO, 
         CAPACIDAD_VIRTUAL,
