@@ -15,7 +15,7 @@ Notación del modelo MIP (ecuaciones 1 a 17):
 | | $T_d$ | Franjas horarias del día $d \in D$. |
 | | $T_{\text{jue}}$ | Franjas del jueves (campus cerrado, 100% virtual). |
 | | $T_{\text{sab}}$ | Franjas del sábado. |
-| | $T_{\text{alm}}$ | Franjas de almuerzo (12:00–13:00). |
+| | $T_{\text{alm}}$ | Franjas de almuerzo (12:00 a 13:00). |
 | | $T_{\text{reg}}$ | Franjas sin almuerzo ($T_{\text{reg}} = T \setminus T_{\text{alm}}$). |
 | | $K, S, P, C$ | Currículos ($K$), secciones ($S$), profesores ($P$) y cursos ($C$). |
 | **Subconjuntos** | $E_p, E_s, E_c, E_k$ | Eventos del docente $p$, sección $s$, curso $c$ o currículo $k$. |
@@ -35,7 +35,7 @@ Notación del modelo MIP (ecuaciones 1 a 17):
 | | $w_{s,r} \in \{0, 1\}$ | 1 si la sección $s$ usa el aula $r$. |
 | | $u_{p,t} \in \{0, 1\}$ | 1 si el profesor $p$ dicta clase en franja $t$. |
 | | $gap_{p,t} \in [0, 1]$ | 1 si la franja $t$ es ventana ociosa del docente $p$. |
-| | $v_{c,i} \ge 0$ | Infracción de espaciado del curso $c$ entre días $d_i$ y $d_{i+1}$. |
+| | $v_{s,i} \ge 0$ | Infracción de espaciado de la sección $s$ entre días $d_i$ y $d_{i+1}$. |
 | | $P_{\text{alm}}, P_{\text{jue}}, P_{\text{sab}}$ | Penalizaciones por uso de almuerzo, jueves y sábado. |
 | | $P_{\text{esp}}, P_{\text{vent}}$ | Penalizaciones por falta de espaciado y ventanas docentes. |
 
@@ -61,7 +61,7 @@ $$x_{e,r,t} = \sum_{\tau \in H_{e,t}} y_{e,r,\tau} \quad \forall e \in E, \; \fo
 ### 2.6 Exclusividad de salones físicos (6)
 $$\sum_{e \in E} x_{e,r,t} \le 1 \quad \forall r \in R_{\text{fis}}, \; \forall t \in T \setminus T_{\text{jue}} \tag{6}$$
 
-### 2.7 Estabilidad espacial de sección (7–8)
+### 2.7 Estabilidad espacial de sección (7 y 8)
 $$\sum_{t \in T_{e,p(e)}} x_{e,r,t} \le Dur_e \cdot w_{s,r} \quad \forall s \in S, \; \forall e \in E_s, \; \forall r \in R_s \tag{7}$$
 
 $$\sum_{r \in R_s} w_{s,r} \le 2 \quad \forall s \in S \tag{8}$$
@@ -76,17 +76,24 @@ $$\sum_{e \in E_{k,c}} \sum_{r \in R_e} x_{e,r,t} + \sum_{r' \in R_{e'}} x_{e',r
 ### 3.1 Horario de Almuerzo (10)
 $$P_{\text{almuerzo}} = \sum_{e \in E} \sum_{r \in R_e} \sum_{t \in T_{\text{alm}}} x_{e,r,t} \tag{10}$$
 
-### 3.2 Espaciado Pedagógico (11–12)
-$$\sum_{e \in E_c} \sum_{r \in R_e} \sum_{t \in T_{d_i}} y_{e,r,t} + \sum_{e \in E_c} \sum_{r \in R_e} \sum_{t \in T_{d_{i+1}}} y_{e,r,t} \le 1 + v_{c, i} \quad \forall c \in C, \; \forall i \in \{1, \dots, |D|-1\} \tag{11}$$
+### 3.2 Espaciado Pedagógico (11 y 12)
 
-$$P_{\text{espaciado}} = \sum_{c \in C} \sum_{i=1}^{|D|-1} v_{c, i} \tag{12}$$
+Con el fin de favorecer la asimilación de los contenidos curriculares y prevenir la sobrecarga académica estudiantil, se promueve que las sesiones lectivas pertenecientes a una misma cohorte o sección $s \in S$ se distribuyan a lo largo de la semana en días no consecutivos. 
 
-### 3.3 Preferencia Temporal (13–14)
+Sea $y_{e,r,t} \in \{0, 1\}$ la variable binaria que indica el inicio del evento $e \in E_s$ en el aula $r \in R_e$ durante la franja $t \in T_{d_i}$. Si una misma sección programa sesiones lectivas en dos días laborales sucesivos ($d_i$ y $d_{i+1}$), se genera una infracción capturada por la variable continua auxiliar $v_{s, i} \ge 0$:
+
+$$\sum_{e \in E_s} \sum_{r \in R_e} \sum_{t \in T_{d_i}} y_{e,r,t} + \sum_{e \in E_s} \sum_{r \in R_e} \sum_{t \in T_{d_{i+1}}} y_{e,r,t} \le 1 + v_{s, i} \quad \forall s \in S, \; \forall i \in \{1, \dots, |D|-1\} \tag{11}$$
+
+La penalización agregada por incumplimiento de espaciado pedagógico ($P_{\text{espaciado}}$) se cuantifica como la suma global de las violaciones registradas en todas las secciones de la institución:
+
+$$P_{\text{espaciado}} = \sum_{s \in S} \sum_{i=1}^{|D|-1} v_{s, i} \tag{12}$$
+
+### 3.3 Preferencia Temporal (13 y 14)
 $$P_{\text{jueves}} = \sum_{e \in E} \sum_{r \in R_e} \sum_{t \in T_{\text{jue}}} x_{e,r,t} \tag{13}$$
 
 $$P_{\text{sabado}} = \sum_{e \in E} \sum_{r \in R_e} \sum_{t \in T_{\text{sab}}} x_{e,r,t} \tag{14}$$
 
-### 3.4 Compacidad Docente / Ventanas (15–16)
+### 3.4 Compacidad Docente / Ventanas (15 y 16)
 Sea $u_{p,t} = \sum_{e \in E_p} \sum_{r \in R_e} x_{e,r,t}$ la actividad lectiva del docente $p$ en la franja $t$:
 
 $$gap_{p,t} \ge u_{p,t_1} + u_{p,t_2} - 1 - u_{p,t} \quad \forall p \in P, \; \forall d \in D, \; \forall t_1, t, t_2 \in T_d \cap T_{\text{reg}} \text{ con } t_1 < t < t_2 \tag{15}$$
